@@ -36,14 +36,13 @@ Les dépendances privées `@mairie360/*` nécessitent un accès GitHub Packages.
 npm ci
 ```
 
-Créer `.env.local` à la racine. Exemple pour des BFF exécutés sur la même machine:
+Créer `.env.local` à la racine. Exemple pour le BFF exécuté sur la même machine:
 
 ```dotenv
 SETTINGS_BFF_URL=http://localhost:4008
-USER_BFF_URL=http://localhost:4000
 ```
 
-Démarrer le BFF associé et BFF User pour les parcours de session, puis lancer le web service. Le port `5008` ci-dessous est un choix local explicite pour éviter les collisions; ce n’est pas une affirmation sur les ports de tous les fichiers Compose.
+Démarrer BFF_Settings, seul BFF appelé par ce front, puis lancer le web service. Le port `5008` ci-dessous est un choix local explicite pour éviter les collisions; ce n’est pas une affirmation sur les ports de tous les fichiers Compose.
 
 ```bash
 npm run dev -- --port 5008
@@ -63,8 +62,6 @@ Les valeurs ci-dessous sont des exemples locaux ou des comportements expliciteme
 | Variable ou priorité | Exemple / repli indiqué | Rôle |
 | --- | --- | --- |
 | `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL` | http://localhost:4008 | Priorité de gauche à droite dans le proxy; l’URL indiquée est le repli local. |
-| `USER_BFF_URL` → `BFF_USER_API_URL` | http://localhost:4000 | Priorité propre aux adaptateurs de session vers BFF User. |
-| `BFF_CONTRACT_DIR` | ../BFF_Settings/contracts | Répertoire des contrats BFF pour les scripts de synchronisation et de contrôle. |
 
 Dans un conteneur, `localhost` désigne le conteneur lui-même. Utiliser le nom DNS du service BFF sur le réseau Docker, ou une adresse d’hôte accessible. Les fichiers Compose incluent parfois d’autres services et des paramètres hérités; vérifier les URL et ports effectifs avant de les employer.
 
@@ -84,22 +81,17 @@ Ces chemins de données sont exposés à la même origine par le proxy; les page
 | PATCH | `/settings/appearance` | application/json | 200, 404 |
 | PATCH | `/settings/general` | application/json | 200, 404 |
 
-### Pages et adaptateurs locaux
+### Pages
 
 | Page | Source |
 | --- | --- |
 | `/` | [src/app/page.tsx](../../src/app/page.tsx) |
 
-| Méthode | Route locale | Source |
-| --- | --- | --- |
-| GET | `/api/user/me` | [src/app/api/user/me/route.ts](../../src/app/api/user/me/route.ts) |
-| POST | `/api/auth/logout` | [src/app/api/auth/logout/route.ts](../../src/app/api/auth/logout/route.ts) |
-| GET | `/api/auth/me` | [src/app/api/auth/me/route.ts](../../src/app/api/auth/me/route.ts) |
-| GET | `/api/auth/session` | [src/app/api/auth/session/route.ts](../../src/app/api/auth/session/route.ts) |
+Le front n’a aucune route API locale : sa seule route serveur est le proxy contractuel ([src/app/[...path]/route.ts](../../src/app/%5B...path%5D/route.ts)). Un front n’appelle qu’un seul BFF : les chemins de session comme `/api/user/me` ou `/api/auth/*` ne sont pas servis ici (404).
 
 ## Session, permissions et erreurs
 
-Les adaptateurs `/api/auth/me`, `/api/auth/session` et `/api/user/me` utilisent BFF User pour la session; `/api/auth/logout` relaie la déconnexion. Le proxy générique utilise le Bearer explicite ou, en son absence, le cookie `accessToken`. Les permissions métier restent celles du BFF et de ses sources.
+La session provient uniquement du cookie `accessToken` posé par Login_Web_Service. Le proxy générique utilise le Bearer explicite ou, en son absence, le cookie `accessToken`. Les permissions métier restent celles du BFF et de ses sources.
 
 Le proxy générique répond 400 pour un chemin invalide, 404 pour un chemin hors contrat, 405 pour une méthode interdite et 502 si le service est injoignable ou dépasse le délai. Les réponses amont sont conservées, y compris les corps vides 204/205/304.
 
@@ -107,9 +99,10 @@ Toutes les réponses portent `X-Frame-Options: DENY`, `X-Content-Type-Options: n
 
 ## Synchronisation et vérifications
 
-Après une modification de routes ou de schémas, exporter le contrat dans **BFF_Settings** avec `npm run contracts:generate`, puis exécuter dans ce dépôt:
+Le front utilise un seul contrat : celui que **BFF_Settings publie** dans le paquet `@mairie360/bff-settings-openapi`, épinglé à une version exacte `X.Y.Z` dans `package.json`. Il n’est jamais copié depuis un checkout du BFF, qui peut être en avance sur la dernière version publiée. Après une nouvelle version de BFF_Settings, exécuter dans ce dépôt:
 
 ```bash
+npm install --save-exact @mairie360/bff-settings-openapi@X.Y.Z
 npm run contracts:sync
 npm run contracts:check
 npm run test:contracts
@@ -117,9 +110,11 @@ npm run lint
 npm run build
 ```
 
-`contracts:sync` copie le contrat BFF et régénère `src/contracts/bff.d.ts`. `contracts:check` compare aussi le BFF voisin lorsqu’il est présent; dans un checkout isolé, il vérifie les types contre la copie locale versionnée. `test:contracts` exécute les tests Node du proxy.
+Le paquet ne contient que la sortie orval (modèles et endpoints TypeScript). `contracts:sync` (alias `contracts:generate`) reconstruit `contracts/openapi.json` depuis le paquet installé avec `scripts/orval-contract.mjs` ; le proxy lit ce fichier et le code importe ses types depuis `@mairie360/bff-settings-openapi/model`. `contracts:check` échoue si la version n’est pas exacte, si le paquet installé diffère de `package.json`, si un second paquet `bff-*-openapi` existe ou si `contracts/openapi.json` n’est plus à jour. Ces commandes fonctionnent hors ligne. Après une montée de version, aligner aussi le tag d’image `bff-settings` des stacks de test. `test:contracts` exécute les tests Node sans couverture ; `npm test` les exécute avec un seuil de 60 % (lignes, branches, fonctions) sur tous les modules `src/**/*.ts`.
 
-Le générateur de types est fixé à `openapi-typescript@7.10.1` dans `scripts/contracts.mjs` et s’exécute via npm. Pour une modification uniquement documentaire, vérifier les liens, l’exactitude des deux langues et `git diff --check`; ne pas régénérer les contrats sans modification de leur source.
+Les tests vérifient que le front n’accède au réseau qu’à travers les contrats. `tests/network-contract.test.cjs` analyse l’AST TypeScript de `src/` : seuls `src/lib/bff-client.ts` et `src/lib/bff-proxy.ts` appellent `fetch`, chaque appel `requestBff` (tous dans `src/lib/settings-api.ts`) vise une opération littérale de `contracts/openapi.json`, et le seul relais serveur est le proxy vers `configuredBffUrl()` (la seule URL de BFF lue dans l’environnement est `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL`) : le front n’appelle qu’un seul BFF. `tests/settings.bff-mocks.test.cjs` exécute toute la chaîne (code navigateur → routes Next.js → vrai client HTTP) contre un vrai serveur HTTP qui simule BFF_Settings à partir de `contracts/openapi.json`. Le mock refuse toute route, méthode ou corps hors contrat, et le harnais refuse tout appel navigateur vers une autre origine et tout appel serveur vers un autre hôte que BFF_Settings. `tests/package-contract.test.cjs` vérifie l’épinglage exact, l’absence de tout autre paquet de contrat, que `contracts/openapi.json` est exactement la reconstruction du paquet et que les stacks de test démarrent `bff-settings` à la version du paquet. orval ne type que les réponses de succès (et les 404 des préférences) : les réponses d’erreur simulées sont marquées hors contrat.
+
+Pour une modification uniquement documentaire, vérifier les liens, l’exactitude des deux langues et `git diff --check`; ne pas régénérer les contrats sans montée de version du paquet.
 
 ## CI/CD et exécution Docker
 
@@ -135,7 +130,7 @@ Avant un lancement Docker, vérifier les variables de service, les secrets de bu
 
 Diagnostic du BFF associé: Si le profil charge mais pas les sessions, vérifier `sources.sessions` et la réponse Core `/api/v1/sessions/`. Un PATCH 400 peut venir d’un champ inconnu ou d’un corps vide. Un panneau indisponible ne doit pas être interprété comme une sauvegarde échouée.
 
-En cas d’erreur de proxy, comparer la route et la méthode à l’inventaire, vérifier l’URL du BFF puis la session. Pour un 401 après navigation entre modules, vérifier le cookie `accessToken`, son domaine et le service BFF User. Un 404 sur un besoin décrit dans `BACKEND.md` peut correspondre à une fonctionnalité seulement proposée.
+En cas d’erreur de proxy, comparer la route et la méthode à l’inventaire, vérifier l’URL du BFF puis la session. Pour un 401 après navigation entre modules, vérifier le cookie `accessToken` et son domaine. Un 404 sur un besoin décrit dans `BACKEND.md` peut correspondre à une fonctionnalité seulement proposée.
 
 ## Repères dans le dépôt
 
@@ -143,9 +138,9 @@ En cas d’erreur de proxy, comparer la route et la méthode à l’inventaire, 
 - [src/lib/bff-client.ts](../../src/lib/bff-client.ts)
 - [src/lib/bff-proxy.ts](../../src/lib/bff-proxy.ts)
 - [src/app/[...path]/route.ts](../../src/app/%5B...path%5D/route.ts)
-- [src/lib/user-bff-proxy.ts](../../src/lib/user-bff-proxy.ts)
+- [src/lib/settings-api.ts](../../src/lib/settings-api.ts)
 - [contracts/openapi.json](../../contracts/openapi.json)
-- [src/contracts/bff.d.ts](../../src/contracts/bff.d.ts)
+- [scripts/orval-contract.mjs](../../scripts/orval-contract.mjs)
 - [scripts/contracts.mjs](../../scripts/contracts.mjs)
 - [package.json](../../package.json)
 - [.github/workflows/contracts.yml](../../.github/workflows/contracts.yml)

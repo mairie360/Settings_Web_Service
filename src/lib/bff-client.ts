@@ -1,4 +1,8 @@
-export async function requestBff<T>(path: string, init: RequestInit = {}): Promise<T> {
+// Chemins du contrat reconstruit depuis le paquet publié de BFF_Settings (npm run contracts:sync) : un appel hors
+// contrat ne compile pas.
+export type BffPath = keyof (typeof import('../../contracts/openapi.json'))['paths'];
+
+export async function requestBff<T>(path: BffPath, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set('Accept', 'application/json');
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');

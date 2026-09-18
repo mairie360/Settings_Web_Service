@@ -130,7 +130,7 @@ services:
       - backend
 
   bff-settings:
-    image: ${BFF_SETTINGS_IMAGE:-ghcr.io/mairie360/bff-settings:1.0.0}
+    image: ${BFF_SETTINGS_IMAGE:-ghcr.io/mairie360/bff-settings:1.1.0}
     container_name: settings-front-perf-bff-settings
     depends_on:
       seeder:

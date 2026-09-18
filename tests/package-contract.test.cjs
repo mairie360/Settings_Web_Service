@@ -36,8 +36,6 @@ test('contracts/openapi.json is exactly the contract rebuilt from the installed 
 test('every Docker stack starts BFF_Settings only, in the version of the contract package', () => {
   for (const file of fs.readdirSync(ROOT).filter((name) => /^docker-compose.*\.ya?ml$/.test(name))) {
     const images = [...fs.readFileSync(path.join(ROOT, file), 'utf8').matchAll(/ghcr\.io\/mairie360\/(bff-[\w-]+):([\w.-]+)/g)];
-    // docker-compose.yml est encore le gabarit non adapté (aucun BFF) ; les stacks isolées démarrent BFF_Settings.
-    const expected = /-(security|performance)\.ya?ml$/.test(file) ? [`bff-settings:${pinned}`] : [];
-    assert.deepEqual(images.map(([, name, tag]) => `${name}:${tag}`), expected, file);
+    assert.deepEqual(images.map(([, name, tag]) => `${name}:${tag}`), [`bff-settings:${pinned}`], file);
   }
 });

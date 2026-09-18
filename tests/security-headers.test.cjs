@@ -1,14 +1,11 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const fs = require('node:fs');
-const ts = require('typescript');
 const { NextRequest } = require('next/server');
-const originalLoader = require.extensions['.ts'];
-require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true } }).outputText, filename);
-const { middleware } = require('../src/middleware.ts');
-const { buildContentSecurityPolicy } = require('../src/lib/content-security-policy.ts');
+const { register, requireSrc } = require('./support/load-ts.cjs');
+const { middleware } = requireSrc('middleware.ts');
+const { buildContentSecurityPolicy } = requireSrc('lib/content-security-policy.ts');
+register();
 const nextConfig = require('../next.config.ts').default;
-require.extensions['.ts'] = originalLoader;
 
 const pageRequest = () => new NextRequest('http://localhost:5000/');
 

@@ -23,7 +23,7 @@ x-db-env: &db-env
   DB_PORT: 5432
 
 # JWT_SECRET identique sur toute la chaîne : le cookie accessToken du front est
-# relayé tel quel (Bearer) à BFF User, aux BFFs métier et aux APIs.
+# relayé tel quel (Bearer) à BFF Settings, puis à Core API.
 x-api-env: &api-env
   <<: *db-env
   HOST: "0.0.0.0"
@@ -129,40 +129,8 @@ services:
     networks:
       - backend
 
-  bff-user:
-    image: ${BFF_USER_IMAGE:-ghcr.io/mairie360/bff-user:0.4.0}
-    container_name: settings-front-perf-bff-user
-    depends_on:
-      seeder:
-        condition: service_completed_successfully
-      core-api-ready:
-        condition: service_completed_successfully
-    environment:
-      <<: *db-env
-      HOST: "0.0.0.0"
-      PORT: 4000
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: 'b"secret"'
-      CORE_API_URL: http://core-api:3000
-    expose:
-      - "4000"
-    networks:
-      - backend
-
-  bff-user-ready:
-    image: curlimages/curl:latest
-    container_name: settings-front-perf-bff-user-ready
-    depends_on:
-      bff-user:
-        condition: service_started
-    command: >
-      sh -c 'until curl -fsS http://bff-user:4000/health >/dev/null; do
-      echo "waiting for bff-user..."; sleep 2; done; echo "bff-user ready"'
-    networks:
-      - backend
-
   bff-settings:
-    image: ${BFF_SETTINGS_IMAGE:-ghcr.io/mairie360/bff-settings:dev-latest}
+    image: ${BFF_SETTINGS_IMAGE:-ghcr.io/mairie360/bff-settings:1.1.0}
     container_name: settings-front-perf-bff-settings
     depends_on:
       seeder:
@@ -199,15 +167,12 @@ services:
       args:
         NODE_AUTH_TOKEN: ${NODE_AUTH_TOKEN:-}
     depends_on:
-      bff-user-ready:
-        condition: service_completed_successfully
       bff-settings-ready:
         condition: service_completed_successfully
     environment:
       HOSTNAME: "0.0.0.0"
       PORT: 5000
       SETTINGS_BFF_URL: http://bff-settings:4008
-      USER_BFF_URL: http://bff-user:4000
     expose:
       - "5000"
     networks:

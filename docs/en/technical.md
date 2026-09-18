@@ -36,14 +36,13 @@ Private `@mairie360/*` dependencies require GitHub Packages access. Set `NODE_AU
 npm ci
 ```
 
-Create `.env.local` in the repository root. Example for BFFs running on the same machine:
+Create `.env.local` in the repository root. Example for the BFF running on the same machine:
 
 ```dotenv
 SETTINGS_BFF_URL=http://localhost:4008
-USER_BFF_URL=http://localhost:4000
 ```
 
-Start the associated BFF and BFF User for session flows, then start the web service. Port `5008` below is an explicit local choice to avoid collisions; it is not a claim about ports in every Compose file.
+Start BFF_Settings, the only BFF this front calls, then start the web service. Port `5008` below is an explicit local choice to avoid collisions; it is not a claim about ports in every Compose file.
 
 ```bash
 npm run dev -- --port 5008
@@ -63,8 +62,6 @@ Values below are local examples or explicitly described behavior, not production
 | Variable or precedence | Example / stated fallback | Purpose |
 | --- | --- | --- |
 | `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL` | http://localhost:4008 | Left-to-right proxy precedence; the URL shown is the local fallback. |
-| `USER_BFF_URL` → `BFF_USER_API_URL` | http://localhost:4000 | Separate precedence used by session adapters targeting BFF User. |
-| `BFF_CONTRACT_DIR` | ../BFF_Settings/contracts | BFF contract directory for synchronization and checking scripts. |
 
 Inside a container, `localhost` refers to that container. Use the BFF service DNS name on the Docker network or a reachable host address. Compose files sometimes include other services and legacy settings; check effective URLs and ports before using them.
 
@@ -84,22 +81,17 @@ These data paths are exposed at the same origin through the proxy; Next.js pages
 | PATCH | `/settings/appearance` | application/json | 200, 404 |
 | PATCH | `/settings/general` | application/json | 200, 404 |
 
-### Pages and local adapters
+### Pages
 
 | Page | Source |
 | --- | --- |
 | `/` | [src/app/page.tsx](../../src/app/page.tsx) |
 
-| Method | Local route | Source |
-| --- | --- | --- |
-| GET | `/api/user/me` | [src/app/api/user/me/route.ts](../../src/app/api/user/me/route.ts) |
-| POST | `/api/auth/logout` | [src/app/api/auth/logout/route.ts](../../src/app/api/auth/logout/route.ts) |
-| GET | `/api/auth/me` | [src/app/api/auth/me/route.ts](../../src/app/api/auth/me/route.ts) |
-| GET | `/api/auth/session` | [src/app/api/auth/session/route.ts](../../src/app/api/auth/session/route.ts) |
+The front has no local API route: its only server route is the contract proxy ([src/app/[...path]/route.ts](../../src/app/%5B...path%5D/route.ts)). A front calls a single BFF, so session paths such as `/api/user/me` or `/api/auth/*` are not served here (404).
 
 ## Session, permissions and errors
 
-The `/api/auth/me`, `/api/auth/session` and `/api/user/me` adapters use BFF User for session access; `/api/auth/logout` forwards logout. The generic proxy uses an explicit Bearer header or, when absent, the `accessToken` cookie. Business permissions remain those of the BFF and its sources.
+The session comes only from the `accessToken` cookie set by Login_Web_Service. The generic proxy uses an explicit Bearer header or, when absent, the `accessToken` cookie. Business permissions remain those of the BFF and its sources.
 
 The generic proxy returns 400 for an invalid path, 404 for a path outside the contract, 405 for a disallowed method and 502 when the service is unreachable or times out. Upstream responses are preserved, including empty 204/205/304 bodies.
 
@@ -107,9 +99,10 @@ Every response carries `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff
 
 ## Synchronization and verification
 
-After changing routes or schemas, export the contract in **BFF_Settings** using `npm run contracts:generate`, then run in this repository:
+The front uses a single contract: the one **BFF_Settings publishes** in the `@mairie360/bff-settings-openapi` package, pinned to an exact `X.Y.Z` version in `package.json`. It is never copied from a BFF checkout, which can be ahead of the last release. After a new BFF_Settings release, run in this repository:
 
 ```bash
+npm install --save-exact @mairie360/bff-settings-openapi@X.Y.Z
 npm run contracts:sync
 npm run contracts:check
 npm run test:contracts
@@ -117,9 +110,11 @@ npm run lint
 npm run build
 ```
 
-`contracts:sync` copies the BFF contract and regenerates `src/contracts/bff.d.ts`. `contracts:check` also compares a neighboring BFF when present; in an isolated checkout, it checks types against the local committed snapshot. `test:contracts` runs the Node proxy tests.
+The package only contains orval output (TypeScript models and endpoints). `contracts:sync` (alias `contracts:generate`) rebuilds `contracts/openapi.json` from the installed package with `scripts/orval-contract.mjs`; the proxy reads that file and the code imports its types from `@mairie360/bff-settings-openapi/model`. `contracts:check` fails if the version is not exact, if the installed package differs from `package.json`, if a second `bff-*-openapi` package exists or if `contracts/openapi.json` is stale. These commands run offline. After a bump, also move the `bff-settings` image tag of the test stacks to the same version. `test:contracts` runs the Node tests without coverage; `npm test` runs them with a 60% threshold (lines, branches, functions) over every `src/**/*.ts` module.
 
-The type generator is pinned to `openapi-typescript@7.10.1` in `scripts/contracts.mjs` and runs through npm. For documentation-only changes, check links, accuracy in both languages and `git diff --check`; do not regenerate contracts without changing their source.
+The tests check that the front only reaches the network through the contracts. `tests/network-contract.test.cjs` scans the TypeScript AST of `src/`: only `src/lib/bff-client.ts` and `src/lib/bff-proxy.ts` call `fetch`, every `requestBff` call (all in `src/lib/settings-api.ts`) targets a literal operation of `contracts/openapi.json`, and the only server relay is the proxy to `configuredBffUrl()` (the only BFF URL read from the environment is `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL`), so the front calls a single BFF. `tests/settings.bff-mocks.test.cjs` runs the whole chain (browser code → Next.js routes → real HTTP client) against a real HTTP server that simulates BFF_Settings from `contracts/openapi.json`. The mock rejects any route, method or body outside the contract, and the harness rejects any browser call to another origin and any server call to a host other than BFF_Settings. `tests/package-contract.test.cjs` checks the exact pin, that no other contract package exists, that `contracts/openapi.json` is exactly the package rebuild and that the test stacks start `bff-settings` at the package version. orval only types success responses (and the preference 404s), so simulated error replies are marked outside the contract.
+
+For documentation-only changes, check links, accuracy in both languages and `git diff --check`; do not regenerate contracts without bumping the package.
 
 ## CI/CD and Docker execution
 
@@ -135,7 +130,7 @@ Before running Docker, check service variables, build secrets and networks in th
 
 Associated BFF diagnostics: If the profile loads but sessions do not, check `sources.sessions` and the Core `/api/v1/sessions/` response. PATCH 400 can result from an unknown field or an empty body. An unavailable panel should not be interpreted as a failed save.
 
-For a proxy error, compare the path and method with the inventory, then check the BFF URL and session. For a 401 after navigating between modules, check the `accessToken` cookie, its domain and BFF User. A 404 for a requirement described in `BACKEND.md` may refer to a feature that is only proposed.
+For a proxy error, compare the path and method with the inventory, then check the BFF URL and session. For a 401 after navigating between modules, check the `accessToken` cookie and its domain. A 404 for a requirement described in `BACKEND.md` may refer to a feature that is only proposed.
 
 ## Repository reference
 
@@ -143,9 +138,9 @@ For a proxy error, compare the path and method with the inventory, then check th
 - [src/lib/bff-client.ts](../../src/lib/bff-client.ts)
 - [src/lib/bff-proxy.ts](../../src/lib/bff-proxy.ts)
 - [src/app/[...path]/route.ts](../../src/app/%5B...path%5D/route.ts)
-- [src/lib/user-bff-proxy.ts](../../src/lib/user-bff-proxy.ts)
+- [src/lib/settings-api.ts](../../src/lib/settings-api.ts)
 - [contracts/openapi.json](../../contracts/openapi.json)
-- [src/contracts/bff.d.ts](../../src/contracts/bff.d.ts)
+- [scripts/orval-contract.mjs](../../scripts/orval-contract.mjs)
 - [scripts/contracts.mjs](../../scripts/contracts.mjs)
 - [package.json](../../package.json)
 - [.github/workflows/contracts.yml](../../.github/workflows/contracts.yml)

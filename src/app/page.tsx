@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import type { components } from "@/contracts/bff";
-import { requestBff } from "@/lib/bff-client";
+import { loadSettings, saveProfile } from "@/lib/settings-api";
+import type { SettingsBootstrap as Bootstrap, SettingsProfile as Profile } from "@/lib/settings-api";
 
-type Bootstrap = components["schemas"]["SettingsBootstrap"];
-type Profile = components["schemas"]["SettingsProfile"];
 const tabs = ["Profil", "Sécurité", "Notifications", "Apparence", "Général", "Système"];
 export default function Home() {
   const [data, setData] = useState<Bootstrap | null>(null);
@@ -17,14 +15,14 @@ export default function Home() {
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
-    void requestBff<Bootstrap>("/settings/bootstrap", { signal: controller.signal }).then((result) => { setData(result); setProfile(result.profile); }).catch((reason: Error) => { if (!controller.signal.aborted) setError(reason.message); });
+    void loadSettings(controller.signal).then((result) => { setData(result); setProfile(result.profile); }).catch((reason: Error) => { if (!controller.signal.aborted) setError(reason.message); });
     return () => controller.abort();
   }, []);
   async function save(event: FormEvent) {
     event.preventDefault(); if (!profile) return;
     setSaving(true); setError(""); setStatus("");
     try {
-      const saved = await requestBff<Profile>("/settings/profile", { method: "PATCH", body: JSON.stringify(profile) });
+      const saved = await saveProfile(profile);
       setProfile(saved); setData((current) => current ? { ...current, profile: saved } : current); setStatus("Votre profil a été enregistré.");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Le profil n’a pas pu être enregistré."); }
     finally { setSaving(false); }

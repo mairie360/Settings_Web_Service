@@ -1,23 +1,195 @@
 {
-  "openapi": "3.1.0",
-  "info": {
-    "title": "BFF Settings API",
-    "version": "1.0.0"
-  },
   "components": {
     "schemas": {
-      "SettingsProfile": {
-        "type": "object",
+      "Error": {
         "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorError"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
+      "ErrorError": {
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      },
+      "GetCheckApis200": {
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "GetCheckApis502": {
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "GetHealth200": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/GetHealth200Status"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "GetHealth200Status": {
+        "enum": [
+          "ok"
+        ],
+        "type": "string"
+      },
+      "PatchSettingsAppearance200": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "PatchSettingsAppearance404": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "PatchSettingsAppearanceBody": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "PatchSettingsGeneral200": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "PatchSettingsGeneral404": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "PatchSettingsGeneralBody": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "PatchSettingsNotifications200": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "PatchSettingsNotifications404": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "PatchSettingsNotificationsBody": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "SettingsBootstrap": {
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/SettingsProfile"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/SettingsBootstrapSessionsItem"
+            },
+            "type": "array"
+          },
+          "sources": {
+            "$ref": "#/components/schemas/SettingsBootstrapSources"
+          }
+        },
+        "required": [
+          "profile",
+          "sessions",
+          "sources"
+        ],
+        "type": "object"
+      },
+      "SettingsBootstrapSessionsItem": {
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "device_info": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "ip_address": {
+            "type": "string"
+          },
+          "revoked_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "device_info",
+          "ip_address",
+          "created_at",
+          "expires_at"
+        ],
+        "type": "object"
+      },
+      "SettingsBootstrapSources": {
+        "properties": {
+          "sessions": {
+            "$ref": "#/components/schemas/SettingsBootstrapSourcesSessions"
+          }
+        },
+        "required": [
+          "sessions"
+        ],
+        "type": "object"
+      },
+      "SettingsBootstrapSourcesSessions": {
+        "enum": [
+          "available",
+          "unavailable"
+        ],
+        "type": "string"
+      },
+      "SettingsProfile": {
+        "properties": {
+          "email": {
+            "type": "string"
+          },
           "first_name": {
             "type": "string"
           },
           "last_name": {
             "type": "string"
-          },
-          "email": {
-            "type": "string",
-            "format": "email"
           },
           "phone": {
             "type": [
@@ -30,20 +202,19 @@
           "first_name",
           "last_name",
           "email"
-        ]
+        ],
+        "type": "object"
       },
       "SettingsProfilePatch": {
-        "type": "object",
         "properties": {
+          "email": {
+            "type": "string"
+          },
           "first_name": {
             "type": "string"
           },
           "last_name": {
             "type": "string"
-          },
-          "email": {
-            "type": "string",
-            "format": "email"
           },
           "phone": {
             "type": [
@@ -52,221 +223,223 @@
             ]
           }
         },
-        "additionalProperties": false
-      },
-      "SettingsBootstrap": {
-        "type": "object",
-        "properties": {
-          "profile": {
-            "$ref": "#/components/schemas/SettingsProfile"
-          },
-          "sessions": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "device_info": {
-                  "type": "string"
-                },
-                "ip_address": {
-                  "type": "string"
-                },
-                "created_at": {
-                  "type": "string"
-                },
-                "expires_at": {
-                  "type": "string"
-                },
-                "revoked_at": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
-                }
-              },
-              "required": [
-                "id",
-                "device_info",
-                "ip_address",
-                "created_at",
-                "expires_at"
-              ]
-            }
-          },
-          "sources": {
-            "type": "object",
-            "properties": {
-              "sessions": {
-                "type": "string",
-                "enum": [
-                  "available",
-                  "unavailable"
-                ]
-              }
-            },
-            "required": [
-              "sessions"
-            ]
-          }
-        },
-        "required": [
-          "profile",
-          "sessions",
-          "sources"
-        ]
+        "required": [],
+        "type": "object"
       }
-    },
-    "parameters": {}
+    }
   },
+  "info": {
+    "title": "bff_settings",
+    "version": "1.0.0",
+    "x-source-package": "@mairie360/bff-settings-openapi@1.1.0"
+  },
+  "openapi": "3.1.0",
   "paths": {
-    "/health": {
-      "get": {
-        "tags": [
-          "Connectivity"
-        ],
-        "summary": "Vérifie la santé du BFF",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/check_apis": {
       "get": {
+        "operationId": "getCheckApis",
+        "parameters": [],
         "responses": {
-          "200": {
-            "description": "Services disponibles"
-          },
           "502": {
-            "description": "Service indisponible"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCheckApis502"
+                }
+              }
+            },
+            "description": "Réponse 502 (modèle orval GetCheckApis502)"
+          },
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCheckApis200"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
           }
         }
       }
     },
-    "/settings/bootstrap": {
+    "/health": {
       "get": {
+        "operationId": "getHealth",
+        "parameters": [],
         "responses": {
-          "200": {
-            "description": "Profil et sessions Core de l’utilisateur connecté",
+          "2XX": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SettingsBootstrap"
+                  "$ref": "#/components/schemas/GetHealth200"
                 }
               }
-            }
-          },
-          "401": {
-            "description": "Session invalide"
-          },
-          "502": {
-            "description": "Profil indisponible"
-          }
-        }
-      }
-    },
-    "/settings/profile": {
-      "patch": {
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SettingsProfilePatch"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Profil sauvegardé puis relu",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SettingsProfile"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Champs invalides ou non pris en charge"
-          }
-        }
-      }
-    },
-    "/settings/notifications": {
-      "patch": {
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": {}
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Préférences enregistrées par Core"
-          },
-          "404": {
-            "description": "Fonction non disponible dans Core"
+            },
+            "description": "Succès (seul statut typé par orval)"
           }
         }
       }
     },
     "/settings/appearance": {
       "patch": {
+        "operationId": "patchSettingsAppearance",
+        "parameters": [],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "additionalProperties": {}
+                "$ref": "#/components/schemas/PatchSettingsAppearanceBody"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
-          "200": {
-            "description": "Préférences enregistrées par Core"
-          },
           "404": {
-            "description": "Fonction non disponible dans Core"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchSettingsAppearance404"
+                }
+              }
+            },
+            "description": "Réponse 404 (modèle orval PatchSettingsAppearance404)"
+          },
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchSettingsAppearance200"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/settings/bootstrap": {
+      "get": {
+        "operationId": "getSettingsBootstrap",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsBootstrap"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
           }
         }
       }
     },
     "/settings/general": {
       "patch": {
+        "operationId": "patchSettingsGeneral",
+        "parameters": [],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "additionalProperties": {}
+                "$ref": "#/components/schemas/PatchSettingsGeneralBody"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
-          "200": {
-            "description": "Préférences enregistrées par Core"
-          },
           "404": {
-            "description": "Fonction non disponible dans Core"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchSettingsGeneral404"
+                }
+              }
+            },
+            "description": "Réponse 404 (modèle orval PatchSettingsGeneral404)"
+          },
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchSettingsGeneral200"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/settings/notifications": {
+      "patch": {
+        "operationId": "patchSettingsNotifications",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchSettingsNotificationsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchSettingsNotifications404"
+                }
+              }
+            },
+            "description": "Réponse 404 (modèle orval PatchSettingsNotifications404)"
+          },
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatchSettingsNotifications200"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/settings/profile": {
+      "patch": {
+        "operationId": "patchSettingsProfile",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsProfilePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsProfile"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
           }
         }
       }
     }
-  },
-  "webhooks": {}
+  }
 }

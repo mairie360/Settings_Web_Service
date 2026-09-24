@@ -69,7 +69,8 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.match(html, /<input[^>]*type="text"[^>]*required=""[^>]*value="Anne Marie"/);
   assert.match(html, /<input[^>]*type="email"[^>]*value="anne\.le-gall@mairie\.test"/);
   assert.match(html, /<input[^>]*type="tel"[^>]*value="\+33123456789"/);
-  assert.match(html, /<button[^>]*type="submit"[^>]*>Enregistrer<\/button>/);
+  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Enregistrer<\/button>/);
+  assert.match(html, /Aucune modification à enregistrer\./);
   assert.doesNotMatch(html, /role="alert"/);
 });
 
@@ -91,7 +92,10 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
   assert.match(view.text(), /Les sessions sont temporairement indisponibles\./);
 
   await view.click('Notifications');
-  assert.match(view.html, /<h2[^>]*>Notifications<\/h2><p>Ces réglages ne sont pas encore disponibles\.<\/p>/);
+  assert.match(view.html, /<h2[^>]*>Notifications<\/h2>/);
+  assert.match(view.text(), /Fonctionnalité indisponible/);
+  assert.match(view.text(), /préférences de notification ne sont pas encore exposées par le contrat BFF publié/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap'], 'an unavailable tab does not call the BFF');
 });
 
 test('editing a field and submitting the form saves the profile with PATCH /settings/profile', async () => {
@@ -108,22 +112,35 @@ test('editing a field and submitting the form saves the profile with PATCH /sett
   const html = await view.waitFor((current) => current.includes('role="status"'));
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
-  assert.deepEqual(bffSettings.requests[1].body, fixtures.profile({ first_name: 'Anne' }));
+  assert.deepEqual(bffSettings.requests[1].body, { first_name: 'Anne' });
   assert.match(html, /<p role="status"[^>]*>Votre profil a été enregistré\.<\/p>/);
   assert.match(html, /<input[^>]*type="text"[^>]*value="LE GALL"/);
-  assert.match(html, /<button[^>]*type="submit"[^>]*>Enregistrer<\/button>/, 'the button is enabled again');
+  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Enregistrer<\/button>/, 'the button is disabled again');
+  assert.match(html, /Aucune modification à enregistrer\./);
 });
 
 test('a refused save keeps the form and shows the BFF message', async () => {
   await renderLoadedPage();
   bffSettings.on('PATCH', '/settings/profile', { status: 400, body: fixtures.error('Numéro de téléphone invalide'), outOfContract: true });
 
+  await view.fire((props) => props.type === 'tel', 'onChange', { target: { value: 'invalide' } });
   await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
   const html = await view.waitFor((current) => current.includes('role="alert"'));
 
   assert.match(html, /<p role="alert"[^>]*>Numéro de téléphone invalide<\/p>/);
   assert.match(html, /value="Anne Marie"/);
   assert.doesNotMatch(html, /role="status"/);
+  assert.deepEqual(bffSettings.requests[1].body, { phone: 'invalide' });
+});
+
+test('submitting an unchanged profile never calls the BFF', async () => {
+  await renderLoadedPage();
+
+  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+  assert.doesNotMatch(view.html, /Votre profil a été enregistré/);
+  assert.match(view.html, /Aucune modification à enregistrer\./);
 });
 
 test('a bootstrap failure renders an alert instead of the form', async () => {

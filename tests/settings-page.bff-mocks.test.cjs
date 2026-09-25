@@ -64,7 +64,9 @@ test('the first pass renders the loading state, the next one the profile form fi
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
   assert.deepEqual(front.browserCalls, [{ method: 'GET', path: '/settings/bootstrap' }]);
-  assert.match(html, /<button type="button" aria-current="page"[^>]*>Profil<\/button>/);
+  assert.match(html, /<nav role="tablist" aria-label="Paramètres"/);
+  assert.match(html, /<button id="settings-tab-profile" type="button" role="tab" aria-selected="true" tabindex="0"[^>]*>Profil<\/button>/);
+  assert.match(html, /<div role="tabpanel" id="settings-panel-profile" aria-labelledby="settings-tab-profile">/);
   assert.match(html, /<h2[^>]*>Informations personnelles<\/h2>/);
   assert.match(html, /<input[^>]*type="text"[^>]*required=""[^>]*value="Anne Marie"/);
   assert.match(html, /<input[^>]*type="email"[^>]*value="anne\.le-gall@mairie\.test"/);
@@ -79,7 +81,7 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
 
   await view.click('Sécurité');
 
-  assert.match(view.html, /<button type="button" aria-current="page"[^>]*>Sécurité<\/button>/);
+  assert.match(view.html, /<button id="settings-tab-security" type="button" role="tab" aria-selected="true" tabindex="0"[^>]*>Sécurité<\/button>/);
   assert.match(view.html, /<h2[^>]*>Sessions<\/h2>/);
   assert.match(view.text(), /Firefox sur Linux — 192\.0\.2\.10 Créée le 2026-09-15T08:00:00Z · Expire le 2026-09-22T08:00:00Z/);
   assert.match(view.text(), /Chrome sur Android — 198\.51\.100\.7/);
@@ -97,6 +99,34 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
   assert.match(view.text(), /préférences de notification ne sont pas encore exposées par le contrat BFF publié/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap'], 'an unavailable tab does not call the BFF');
 });
+
+test('arrow, Home and End keys select and focus Settings tabs without a BFF call', async () => {
+  await renderLoadedPage();
+  const focused = [];
+  const children = tabsForFocus(6, focused);
+  const key = async (label, pressed) => view.fire(
+    (props, text) => props.role === 'tab' && text === label,
+    'onKeyDown',
+    { key: pressed, currentTarget: { parentElement: { children } } },
+  );
+
+  await key('Profil', 'ArrowRight');
+  assert.match(view.html, /id="settings-panel-security"/);
+  assert.deepEqual(focused, [1]);
+  await key('Sécurité', 'End');
+  assert.match(view.html, /id="settings-panel-system"/);
+  assert.deepEqual(focused, [1, 5]);
+  await key('Système', 'ArrowRight');
+  assert.match(view.html, /id="settings-panel-profile"/);
+  assert.deepEqual(focused, [1, 5, 0]);
+  await key('Profil', 'Home');
+  assert.deepEqual(focused, [1, 5, 0, 0]);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+});
+
+function tabsForFocus(count, focused) {
+  return Array.from({ length: count }, (_, index) => ({ focus() { focused.push(index); } }));
+}
 
 test('editing a field and submitting the form saves the profile with PATCH /settings/profile', async () => {
   await renderLoadedPage();

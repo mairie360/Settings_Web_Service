@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import type {
   SettingsBootstrap as Bootstrap,
@@ -83,6 +83,18 @@ export default function Home() {
     setStatus("");
   }
 
+  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, currentTab: TabId) {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+
+    event.preventDefault();
+    const current = tabs.findIndex(({ id }) => id === currentTab);
+    const next = event.key === 'Home' ? 0
+      : event.key === 'End' ? tabs.length - 1
+      : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    setActiveTab(tabs[next].id);
+    (event.currentTarget.parentElement?.children[next] as HTMLButtonElement | undefined)?.focus();
+  }
+
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!profile || !data || !hasChanges) return;
@@ -120,13 +132,17 @@ export default function Home() {
           <p role="status">{error ? "Le profil est indisponible." : "Chargement des paramètres…"}</p>
         ) : (
           <>
-            <nav aria-label="Paramètres" className="flex flex-wrap gap-2">
+            <nav role="tablist" aria-label="Paramètres" className="flex flex-wrap gap-2">
               {tabs.map(({ id, label }) => (
                 <button
                   key={id}
+                  id={`settings-tab-${id}`}
                   type="button"
-                  aria-current={activeTab === id ? "page" : undefined}
+                  role="tab"
+                  aria-selected={activeTab === id}
+                  tabIndex={activeTab === id ? 0 : -1}
                   onClick={() => setActiveTab(id)}
+                  onKeyDown={(event) => handleTabKeyDown(event, id)}
                   className={`rounded px-4 py-2 ${activeTab === id ? "bg-[#155bb5] text-white" : "bg-white"}`}
                 >
                   {label}
@@ -134,6 +150,7 @@ export default function Home() {
               ))}
             </nav>
 
+            <div role="tabpanel" id={`settings-panel-${activeTab}`} aria-labelledby={`settings-tab-${activeTab}`}>
             {activeTab === "profile" ? (
               <form onSubmit={save} className="space-y-4 rounded-lg border border-[#e0dbd4] bg-white p-6">
                 <h2 className="text-xl font-semibold">Informations personnelles</h2>
@@ -185,6 +202,7 @@ export default function Home() {
                 <p>{unavailableSections[activeTab]}</p>
               </section>
             )}
+            </div>
           </>
         )}
       </section>

@@ -22,7 +22,15 @@ The following sources and limitations describe the associated BFF, which determi
 
 The profile comes from Core `/api/v1/user/me/`; sessions come from `/api/v1/sessions/`. Fields are `first_name`, `last_name`, `email` and `phone`. The session schema retains displayable information and removes internal fields. The BFF stores no preferences locally.
 
-The web service’s notifications, appearance, general and system panels currently report unavailability. Security displays sessions without managing other settings. Preference adapters do not guarantee that the corresponding Core routes are deployed.
+Notifications, appearance and general remain unavailable. System hosts local assistance only. Security displays sessions without managing other settings. The preference paths currently have empty request/response schemas and bootstrap provides no preference values; route existence alone does not establish a usable contract.
+
+### Local assistance (MAIR-304)
+
+`src/components/settings-assistance.tsx` handles user-triggered exports without an effect, timer loop, network call or persistence. `src/lib/local-assistance.ts` validates authored text (nonblank, at most 5,000 characters), builds plain-text/JSON files and requests a Blob download. An appended temporary anchor is removed immediately; its object URL is revoked after one second on success or immediately on failure. The UI reports a download request, not a confirmed saved file or delivered support message. Raw exceptions never reach the assistance UI or exported diagnostic.
+
+Only coarse browser/OS labels are derived from `navigator.userAgent` when the diagnostic button is clicked. The raw string is never exported; unknown families remain unidentified. The JSON allowlist is `module`, `generatedAt`, `browser`, `operatingSystem`, `capabilities.objectUrls`. No business DTO is passed to the component, no storage is read/cleared and no deployment version/date or quota is invented. No new environment, package, route, permission or BFF operation is required.
+
+Node tests cover export validation/content/privacy and download cleanup; component tests exercise the real page, keyboard access, axe checks, errors/retry and the absence of additional bootstrap calls. The contract harness also verifies the System tab adds no upstream operation.
 
 React state manages display and pending operations. This repository defines no business database of its own; save guarantees come from the BFF and its sources described above.
 

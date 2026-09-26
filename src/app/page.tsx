@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
+import SettingsAssistance from "@/components/settings-assistance";
 import type {
   SettingsBootstrap as Bootstrap,
   SettingsProfile as Profile,
@@ -33,11 +34,10 @@ const profileFields: ReadonlyArray<{
   { field: "phone", label: "Téléphone", type: "tel", required: false },
 ];
 
-const unavailableSections: Record<Exclude<TabId, "profile" | "security">, string> = {
+const unavailableSections: Record<Exclude<TabId, "profile" | "security" | "system">, string> = {
   notifications: "Les préférences de notification ne sont pas encore exposées par le contrat BFF publié.",
   appearance: "Les préférences d’apparence ne sont pas encore exposées par le contrat BFF publié.",
   general: "Les préférences générales ne sont pas encore exposées par le contrat BFF publié.",
-  system: "Les informations système ne sont pas fournies par le service et aucune valeur de remplacement n’est affichée.",
 };
 
 function profilePatch(initial: Profile, current: Profile): ProfilePatch {
@@ -195,6 +195,8 @@ export default function Home() {
                 )}
                 <p className="text-sm text-[#596274]">Les autres réglages de sécurité ne sont pas encore disponibles.</p>
               </section>
+            ) : activeTab === "system" ? (
+              <SettingsAssistance />
             ) : (
               <section className="space-y-2 rounded-lg border border-[#e0dbd4] bg-white p-6">
                 <h2 className="text-xl font-semibold">{activeLabel}</h2>

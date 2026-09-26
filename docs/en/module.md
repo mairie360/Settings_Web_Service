@@ -15,6 +15,7 @@ Business domain: Personal settings.
 - Form for first name, last name, email and phone.
 - Save confirmation based on the profile read back by the BFF.
 - Session list in the Security tab with a separate unavailable state.
+- System tab: truthful help, local support/report text downloads and a minimal browser diagnostic JSON. Files are not sent automatically.
 
 ## Typical workflow
 
@@ -34,7 +35,9 @@ The profile comes from Core `/api/v1/user/me/`; sessions come from `/api/v1/sess
 
 ## Scope and limitations
 
-The web service’s notifications, appearance, general and system panels currently report unavailability. Security displays sessions without managing other settings. Preference adapters do not guarantee that the corresponding Core routes are deployed.
+Notifications, appearance and general preferences remain unavailable. System provides local assistance only, not server logs, deployment information or storage quotas. Security displays sessions without managing other settings. Preference adapters do not guarantee that the corresponding Core routes are deployed.
+
+Support/report drafts accept 1–5,000 characters and remain in memory only; leaving the System tab or reloading discards them. Download failures keep the draft and allow retry. Review downloaded files before sharing them through your usual channel. No profile or session data is included automatically, and no support service is contacted. The diagnostic contains only the module name, generation time, estimated browser/OS families and object-URL capability. It does not collect raw user agents, account data, cookies, storage, page addresses or logs. Browser family detection is an estimate, not a device inventory.
 
 ## Developing or operating this module
 

@@ -128,6 +128,72 @@ function tabsForFocus(count, focused) {
   return Array.from({ length: count }, (_, index) => ({ focus() { focused.push(index); } }));
 }
 
+test('system assistance is local and does not fetch unsupported settings', async () => {
+  await renderLoadedPage();
+  await view.click('Système');
+  assert.match(view.text(), /Système et assistance/);
+  assert.match(view.text(), /Centre d’aide/);
+  assert.match(view.text(), /Aucune donnée n’est transmise/);
+  assert.doesNotMatch(view.html, /Vider le cache|v2\.1\.0|10 septembre 2026|50 MB/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+});
+
+for (const [action, name] of [['Préparer une demande de support', 'demande-support-settings.txt'], ['Signaler un problème', 'signalement-settings.txt']]) {
+  test(`local assistance exports ${name} without calling the BFF`, async (t) => {
+    const exports = [];
+    t.mock.method(requireSrc('lib/local-assistance.ts'), 'downloadLocalFile', (file) => exports.push(file));
+    await renderLoadedPage(); await view.click('Système'); await view.click(action);
+    await view.fire((props) => props.id === 'settings-assistance-message', 'onChange', { target: { value: 'Une question <b>texte</b>' } });
+    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    assert.equal(exports.length, 1); assert.equal(exports[0].name, name);
+    assert.match(exports[0].content, /Une question <b>texte<\/b>/);
+    assert.doesNotMatch(exports[0].content, /anne\.le-gall|192\.0\.2|Anne Marie/);
+    assert.match(view.text(), /Aucun message n’a été envoyé/);
+    assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+  });
+}
+
+test('a failed local export retains its draft, hides raw errors and allows retry', async (t) => {
+  let fail = true;
+  t.mock.method(requireSrc('lib/local-assistance.ts'), 'downloadLocalFile', () => { if (fail) throw new Error('private detail'); });
+  await renderLoadedPage(); await view.click('Système'); await view.click('Signaler un problème');
+  await view.fire((props) => props.id === 'settings-assistance-message', 'onChange', { target: { value: 'Mon brouillon' } });
+  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  assert.match(view.text(), /Votre message est conservé/); assert.match(view.html, /Mon brouillon/);
+  assert.doesNotMatch(view.text(), /private detail|Téléchargement de la demande lancé/);
+  fail = false;
+  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  assert.match(view.text(), /Téléchargement de la demande lancé/); assert.doesNotMatch(view.html, /role="alert"/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+});
+
+test('local assistance rejects blank and oversized text before requesting a download', async (t) => {
+  const download = t.mock.method(requireSrc('lib/local-assistance.ts'), 'downloadLocalFile', () => {});
+  await renderLoadedPage(); await view.click('Système'); await view.click('Signaler un problème');
+  for (const value of [' \n ', 'a'.repeat(5001)]) {
+    await view.fire((props) => props.id === 'settings-assistance-message', 'onChange', { target: { value } });
+    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    assert.match(view.text(), /1 à 5 000 caractères/);
+  }
+  assert.equal(download.mock.callCount(), 0);
+});
+
+test('diagnostic exports use only allowlisted device information and report download errors', async (t) => {
+  const exports = [];
+  let fail = false;
+  t.mock.method(requireSrc('lib/local-assistance.ts'), 'downloadLocalFile', (file) => { if (fail) throw new Error('private detail'); exports.push(file); });
+  await renderLoadedPage(); await view.click('Système');
+  await view.click('Télécharger le diagnostic local');
+  const report = JSON.parse(exports[0].content);
+  assert.deepEqual(Object.keys(report).sort(), ['browser', 'capabilities', 'generatedAt', 'module', 'operatingSystem']);
+  assert.doesNotMatch(exports[0].content, /anne\.le-gall|192\.0\.2|Anne Marie/);
+  assert.match(view.text(), /Aucun fichier n’a été envoyé/);
+  fail = true; await view.click('Télécharger le diagnostic local');
+  assert.match(view.text(), /diagnostic local n’a pas pu être préparé/);
+  assert.doesNotMatch(view.text(), /private detail|Téléchargement du diagnostic local lancé/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+});
+
 test('editing a field and submitting the form saves the profile with PATCH /settings/profile', async () => {
   await renderLoadedPage();
   const saved = fixtures.profile({ first_name: 'Anne', last_name: 'LE GALL' });

@@ -81,14 +81,14 @@ describe("Settings page", () => {
   ])("shows the %s session state honestly", async (source, message) => {
     vi.mocked(loadSettings).mockResolvedValue(bootstrap({ sources: { sessions: source } }));
     const user = await openSettings();
-    await user.click(screen.getByRole("button", { name: "Sécurité" }));
+    await user.click(screen.getByRole("tab", { name: "Sécurité" }));
 
     expect(screen.getByText(message)).toBeTruthy();
   });
 
   it("keeps unsupported settings visibly unavailable", async () => {
     const user = await openSettings();
-    await user.click(screen.getByRole("button", { name: "Notifications" }));
+    await user.click(screen.getByRole("tab", { name: "Notifications" }));
 
     expect(screen.getByRole("heading", { name: "Notifications" })).toBeTruthy();
     expect(screen.getByText("Fonctionnalité indisponible")).toBeTruthy();
@@ -98,10 +98,10 @@ describe("Settings page", () => {
 
   it("has labeled controls, keyboard navigation and no serious axe violations", async () => {
     const user = await openSettings();
-    const navigation = screen.getByRole("navigation", { name: "Paramètres" });
-    expect(within(navigation).getByRole("button", { name: "Profil" })).toBeTruthy();
+    const navigation = screen.getByRole("tablist", { name: "Paramètres" });
+    expect(within(navigation).getByRole("tab", { name: "Profil" })).toBeTruthy();
     await user.tab();
-    expect(document.activeElement).toBe(within(navigation).getByRole("button", { name: "Profil" }));
+    expect(document.activeElement).toBe(within(navigation).getByRole("tab", { name: "Profil" }));
 
     const results = await axe(document.querySelector("main"));
     expect(results.violations.filter(({ impact }) => impact === "serious" || impact === "critical")).toEqual([]);

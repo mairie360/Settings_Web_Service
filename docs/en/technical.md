@@ -59,9 +59,9 @@ npm run start -- --port 5008
 
 Values below are local examples or explicitly described behavior, not production credentials.
 
-| Variable or precedence | Example / stated fallback | Purpose |
+| Variable or precedence | Explicit local example | Purpose |
 | --- | --- | --- |
-| `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL` | http://localhost:4008 | Left-to-right proxy precedence; the URL shown is the local fallback. |
+| `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL` | http://localhost:4008 | Left-to-right proxy precedence; configure an HTTP(S) URL explicitly. Missing or invalid configuration returns an uncached 503 without contacting an upstream. |
 
 Inside a container, `localhost` refers to that container. Use the BFF service DNS name on the Docker network or a reachable host address. Compose files sometimes include other services and legacy settings; check effective URLs and ports before using them.
 

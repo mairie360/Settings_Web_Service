@@ -4,9 +4,15 @@ const { NextRequest } = require('next/server');
 const { requireSrc } = require('./support/load-ts.cjs');
 const { proxyBffRequest, forwardToBff } = requireSrc('lib/bff-proxy.ts');
 const originalFetch = global.fetch;
-afterEach(() => { global.fetch = originalFetch; });
+const originalBffUrl = process.env.SETTINGS_BFF_URL;
+afterEach(() => {
+  global.fetch = originalFetch;
+  if (originalBffUrl === undefined) delete process.env.SETTINGS_BFF_URL;
+  else process.env.SETTINGS_BFF_URL = originalBffUrl;
+});
 
 test('proxy preserves query, authorization, data, and upstream status', async () => {
+  process.env.SETTINGS_BFF_URL = 'http://bff.example';
   let called;
   global.fetch = async (url, init) => { called = { url: String(url), init }; return Response.json({ id: '42', value: null }, { status: 201 }); };
   const request = new NextRequest('http://localhost/health?q=a%26b', { headers: { cookie: 'accessToken=test-session', Authorization: 'Bearer explicit-session' } });

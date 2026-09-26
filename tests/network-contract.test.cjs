@@ -47,8 +47,8 @@ describe('network surface of src/', () => {
     ]);
   });
 
-  test('the only hard-coded URL is the local BFF_Settings fallback', () => {
-    assert.deepEqual(surface.absoluteUrls.map(({ file, url }) => `${file} ${url}`), ['lib/bff-proxy.ts http://localhost:4008']);
+  test('the frontend has no hard-coded absolute network URL', () => {
+    assert.deepEqual(surface.absoluteUrls.map(({ file, url }) => `${file} ${url}`), []);
   });
 
   test('every browser call goes through requestBff from src/lib/settings-api.ts', () => {

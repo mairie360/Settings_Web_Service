@@ -141,6 +141,28 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
     await loadSettings();
     assert.equal(bffSettings.requests.length, 1);
   });
+
+  for (const [name, value] of [
+    ['missing', undefined],
+    ['empty', ''],
+    ['malformed', 'not-a-url'],
+    ['unsupported protocol', 'file:///tmp/bff'],
+    ['embedded credentials', 'http://user:password@example.test'],
+  ]) {
+    test(`${name} BFF URL returns an uncached 503 without an upstream call`, async () => {
+      if (value === undefined) delete process.env.SETTINGS_BFF_URL;
+      else process.env.SETTINGS_BFF_URL = value;
+      delete process.env.BFF_SETTINGS_BASE_URL;
+
+      const response = await browser('/settings/bootstrap');
+
+      assert.equal(response.status, 503);
+      assert.equal(response.headers.get('cache-control'), 'no-store');
+      assert.deepEqual(await response.json(), { error: { message: 'Le service n’est pas configuré.' } });
+      assert.deepEqual(front.upstreamCalls, []);
+      assert.equal(bffSettings.requests.length, 0);
+    });
+  }
 });
 
 describe('same-origin proxy exposes exactly the published BFF_Settings contract', () => {

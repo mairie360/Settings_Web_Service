@@ -15,6 +15,7 @@ Domaine fonctionnel: Paramètres personnels.
 - Formulaire de prénom, nom, e-mail et téléphone.
 - Confirmation de sauvegarde à partir du profil relu par le BFF.
 - Liste de sessions dans l’onglet Sécurité avec état d’indisponibilité distinct.
+- Onglet Système : aide adaptée aux fonctions disponibles, téléchargements locaux de demande/signalement en texte et diagnostic navigateur minimal en JSON. Aucun envoi automatique.
 
 ## Parcours type
 
@@ -34,7 +35,9 @@ Le profil vient de Core `/api/v1/user/me/`; les sessions viennent de `/api/v1/se
 
 ## Périmètre et limites
 
-Les panneaux notifications, apparence, général et système du web service indiquent actuellement leur indisponibilité. La sécurité affiche les sessions, sans gérer les autres réglages. Les adaptateurs de préférences ne garantissent pas que les routes correspondantes soient déployées dans Core.
+Les préférences notifications, apparence et général restent indisponibles. Système fournit uniquement une assistance locale, pas des journaux serveur, informations de déploiement ou quotas de stockage. La sécurité affiche les sessions, sans gérer les autres réglages. Les adaptateurs de préférences ne garantissent pas que les routes correspondantes soient déployées dans Core.
+
+Les brouillons de demande/signalement acceptent 1 à 5 000 caractères et restent en mémoire ; quitter Système ou recharger la page les efface. Un échec de téléchargement conserve le brouillon et permet de réessayer. Relisez les fichiers avant de les partager par votre canal habituel. Aucun profil ni session n’est ajouté automatiquement, aucun service de support n’est contacté. Le diagnostic contient seulement le nom du module, sa date de génération, les familles estimées du navigateur et du système et la disponibilité des URL d’objets. Il ne collecte ni user-agent brut, données de compte, cookies, stockage, adresse de page ou journaux. La détection des familles est indicative, pas un inventaire de l’appareil.
 
 ## Pour développer ou exploiter ce module
 

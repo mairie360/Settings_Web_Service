@@ -43,7 +43,7 @@ const unavailableSections: Record<Exclude<TabId, "profile" | "security" | "syste
 
 function SessionDate({ value }: { value: string | null | undefined }) {
   const label = formatSessionDate(value);
-  return label && value ? <time dateTime={value}>{label}</time> : <>Date indisponible</>;
+  return label && value ? <time dateTime={value}>{label}</time> : <span>Date indisponible</span>;
 }
 
 function profilePatch(initial: Profile, current: Profile): ProfilePatch {

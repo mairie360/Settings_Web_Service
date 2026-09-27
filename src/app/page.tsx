@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
+import { formatSessionDate } from "@/lib/session-date";
 import SettingsAssistance from "@/components/settings-assistance";
 import type {
   SettingsBootstrap as Bootstrap,
@@ -35,10 +36,15 @@ const profileFields: ReadonlyArray<{
 ];
 
 const unavailableSections: Record<Exclude<TabId, "profile" | "security" | "system">, string> = {
-  notifications: "Les préférences de notification ne sont pas encore exposées par le contrat BFF publié.",
-  appearance: "Les préférences d’apparence ne sont pas encore exposées par le contrat BFF publié.",
-  general: "Les préférences générales ne sont pas encore exposées par le contrat BFF publié.",
+  notifications: "Les préférences de notification ne sont pas encore disponibles. Aucun réglage ne peut être enregistré pour le moment.",
+  appearance: "Les préférences d’apparence ne sont pas encore disponibles. Aucun réglage ne peut être enregistré pour le moment.",
+  general: "Les préférences générales ne sont pas encore disponibles. Aucun réglage ne peut être enregistré pour le moment.",
 };
+
+function SessionDate({ value }: { value: string | null | undefined }) {
+  const label = formatSessionDate(value);
+  return label && value ? <time dateTime={value}>{label}</time> : <>Date indisponible</>;
+}
 
 function profilePatch(initial: Profile, current: Profile): ProfilePatch {
   const patch: ProfilePatch = {};
@@ -185,8 +191,8 @@ export default function Home() {
                     {data.sessions.map((session) => (
                       <li className="border-b py-3 last:border-b-0" key={session.id}>
                         <p>{session.device_info} — {session.ip_address}</p>
-                        <p className="text-sm">Créée le {session.created_at} · Expire le {session.expires_at}</p>
-                        {session.revoked_at ? <p className="text-sm text-[#7b3f00]">Révoquée le {session.revoked_at}</p> : null}
+                        <p className="text-sm">Création : <SessionDate value={session.created_at} /> · Expiration : <SessionDate value={session.expires_at} /></p>
+                        {session.revoked_at ? <p className="text-sm text-[#7b3f00]">Révocation : <SessionDate value={session.revoked_at} /></p> : null}
                       </li>
                     ))}
                   </ul>

@@ -83,7 +83,11 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
 
   assert.match(view.html, /<button id="settings-tab-security" type="button" role="tab" aria-selected="true" tabindex="0"[^>]*>Sécurité<\/button>/);
   assert.match(view.html, /<h2[^>]*>Sessions<\/h2>/);
-  assert.match(view.text(), /Firefox sur Linux — 192\.0\.2\.10 Créée le 2026-09-15T08:00:00Z · Expire le 2026-09-22T08:00:00Z/);
+  const createdAt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })
+    .format(new Date('2026-09-15T08:00:00Z'));
+  assert.ok(view.text().includes(`Firefox sur Linux — 192.0.2.10 Création : ${createdAt}`));
+  assert.match(view.html, /<time dateTime="2026-09-15T08:00:00Z">/);
+  assert.doesNotMatch(view.text(), /2026-09-15T08:00:00Z/);
   assert.match(view.text(), /Chrome sur Android — 198\.51\.100\.7/);
   assert.doesNotMatch(view.html, /<form/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap'], 'changing tab does not call the BFF');
@@ -96,7 +100,8 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
   await view.click('Notifications');
   assert.match(view.html, /<h2[^>]*>Notifications<\/h2>/);
   assert.match(view.text(), /Fonctionnalité indisponible/);
-  assert.match(view.text(), /préférences de notification ne sont pas encore exposées par le contrat BFF publié/);
+  assert.match(view.text(), /préférences de notification ne sont pas encore disponibles/);
+  assert.doesNotMatch(view.text(), /BFF/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap'], 'an unavailable tab does not call the BFF');
 });
 

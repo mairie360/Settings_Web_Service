@@ -86,13 +86,57 @@ describe("Settings page", () => {
     expect(screen.getByText(message)).toBeTruthy();
   });
 
-  it("keeps unsupported settings visibly unavailable", async () => {
+  it("formats real session timestamps without exposing raw ISO values", async () => {
+    vi.mocked(loadSettings).mockResolvedValue(bootstrap({
+      sessions: [{
+        id: "session-1",
+        device_info: "Firefox sur Linux",
+        ip_address: "192.0.2.10",
+        created_at: "2026-09-15T08:00:00Z",
+        expires_at: "2026-09-22T08:00:00Z",
+        revoked_at: null,
+      }],
+    }));
     const user = await openSettings();
-    await user.click(screen.getByRole("tab", { name: "Notifications" }));
+    await user.click(screen.getByRole("tab", { name: "Sécurité" }));
 
-    expect(screen.getByRole("heading", { name: "Notifications" })).toBeTruthy();
+    const dates = document.querySelectorAll("time");
+    expect(dates).toHaveLength(2);
+    expect(dates[0].dateTime).toBe("2026-09-15T08:00:00Z");
+    expect(dates[1].dateTime).toBe("2026-09-22T08:00:00Z");
+    expect(dates[0].textContent).toBe(new Intl.DateTimeFormat("fr-FR", {
+      dateStyle: "medium", timeStyle: "short",
+    }).format(new Date(dates[0].dateTime)));
+    expect(screen.queryByText("2026-09-15T08:00:00Z")).toBeNull();
+  });
+
+  it("does not invent dates for invalid session timestamps", async () => {
+    vi.mocked(loadSettings).mockResolvedValue(bootstrap({
+      sessions: [{
+        id: "session-2",
+        device_info: "Firefox sur Linux",
+        ip_address: "192.0.2.10",
+        created_at: "2026-02-30T08:00:00Z",
+        expires_at: "not-a-date",
+        revoked_at: null,
+      }],
+    }));
+    const user = await openSettings();
+    await user.click(screen.getByRole("tab", { name: "Sécurité" }));
+
+    expect(screen.getAllByText("Date indisponible")).toHaveLength(2);
+    expect(document.querySelectorAll("time")).toHaveLength(0);
+    expect(screen.queryByText("not-a-date")).toBeNull();
+  });
+
+  it.each(["Notifications", "Apparence", "Général"])("keeps %s visibly unavailable without technical jargon", async (tabName) => {
+    const user = await openSettings();
+    await user.click(screen.getByRole("tab", { name: tabName }));
+
+    expect(screen.getByRole("heading", { name: tabName })).toBeTruthy();
     expect(screen.getByText("Fonctionnalité indisponible")).toBeTruthy();
-    expect(screen.getByText(/pas encore exposées par le contrat BFF publié/)).toBeTruthy();
+    expect(screen.getByText(/ne sont pas encore disponibles/)).toBeTruthy();
+    expect(document.querySelector("main").textContent).not.toContain("BFF");
     expect(saveProfile).not.toHaveBeenCalled();
   });
 

@@ -41,10 +41,25 @@ test('the reusable workflow receives only its declared named secrets', () => {
   ]);
 });
 
-test('npm waits seven days before resolving newly published packages', () => {
+test('npm keeps the seven-day window except for the internal UI package', () => {
   const config = read('.npmrc');
   assert.match(config, /^min-release-age\s*=\s*7\s*$/m);
-  assert.doesNotMatch(config, /^\s*(?:min-release-age-exclude|before)\b/m);
+  const exclusions = [...config.matchAll(/^\s*min-release-age-exclude(\[\])?\s*=\s*(.+?)\s*$/gm)];
+  assert.deepEqual(exclusions.map(([, list, name]) => [list, name]), [
+    ['[]', '@mairie360/lib-components'],
+  ]);
+  assert.doesNotMatch(config, /^\s*before\b/m);
+});
+
+test('the internal UI package is pinned to its published release in the lockfile', () => {
+  const manifest = JSON.parse(read('package.json'));
+  const lock = JSON.parse(read('package-lock.json'));
+  assert.equal(manifest.dependencies['@mairie360/lib-components'], '0.6.0');
+  assert.equal(lock.packages[''].dependencies['@mairie360/lib-components'], '0.6.0');
+  const resolved = lock.packages['node_modules/@mairie360/lib-components'];
+  assert.equal(resolved.version, '0.6.0');
+  assert.match(resolved.resolved, /^https:\/\/npm\.pkg\.github\.com\/download\/@mairie360\/lib-components\/0\.6\.0\//);
+  assert.match(resolved.integrity, /^sha512-/);
 });
 
 test('CI and local toolchains support the npm release-age policy', () => {

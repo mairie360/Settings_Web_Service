@@ -113,10 +113,16 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
     }
   }
 
-  test('an error without a JSON message falls back to the status', async () => {
+  test('an unreadable 5xx response uses an agent-readable fallback', async () => {
     bffSettings.on('PATCH', '/settings/profile', { status: 502, raw: 'Bad Gateway', contentType: 'text/plain', outOfContract: true });
 
-    await assert.rejects(saveProfile({ first_name: 'Anne' }), { message: 'Le service a répondu 502.' });
+    await assert.rejects(saveProfile({ first_name: 'Anne' }), { message: 'Le service est momentanément indisponible. Veuillez réessayer plus tard.' });
+  });
+
+  test('a blank 4xx business message uses an agent-readable fallback', async () => {
+    bffSettings.on('PATCH', '/settings/profile', { status: 400, body: { error: { message: ' ' } }, outOfContract: true });
+
+    await assert.rejects(saveProfile({ first_name: 'Anne' }), { message: 'La demande n’a pas pu aboutir. Veuillez réessayer.' });
   });
 
   test('a BFF that drops the connection becomes a controlled 502', async () => {

@@ -72,10 +72,16 @@ describe('network surface of src/', () => {
     assert.deepEqual(surface.routes, ['app/[...path]/route.ts']);
   });
 
-  test('the only BFF URL read from the environment is the BFF_Settings one', () => {
+  test('environment reads are limited to the BFF and explicit active-front navigation URLs', () => {
     assert.deepEqual(surface.env.map(({ file, name }) => `${file} ${name}`), [
       'lib/bff-proxy.ts SETTINGS_BFF_URL',
       'lib/bff-proxy.ts BFF_SETTINGS_BASE_URL',
+      'lib/front-urls.ts DASHBOARD_FRONT_URL',
+      'lib/front-urls.ts PROJECT_FRONT_URL',
+      'lib/front-urls.ts CALENDAR_FRONT_URL',
+      'lib/front-urls.ts MESSAGE_FRONT_URL',
+      'lib/front-urls.ts ELEARNING_FRONT_URL',
+      'lib/front-urls.ts ADMINISTRATION_FRONT_URL',
       'middleware.ts NODE_ENV',
     ]);
   });

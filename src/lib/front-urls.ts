@@ -15,12 +15,14 @@ let browserFrontUrls: FrontUrls = {};
 
 /** Server only: read public frontend destinations from the runtime environment. */
 export function readFrontUrlsFromEnv(): FrontUrls {
-  const urls: FrontUrls = {};
-  for (const key of FRONT_URL_KEYS) {
-    const value = process.env[key]?.trim();
-    if (value) urls[key] = value;
-  }
-  return urls;
+  return {
+    DASHBOARD_FRONT_URL: process.env.DASHBOARD_FRONT_URL?.trim() || undefined,
+    PROJECT_FRONT_URL: process.env.PROJECT_FRONT_URL?.trim() || undefined,
+    CALENDAR_FRONT_URL: process.env.CALENDAR_FRONT_URL?.trim() || undefined,
+    MESSAGE_FRONT_URL: process.env.MESSAGE_FRONT_URL?.trim() || undefined,
+    ELEARNING_FRONT_URL: process.env.ELEARNING_FRONT_URL?.trim() || undefined,
+    ADMINISTRATION_FRONT_URL: process.env.ADMINISTRATION_FRONT_URL?.trim() || undefined,
+  };
 }
 
 export function setBrowserFrontUrls(urls: FrontUrls) {

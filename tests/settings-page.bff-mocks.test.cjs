@@ -64,6 +64,15 @@ test('the first pass renders the loading state, the next one the profile form fi
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
   assert.deepEqual(front.browserCalls, [{ method: 'GET', path: '/settings/bootstrap' }]);
+  assert.equal(view.find('AppShell').length, 1);
+  assert.equal(view.props('AppShell').activeItem, 'settings');
+  assert.deepEqual(view.props('AppShell').user, {
+    first_name: 'Anne Marie',
+    last_name: 'Le Gall',
+    email: 'anne.le-gall@mairie.test',
+  });
+  assert.equal(view.props('AppShell').isAdmin, undefined);
+  assert.doesNotMatch(html, /aria-label="Notifications"|>Administration</);
   assert.match(html, /<nav role="tablist" aria-label="Paramètres"/);
   assert.match(html, /<button id="settings-tab-profile" type="button" role="tab" aria-selected="true" tabindex="0"[^>]*>Profil<\/button>/);
   assert.match(html, /<div role="tabpanel" id="settings-panel-profile" aria-labelledby="settings-tab-profile">/);

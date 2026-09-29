@@ -1,10 +1,12 @@
 "use client";
 
+import { AppShell } from "@mairie360/lib-components";
 import { useEffect, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { formatSessionDate } from "@/lib/session-date";
 import SettingsAssistance from "@/components/settings-assistance";
+import { getActiveFrontHrefs } from "@/lib/navigation";
 import type {
   SettingsBootstrap as Bootstrap,
   SettingsProfile as Profile,
@@ -124,7 +126,16 @@ export default function Home() {
   const activeLabel = tabs.find(({ id }) => id === activeTab)?.label ?? "Paramètres";
 
   return (
-    <main className="min-h-screen bg-[#f5f3f0] px-4 py-6 text-[#172033] sm:px-6 lg:px-8">
+    <AppShell
+      activeItem="settings"
+      hrefs={getActiveFrontHrefs()}
+      user={data ? {
+        first_name: data.profile.first_name,
+        last_name: data.profile.last_name,
+        email: data.profile.email,
+      } : undefined}
+      sidebarProps={{ brandLogoSrc: "/mairie360-logo.png" }}
+    >
       <section className="mx-auto max-w-[1232px] space-y-6">
         <header>
           <h1 className="text-3xl font-bold">Paramètres</h1>
@@ -214,6 +225,6 @@ export default function Home() {
           </>
         )}
       </section>
-    </main>
+    </AppShell>
   );
 }

@@ -71,6 +71,16 @@ Values below are local examples or explicitly described behavior, not production
 | --- | --- | --- |
 | `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL` | http://localhost:4008 | Left-to-right proxy precedence; configure an HTTP(S) URL explicitly. Missing or invalid configuration returns an uncached 503 without contacting an upstream. |
 
+The shared navigation reads `DASHBOARD_FRONT_URL`, `PROJECT_FRONT_URL`,
+`MESSAGE_FRONT_URL`, `ELEARNING_FRONT_URL`, `CALENDAR_FRONT_URL` and
+`ADMINISTRATION_FRONT_URL` from the server's runtime environment and passes
+them to the browser. Only configured HTTP(S) destinations without embedded
+credentials are shown; an absent or invalid URL hides that link. Settings and
+profile always use this front's `/` route. These are navigation destinations,
+not additional BFF connections. The current Settings bootstrap publishes no
+role or notification inbox, so the shell does not claim administrator access
+or show a notification badge.
+
 Inside a container, `localhost` refers to that container. Use the BFF service DNS name on the Docker network or a reachable host address. Compose files sometimes include other services and legacy settings; check effective URLs and ports before using them.
 
 ## Routes and data contract

@@ -71,6 +71,17 @@ Les valeurs ci-dessous sont des exemples locaux ou des comportements expliciteme
 | --- | --- | --- |
 | `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL` | http://localhost:4008 | Priorité de gauche à droite dans le proxy ; configurer explicitement une URL HTTP(S). Une configuration absente ou invalide renvoie un 503 non mis en cache, sans appel réseau. |
 
+La navigation commune lit `DASHBOARD_FRONT_URL`, `PROJECT_FRONT_URL`,
+`MESSAGE_FRONT_URL`, `ELEARNING_FRONT_URL`, `CALENDAR_FRONT_URL` et
+`ADMINISTRATION_FRONT_URL` dans l’environnement du serveur à l’exécution,
+puis les transmet au navigateur. Seules les destinations HTTP(S) configurées,
+sans identifiants intégrés, sont affichées ; une URL absente ou invalide
+masque le lien. Paramètres et profil utilisent toujours la route `/` de ce
+front. Il s’agit de destinations de navigation, pas d’autres connexions BFF.
+Le bootstrap Settings actuel ne fournit ni rôle ni boîte de notifications :
+le shell ne suppose donc pas un accès administrateur et n’affiche pas de
+compteur fictif.
+
 Dans un conteneur, `localhost` désigne le conteneur lui-même. Utiliser le nom DNS du service BFF sur le réseau Docker, ou une adresse d’hôte accessible. Les fichiers Compose incluent parfois d’autres services et des paramètres hérités; vérifier les URL et ports effectifs avant de les employer.
 
 ## Routes et contrat de données

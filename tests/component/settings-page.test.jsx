@@ -143,9 +143,11 @@ describe("Settings page", () => {
   it("has labeled controls, keyboard navigation and no serious axe violations", async () => {
     const user = await openSettings();
     const navigation = screen.getByRole("tablist", { name: "Paramètres" });
-    expect(within(navigation).getByRole("tab", { name: "Profil" })).toBeTruthy();
-    await user.tab();
-    expect(document.activeElement).toBe(within(navigation).getByRole("tab", { name: "Profil" }));
+    const profileTab = within(navigation).getByRole("tab", { name: "Profil" });
+    for (let index = 0; index < 12 && document.activeElement !== profileTab; index += 1) {
+      await user.tab();
+    }
+    expect(document.activeElement).toBe(profileTab);
 
     const results = await axe(document.querySelector("main"));
     expect(results.violations.filter(({ impact }) => impact === "serious" || impact === "critical")).toEqual([]);

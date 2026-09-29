@@ -15,6 +15,10 @@ function configuredFrontUrl(key: FrontUrlKey): string | undefined {
   }
 }
 
+export function getLoginFrontHref() {
+  return configuredFrontUrl("LOGIN_FRONT_URL");
+}
+
 /** The current account route is always available; other modules need safe runtime URLs. */
 export function getActiveFrontHrefs() {
   return {

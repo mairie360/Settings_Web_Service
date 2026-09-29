@@ -15,6 +15,7 @@ const { OpenApiContract } = require('./support/openapi-contract.cjs');
 const { ContractMockServer } = require('./support/contract-mock-server.cjs');
 const { createFront } = require('./support/front-harness.cjs');
 const fixtures = require('./support/settings-fixtures.cjs');
+const { setBrowserFrontUrls } = requireSrc('lib/front-urls.ts');
 const Home = requireSrc('app/page.tsx').default;
 
 const bffSettings = new ContractMockServer('BFF_SETTINGS', OpenApiContract.load(path.join(ROOT, 'contracts', 'openapi.json')));
@@ -40,6 +41,9 @@ beforeEach(() => {
 afterEach(() => {
   view?.unmount();
   view = undefined;
+  delete global.window;
+  delete process.env.COOKIE_DOMAIN;
+  setBrowserFrontUrls({});
   assert.deepEqual([...front.violations, ...bffSettings.violations], []);
 });
 
@@ -72,6 +76,7 @@ test('the first pass renders the loading state, the next one the profile form fi
     email: 'anne.le-gall@mairie.test',
   });
   assert.equal(view.props('AppShell').isAdmin, undefined);
+  assert.equal(typeof view.props('AppShell').onLogout, 'function');
   assert.doesNotMatch(html, /aria-label="Notifications"|>Administration</);
   assert.match(html, /<nav role="tablist" aria-label="Paramètres"/);
   assert.match(html, /<button id="settings-tab-profile" type="button" role="tab" aria-selected="true" tabindex="0"[^>]*>Profil<\/button>/);
@@ -83,6 +88,22 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Enregistrer<\/button>/);
   assert.match(html, /Aucune modification à enregistrer\./);
   assert.doesNotMatch(html, /role="alert"/);
+});
+
+test('the account-menu logout calls only the local route and leaves for Login', async () => {
+  process.env.COOKIE_DOMAIN = '.front.test';
+  setBrowserFrontUrls({ LOGIN_FRONT_URL: 'https://login.test.example/' });
+  const destinations = [];
+  global.window = { location: { replace: (href) => destinations.push(href) } };
+  await renderLoadedPage();
+  await view.act(() => view.props('AppShell').onLogout());
+
+  assert.deepEqual(destinations, ['https://login.test.example/']);
+  assert.deepEqual(front.browserCalls, [
+    { method: 'GET', path: '/settings/bootstrap' },
+    { method: 'POST', path: '/api/auth/logout' },
+  ]);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
 });
 
 test('the security tab lists the sessions of the bootstrap, or their unavailability', async () => {

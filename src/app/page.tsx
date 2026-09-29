@@ -7,6 +7,7 @@ import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { formatSessionDate } from "@/lib/session-date";
 import SettingsAssistance from "@/components/settings-assistance";
 import { getActiveFrontHrefs } from "@/lib/navigation";
+import { logoutAndRedirect } from "@/lib/logout";
 import type {
   SettingsBootstrap as Bootstrap,
   SettingsProfile as Profile,
@@ -134,6 +135,7 @@ export default function Home() {
         last_name: data.profile.last_name,
         email: data.profile.email,
       } : undefined}
+      onLogout={() => void logoutAndRedirect().catch(() => setError("La déconnexion est temporairement indisponible."))}
       sidebarProps={{ brandLogoSrc: "/mairie360-logo.png" }}
     >
       <section className="mx-auto max-w-[1232px] space-y-6">

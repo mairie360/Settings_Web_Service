@@ -70,6 +70,8 @@ Les valeurs ci-dessous sont des exemples locaux ou des comportements expliciteme
 | Variable ou priorité | Exemple local explicite | Rôle |
 | --- | --- | --- |
 | `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL` | http://localhost:4008 | Priorité de gauche à droite dans le proxy ; configurer explicitement une URL HTTP(S). Une configuration absente ou invalide renvoie un 503 non mis en cache, sans appel réseau. |
+| `LOGIN_FRONT_URL` | — | Destination validée à l’exécution après une déconnexion réussie. |
+| `COOKIE_DOMAIN` | — | Domaine du cookie partagé utilisé par Login. Requis dans les environnements déployés en mode production pour la déconnexion locale ; une valeur absente renvoie 503. |
 
 La navigation commune lit `DASHBOARD_FRONT_URL`, `PROJECT_FRONT_URL`,
 `MESSAGE_FRONT_URL`, `ELEARNING_FRONT_URL`, `CALENDAR_FRONT_URL` et
@@ -106,11 +108,13 @@ Ces chemins de données sont exposés à la même origine par le proxy; les page
 | --- | --- |
 | `/` | [src/app/page.tsx](../../src/app/page.tsx) |
 
-Le front n’a aucune route API locale : sa seule route serveur est le proxy contractuel ([src/app/[...path]/route.ts](../../src/app/%5B...path%5D/route.ts)). Un front n’appelle qu’un seul BFF : les chemins de session comme `/api/user/me` ou `/api/auth/*` ne sont pas servis ici (404).
+Le seul relais vers le BFF est le proxy contractuel ([src/app/[...path]/route.ts](../../src/app/%5B...path%5D/route.ts)). Le `POST /api/auth/logout` distinct reste local au front et expire le cookie sans contacter de BFF ; les autres chemins de session comme `/api/user/me` restent indisponibles.
 
 ## Session, permissions et erreurs
 
 La session provient uniquement du cookie `accessToken` posé par Login_Web_Service. Le proxy générique utilise le Bearer explicite ou, en son absence, le cookie `accessToken`. Les permissions métier restent celles du BFF et de ses sources.
+
+Le menu de compte de l’AppShell poste vers la route locale de déconnexion puis, en cas de succès, remplace la page par `LOGIN_FRONT_URL` validée à l’exécution. La route expire `accessToken` sur `COOKIE_DOMAIN` configuré ; en production, elle renvoie 503 si cette valeur manque, et l’interface reste en place avec une erreur. Cela retire uniquement le cookie du navigateur : la révocation côté serveur et la déconnexion Keycloak globale restent suivies par MAIR-143/MAIR-226. Settings ne contacte jamais un deuxième BFF.
 
 Le proxy générique répond 400 pour un chemin invalide, 404 pour un chemin hors contrat, 405 pour une méthode interdite et 502 si le service est injoignable ou dépasse le délai. Les réponses amont sont conservées, y compris les corps vides 204/205/304.
 
@@ -131,7 +135,7 @@ npm run build
 
 Le paquet ne contient que la sortie orval (modèles et endpoints TypeScript). `contracts:sync` (alias `contracts:generate`) reconstruit `contracts/openapi.json` depuis le paquet installé avec `scripts/orval-contract.mjs` ; le proxy lit ce fichier et le code importe ses types depuis `@mairie360/bff-settings-openapi/model`. `contracts:check` échoue si la version n’est pas exacte, si le paquet installé diffère de `package.json`, si un second paquet `bff-*-openapi` existe ou si `contracts/openapi.json` n’est plus à jour. Ces commandes fonctionnent hors ligne. Après une montée de version, aligner aussi le tag d’image `bff-settings` des stacks de test. `test:contracts` exécute les tests Node sans couverture ; `npm test` les exécute avec un seuil de 60 % (lignes, branches, fonctions) sur tous les modules `src/**/*.ts`.
 
-Les tests vérifient que le front n’accède au réseau qu’à travers les contrats. `tests/network-contract.test.cjs` analyse l’AST TypeScript de `src/` : seuls `src/lib/bff-client.ts` et `src/lib/bff-proxy.ts` appellent `fetch`, chaque appel `requestBff` (tous dans `src/lib/settings-api.ts`) vise une opération littérale de `contracts/openapi.json`, et le seul relais serveur est le proxy vers `configuredBffUrl()` (la seule URL de BFF lue dans l’environnement est `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL`) : le front n’appelle qu’un seul BFF. `tests/settings.bff-mocks.test.cjs` exécute toute la chaîne (code navigateur → routes Next.js → vrai client HTTP) contre un vrai serveur HTTP qui simule BFF_Settings à partir de `contracts/openapi.json`. Le mock refuse toute route, méthode ou corps hors contrat, et le harnais refuse tout appel navigateur vers une autre origine et tout appel serveur vers un autre hôte que BFF_Settings. `tests/package-contract.test.cjs` vérifie l’épinglage exact, l’absence de tout autre paquet de contrat, que `contracts/openapi.json` est exactement la reconstruction du paquet et que les stacks de test démarrent `bff-settings` à la version du paquet. orval ne type que les réponses de succès (et les 404 des préférences) : les réponses d’erreur simulées sont marquées hors contrat.
+Les tests vérifient que le front n’accède au réseau qu’à travers le contrat ou sa déconnexion locale. `tests/network-contract.test.cjs` analyse l’AST TypeScript de `src/` : seuls `src/lib/bff-client.ts`, `src/lib/logout.ts` et `src/lib/bff-proxy.ts` appellent `fetch`, chaque appel `requestBff` (tous dans `src/lib/settings-api.ts`) vise une opération littérale de `contracts/openapi.json`, et le seul relais serveur est le proxy vers `configuredBffUrl()` (la seule URL de BFF lue dans l’environnement est `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL`). `tests/settings.bff-mocks.test.cjs` exerce la chaîne BFF contre un mock piloté par le contrat. `tests/logout.test.cjs` vérifie l’expiration locale du cookie et les refus sûrs sans deuxième BFF. `tests/package-contract.test.cjs` vérifie l’épinglage du paquet et la reconstruction du contrat.
 
 Pour une modification uniquement documentaire, vérifier les liens, l’exactitude des deux langues et `git diff --check`; ne pas régénérer les contrats sans montée de version du paquet.
 

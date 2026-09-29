@@ -263,16 +263,10 @@ describe('the front talks to a single BFF', () => {
     });
   }
 
-  test('POST /api/auth/logout is local and never contacts BFF User or BFF Settings', async () => {
-    process.env.COOKIE_DOMAIN = '.front.test';
-    try {
-      const response = await browser('/api/auth/logout', { method: 'POST' });
-      assert.equal(response.status, 204);
-      assert.match(response.headers.get('set-cookie'), /accessToken=;.*Domain=\.front\.test/i);
-      assert.deepEqual(front.upstreamCalls, []);
-    } finally {
-      delete process.env.COOKIE_DOMAIN;
-    }
+  test('POST /api/auth/logout is not served by Settings', async () => {
+    const response = await browser('/api/auth/logout', { method: 'POST' });
+    assert.equal(response.status, 404);
+    assert.deepEqual(front.upstreamCalls, []);
   });
 });
 

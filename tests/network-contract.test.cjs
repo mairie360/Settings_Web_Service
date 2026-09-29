@@ -40,11 +40,10 @@ describe('published BFF_Settings contract in src/', () => {
 });
 
 describe('network surface of src/', () => {
-  test('only the BFF client, local logout and the BFF proxy use a raw network API', () => {
+  test('only the BFF client and the BFF proxy use a raw network API', () => {
     assert.deepEqual(surface.raw.map(({ file, api }) => `${file} ${api}`), [
       'lib/bff-client.ts fetch',
       'lib/bff-proxy.ts fetch',
-      'lib/logout.ts fetch',
     ]);
   });
 
@@ -69,14 +68,12 @@ describe('network surface of src/', () => {
     assert.deepEqual(surface.forwardToBff.map(({ file, baseUrl }) => `${file} ${baseUrl}`), ['lib/bff-proxy.ts configuredBffUrl()']);
   });
 
-  test('the contract catch-all proxy and frontend-local logout are the only server routes', () => {
-    assert.deepEqual(surface.routes, ['app/[...path]/route.ts', 'app/api/auth/logout/route.ts']);
+  test('the contract catch-all proxy is the only server route', () => {
+    assert.deepEqual(surface.routes, ['app/[...path]/route.ts']);
   });
 
   test('environment reads are limited to the BFF and explicit active-front navigation URLs', () => {
     assert.deepEqual(surface.env.map(({ file, name }) => `${file} ${name}`), [
-      'app/api/auth/logout/route.ts COOKIE_DOMAIN',
-      'app/api/auth/logout/route.ts NODE_ENV',
       'lib/bff-proxy.ts SETTINGS_BFF_URL',
       'lib/bff-proxy.ts BFF_SETTINGS_BASE_URL',
       'lib/front-urls.ts LOGIN_FRONT_URL',

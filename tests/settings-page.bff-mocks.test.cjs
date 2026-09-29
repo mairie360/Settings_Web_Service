@@ -90,18 +90,16 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.doesNotMatch(html, /role="alert"/);
 });
 
-test('the account-menu logout calls only the local route and leaves for Login', async () => {
-  process.env.COOKIE_DOMAIN = '.front.test';
+test('the account-menu logout hands off to Login without another BFF call', async () => {
   setBrowserFrontUrls({ LOGIN_FRONT_URL: 'https://login.test.example/' });
   const destinations = [];
   global.window = { location: { replace: (href) => destinations.push(href) } };
   await renderLoadedPage();
   await view.act(() => view.props('AppShell').onLogout());
 
-  assert.deepEqual(destinations, ['https://login.test.example/']);
+  assert.deepEqual(destinations, ['https://login.test.example/logout']);
   assert.deepEqual(front.browserCalls, [
     { method: 'GET', path: '/settings/bootstrap' },
-    { method: 'POST', path: '/api/auth/logout' },
   ]);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
 });

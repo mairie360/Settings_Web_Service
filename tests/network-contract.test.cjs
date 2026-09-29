@@ -68,7 +68,7 @@ describe('network surface of src/', () => {
     assert.deepEqual(surface.forwardToBff.map(({ file, baseUrl }) => `${file} ${baseUrl}`), ['lib/bff-proxy.ts configuredBffUrl()']);
   });
 
-  test('the only server route is the contract catch-all proxy', () => {
+  test('the contract catch-all proxy is the only server route', () => {
     assert.deepEqual(surface.routes, ['app/[...path]/route.ts']);
   });
 
@@ -76,6 +76,7 @@ describe('network surface of src/', () => {
     assert.deepEqual(surface.env.map(({ file, name }) => `${file} ${name}`), [
       'lib/bff-proxy.ts SETTINGS_BFF_URL',
       'lib/bff-proxy.ts BFF_SETTINGS_BASE_URL',
+      'lib/front-urls.ts LOGIN_FRONT_URL',
       'lib/front-urls.ts DASHBOARD_FRONT_URL',
       'lib/front-urls.ts PROJECT_FRONT_URL',
       'lib/front-urls.ts CALENDAR_FRONT_URL',

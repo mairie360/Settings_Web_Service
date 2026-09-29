@@ -254,7 +254,6 @@ describe('the front talks to a single BFF', () => {
     ['GET', '/api/user/me'],
     ['GET', '/api/auth/me'],
     ['GET', '/api/auth/session'],
-    ['POST', '/api/auth/logout'],
   ]) {
     test(`the BFF User session path ${method} ${pathname} is not served by this front`, async () => {
       const response = await browser(pathname, { method });
@@ -263,6 +262,12 @@ describe('the front talks to a single BFF', () => {
       assert.deepEqual(front.upstreamCalls, []);
     });
   }
+
+  test('POST /api/auth/logout is not served by Settings', async () => {
+    const response = await browser('/api/auth/logout', { method: 'POST' });
+    assert.equal(response.status, 404);
+    assert.deepEqual(front.upstreamCalls, []);
+  });
 });
 
 describe('network guard of the test harness', () => {

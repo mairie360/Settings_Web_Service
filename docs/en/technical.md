@@ -70,6 +70,7 @@ Values below are local examples or explicitly described behavior, not production
 | Variable or precedence | Explicit local example | Purpose |
 | --- | --- | --- |
 | `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL` | http://localhost:4008 | Left-to-right proxy precedence; configure an HTTP(S) URL explicitly. Missing or invalid configuration returns an uncached 503 without contacting an upstream. |
+| `LOGIN_FRONT_URL` | — | Validated runtime Login origin used to open `/logout`. |
 
 The shared navigation reads `DASHBOARD_FRONT_URL`, `PROJECT_FRONT_URL`,
 `MESSAGE_FRONT_URL`, `ELEARNING_FRONT_URL`, `CALENDAR_FRONT_URL` and
@@ -105,11 +106,13 @@ These data paths are exposed at the same origin through the proxy; Next.js pages
 | --- | --- |
 | `/` | [src/app/page.tsx](../../src/app/page.tsx) |
 
-The front has no local API route: its only server route is the contract proxy ([src/app/[...path]/route.ts](../../src/app/%5B...path%5D/route.ts)). A front calls a single BFF, so session paths such as `/api/user/me` or `/api/auth/*` are not served here (404).
+The only route handler is the contract-gated BFF proxy ([src/app/[...path]/route.ts](../../src/app/%5B...path%5D/route.ts)). Logout is a browser navigation to Login's `/logout` page, not a Settings route; session paths such as `/api/user/me` remain unavailable.
 
 ## Session, permissions and errors
 
 The session comes only from the `accessToken` cookie set by Login_Web_Service. The generic proxy uses an explicit Bearer header or, when absent, the `accessToken` cookie. Business permissions remain those of the BFF and its sources.
+
+The AppShell account menu validates the runtime `LOGIN_FRONT_URL` and navigates to its `/logout` page. If the URL is missing or invalid, Settings stays in place and reports an error. Login owns shared-cookie expiry and its BFF User logout call; Settings makes no logout request and never contacts a second BFF. End-to-end authenticated logout and Keycloak-wide revocation remain to be verified under MAIR-143/MAIR-226.
 
 The generic proxy returns 400 for an invalid path, 404 for a path outside the contract, 405 for a disallowed method and 502 when the service is unreachable or times out. Upstream responses are preserved, including empty 204/205/304 bodies.
 
@@ -130,7 +133,7 @@ npm run build
 
 The package only contains orval output (TypeScript models and endpoints). `contracts:sync` (alias `contracts:generate`) rebuilds `contracts/openapi.json` from the installed package with `scripts/orval-contract.mjs`; the proxy reads that file and the code imports its types from `@mairie360/bff-settings-openapi/model`. `contracts:check` fails if the version is not exact, if the installed package differs from `package.json`, if a second `bff-*-openapi` package exists or if `contracts/openapi.json` is stale. These commands run offline. After a bump, also move the `bff-settings` image tag of the test stacks to the same version. `test:contracts` runs the Node tests without coverage; `npm test` runs them with a 60% threshold (lines, branches, functions) over every `src/**/*.ts` module.
 
-The tests check that the front only reaches the network through the contracts. `tests/network-contract.test.cjs` scans the TypeScript AST of `src/`: only `src/lib/bff-client.ts` and `src/lib/bff-proxy.ts` call `fetch`, every `requestBff` call (all in `src/lib/settings-api.ts`) targets a literal operation of `contracts/openapi.json`, and the only server relay is the proxy to `configuredBffUrl()` (the only BFF URL read from the environment is `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL`), so the front calls a single BFF. `tests/settings.bff-mocks.test.cjs` runs the whole chain (browser code → Next.js routes → real HTTP client) against a real HTTP server that simulates BFF_Settings from `contracts/openapi.json`. The mock rejects any route, method or body outside the contract, and the harness rejects any browser call to another origin and any server call to a host other than BFF_Settings. `tests/package-contract.test.cjs` checks the exact pin, that no other contract package exists, that `contracts/openapi.json` is exactly the package rebuild and that the test stacks start `bff-settings` at the package version. orval only types success responses (and the preference 404s), so simulated error replies are marked outside the contract.
+The tests check that the front only reaches the network through its published BFF contract. `tests/network-contract.test.cjs` scans the TypeScript AST of `src/`: only `src/lib/bff-client.ts` and `src/lib/bff-proxy.ts` call `fetch`, every `requestBff` call (all in `src/lib/settings-api.ts`) targets a literal operation of `contracts/openapi.json`, and the only server relay is the proxy to `configuredBffUrl()` (the only BFF URL read from the environment is `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL`). `tests/settings.bff-mocks.test.cjs` runs the BFF chain against a contract-driven mock. `tests/logout.test.cjs` checks the validated Login handoff and safe failures without any second BFF. `tests/package-contract.test.cjs` checks the exact package pin and contract rebuild.
 
 For documentation-only changes, check links, accuracy in both languages and `git diff --check`; do not regenerate contracts without bumping the package.
 

@@ -4,7 +4,7 @@ Ce web service consomme **BFF_Settings**. Le contrat est celui publié dans le p
 
 ## Routes implémentées
 
-Les chemins sont relatifs au BFF. Les proxies web conservent méthode, paramètres, contenu binaire, statuts et cookies. Ce front n’appelle aucun autre BFF : il n’expose pas d’adaptateur de session `/api/*` vers BFF User, la session provient uniquement du cookie `accessToken`. Les pages Next.js sont distinctes des routes de données.
+Les chemins métier sont relatifs au BFF. Les proxies web conservent méthode, paramètres, contenu binaire, statuts et cookies. Ce front n’appelle aucun autre BFF : il n’expose pas d’adaptateur de session vers BFF User, la session provient uniquement du cookie `accessToken`. Le menu de compte redirige vers `/logout` sur le front Login configuré ; Settings n’a ni route locale de déconnexion ni appel direct à BFF User. Les pages Next.js sont distinctes des routes de données.
 
 | Méthode | Route | Réponse / schéma |
 | --- | --- | --- |

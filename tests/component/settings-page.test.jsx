@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -73,6 +73,52 @@ describe("Settings page", () => {
     expect((await screen.findByRole("alert")).textContent).toBe("Service indisponible");
     expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("Updated");
     expect(screen.queryByText("Votre profil a été enregistré.")).toBeNull();
+  });
+
+  it("locks one pending save across tab returns, retains a refused draft and unlocks a confirmed retry", async () => {
+    let rejectSave;
+    vi.mocked(saveProfile).mockImplementationOnce(() => new Promise((resolve, reject) => { rejectSave = reject; }));
+    const user = await openSettings();
+    const firstName = screen.getByRole("textbox", { name: "Prénom" });
+    await user.clear(firstName); await user.type(firstName, "Updated");
+    const form = firstName.closest("form");
+    act(() => { fireEvent.submit(form); fireEvent.submit(form); });
+    expect(saveProfile).toHaveBeenCalledExactlyOnceWith({ first_name: "Updated" });
+    expect(form.getAttribute("aria-busy")).toBe("true");
+    for (const label of ["Prénom", "Nom", "E-mail", "Téléphone"]) {
+      expect(screen.getByRole("textbox", { name: label }).disabled).toBe(true);
+    }
+    await user.type(firstName, "Discarded edit");
+    expect(firstName.value).toBe("Updated");
+    expect(screen.getByRole("button", { name: "Enregistrement…" }).disabled).toBe(true);
+    expect(screen.queryByText("Votre profil a été enregistré.")).toBeNull();
+    await user.click(screen.getByRole("tab", { name: "Sécurité" }));
+    await user.click(screen.getByRole("tab", { name: "Profil" }));
+    expect(screen.getByRole("textbox", { name: "Prénom" }).disabled).toBe(true);
+    expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("Updated");
+    await act(async () => { rejectSave(new Error("Service indisponible")); });
+    expect(screen.getByRole("alert").textContent).toBe("Service indisponible");
+    expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("Updated");
+    expect(screen.getByRole("button", { name: "Enregistrer" }).disabled).toBe(false);
+
+    let resolveSave;
+    vi.mocked(saveProfile).mockImplementationOnce(() => new Promise((resolve) => { resolveSave = resolve; }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(saveProfile).toHaveBeenCalledTimes(2);
+    expect(saveProfile).toHaveBeenLastCalledWith({ first_name: "Updated" });
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText("Votre profil a été enregistré.")).toBeNull();
+    await act(async () => { resolveSave({ ...bootstrap().profile, first_name: "UPDATED", last_name: "USER" }); });
+    expect(screen.getByRole("status").textContent).toBe("Votre profil a été enregistré.");
+    expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("UPDATED");
+    expect(screen.getByRole("textbox", { name: "Nom" }).value).toBe("USER");
+    for (const label of ["Prénom", "Nom", "E-mail", "Téléphone"]) {
+      expect(screen.getByRole("textbox", { name: label }).disabled).toBe(false);
+    }
+    await user.type(screen.getByRole("textbox", { name: "Prénom" }), " again");
+    expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("UPDATED again");
+    expect(screen.queryByText("Votre profil a été enregistré.")).toBeNull();
+    expect(screen.getByRole("button", { name: "Enregistrer" }).disabled).toBe(false);
   });
 
   it.each([

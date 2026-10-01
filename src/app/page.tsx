@@ -1,7 +1,7 @@
 "use client";
 
 import { AppShell } from "@mairie360/lib-components";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { formatSessionDate } from "@/lib/session-date";
@@ -67,6 +67,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -87,6 +88,7 @@ export default function Home() {
   const hasChanges = Object.keys(patch).length > 0;
 
   function updateProfile(field: ProfileField, value: string) {
+    if (savingRef.current) return;
     setProfile((current) => current ? { ...current, [field]: value || (field === "phone" ? null : value) } : current);
     setError("");
     setStatus("");
@@ -106,8 +108,9 @@ export default function Home() {
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (!profile || !data || !hasChanges) return;
+    if (savingRef.current || !profile || !data || !hasChanges) return;
 
+    savingRef.current = true;
     setSaving(true);
     setError("");
     setStatus("");
@@ -120,6 +123,7 @@ export default function Home() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Le profil n’a pas pu être enregistré.");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
@@ -171,7 +175,7 @@ export default function Home() {
 
             <div role="tabpanel" id={`settings-panel-${activeTab}`} aria-labelledby={`settings-tab-${activeTab}`}>
             {activeTab === "profile" ? (
-              <form onSubmit={save} className="space-y-4 rounded-lg border border-[#e0dbd4] bg-white p-6">
+              <form onSubmit={save} aria-busy={saving} className="space-y-4 rounded-lg border border-[#e0dbd4] bg-white p-6">
                 <h2 className="text-xl font-semibold">Informations personnelles</h2>
                 {profileFields.map(({ field, label, type, required }) => (
                   <label className="block" key={field}>
@@ -180,6 +184,7 @@ export default function Home() {
                       className="w-full rounded border border-[#d8d2ca] px-3 py-2"
                       type={type}
                       required={required}
+                      disabled={saving}
                       value={profile[field] ?? ""}
                       onChange={(event) => updateProfile(field, event.target.value)}
                     />

@@ -14,6 +14,7 @@ Business domain: Personal settings.
 
 - Form for first name, last name, email and phone.
 - Save confirmation based on the profile read back by the BFF.
+- One profile save at a time: the four fields and submit are locked while pending, even after switching tabs. A refused save keeps the draft and allows retry; a successful save displays the returned profile and releases the fields for new edits.
 - Session list in the Security tab with a separate unavailable state.
 - System tab: truthful help, local support/report text downloads and a minimal browser diagnostic JSON. Files are not sent automatically.
 

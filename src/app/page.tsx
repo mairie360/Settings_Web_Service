@@ -6,6 +6,7 @@ import type { FormEvent, KeyboardEvent } from "react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { formatSessionDate } from "@/lib/session-date";
 import SettingsAssistance from "@/components/settings-assistance";
+import SettingsTabIcon from "@/components/settings-tab-icon";
 import { getActiveFrontHrefs } from "@/lib/navigation";
 import { logoutAndRedirect } from "@/lib/logout";
 import type {
@@ -132,6 +133,7 @@ export default function Home() {
 
   return (
     <AppShell
+      className="settings-shell"
       activeItem="settings"
       hrefs={getActiveFrontHrefs()}
       user={data ? {
@@ -142,7 +144,7 @@ export default function Home() {
       onLogout={() => void logoutAndRedirect().catch(() => setError("La déconnexion est temporairement indisponible."))}
       sidebarProps={{ brandLogoSrc: "/mairie360-logo.png" }}
     >
-      <section className="mx-auto max-w-[1232px] space-y-6">
+      <section className="settings-page">
         <header>
           <h1 className="text-3xl font-bold">Paramètres</h1>
           <p>Gérez les informations réellement disponibles pour votre compte.</p>
@@ -155,7 +157,7 @@ export default function Home() {
           <p role="status">{error ? "Le profil est indisponible." : "Chargement des paramètres…"}</p>
         ) : (
           <>
-            <nav role="tablist" aria-label="Paramètres" className="flex flex-wrap gap-2">
+            <nav role="tablist" aria-label="Paramètres" className="settings-tabs">
               {tabs.map(({ id, label }) => (
                 <button
                   key={id}
@@ -163,20 +165,23 @@ export default function Home() {
                   type="button"
                   role="tab"
                   aria-selected={activeTab === id}
+                  aria-controls={activeTab === id ? `settings-panel-${id}` : undefined}
                   tabIndex={activeTab === id ? 0 : -1}
                   onClick={() => setActiveTab(id)}
                   onKeyDown={(event) => handleTabKeyDown(event, id)}
-                  className={`rounded px-4 py-2 ${activeTab === id ? "bg-[#155bb5] text-white" : "bg-white"}`}
+                  className="settings-tab"
                 >
+                  <SettingsTabIcon name={id} />
                   {label}
                 </button>
               ))}
             </nav>
 
-            <div role="tabpanel" id={`settings-panel-${activeTab}`} aria-labelledby={`settings-tab-${activeTab}`}>
+            <div role="tabpanel" id={`settings-panel-${activeTab}`} aria-labelledby={`settings-tab-${activeTab}`} className="settings-panel">
             {activeTab === "profile" ? (
               <form onSubmit={save} aria-busy={saving} className="space-y-4 rounded-lg border border-[#e0dbd4] bg-white p-6">
                 <h2 className="text-xl font-semibold">Informations personnelles</h2>
+                <div className="settings-profile-fields">
                 {profileFields.map(({ field, label, type, required }) => (
                   <label className="block" key={field}>
                     <span className="mb-1 block">{label}</span>
@@ -190,6 +195,7 @@ export default function Home() {
                     />
                   </label>
                 ))}
+                </div>
                 <button
                   className="rounded bg-[#155bb5] px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
                   type="submit"

@@ -48,6 +48,7 @@ afterEach(() => {
 });
 
 const upstream = () => bffSettings.requests.map((request) => `${request.method} ${request.template}`);
+const profileInputs = () => [...view.html.matchAll(/<input\b[^>]*>/g)].map(([html]) => html);
 
 async function renderLoadedPage(body = fixtures.bootstrap()) {
   bffSettings.on('GET', '/settings/bootstrap', { body });
@@ -228,6 +229,65 @@ test('diagnostic exports use only allowlisted device information and report down
   assert.doesNotMatch(view.text(), /private detail|Téléchargement du diagnostic local lancé/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
 });
+
+for (const refused of [false, true]) {
+  test(`a pending profile save is synchronous, freezes edits across tabs and ${refused ? 'retains a refused draft for retry' : 'uses the confirmed result'}`, async (t) => {
+    await renderLoadedPage();
+    await view.fire((props) => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Anne' } });
+    const saved = fixtures.profile({ first_name: 'ANNE', last_name: 'LE GALL' });
+    bffSettings.on('PATCH', '/settings/profile', refused
+      ? { status: 503, body: { error: { message: 'Service indisponible' } }, outOfContract: true }
+      : { body: saved });
+
+    let release;
+    const gate = new Promise((resolve) => { release = resolve; });
+    const handle = bffSettings.handle;
+    let patchCount = 0;
+    t.mock.method(bffSettings, 'handle', async function (request, response) {
+      if (request.method === 'PATCH') { patchCount += 1; await gate; }
+      return handle.call(this, request, response);
+    });
+    const submit = view.hostElements((props, text, tag) => tag === 'form')[0].props.onSubmit;
+    const staleChange = view.hostElements((props) => props.type === 'text' && props.value === 'Anne')[0].props.onChange;
+    const pending = submit({ preventDefault() {} });
+    // No render or await between these calls: state alone cannot guard this race.
+    const duplicate = submit({ preventDefault() {} });
+    staleChange({ target: { value: 'An edit during the request' } });
+    try {
+      await view.waitFor((html) => html.includes('Enregistrement…'));
+      assert.equal(profileInputs().length, 4);
+      assert.ok(profileInputs().every((html) => html.includes('disabled=""')));
+      assert.match(view.html, /<form[^>]*aria-busy="true"/);
+      assert.doesNotMatch(view.html, /Votre profil a été enregistré|An edit during the request/);
+      await view.click('Sécurité'); await view.click('Profil');
+      assert.ok(profileInputs().every((html) => html.includes('disabled=""')));
+      await view.waitFor(() => patchCount === 1);
+    } finally {
+      release(); await Promise.all([pending, duplicate]); await view.settle();
+    }
+    assert.equal(patchCount, 1);
+    assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
+    assert.deepEqual(bffSettings.requests[1].body, { first_name: 'Anne' });
+    assert.ok(profileInputs().every((html) => !html.includes('disabled=""')));
+    assert.match(view.html, /<form[^>]*aria-busy="false"/);
+    if (refused) {
+      assert.match(view.html, /value="Anne"/);
+      assert.match(view.text(), /Service indisponible/);
+      assert.doesNotMatch(view.text(), /Votre profil a été enregistré/);
+      bffSettings.on('PATCH', '/settings/profile', { body: saved });
+      await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+      assert.equal(patchCount, 2);
+      assert.deepEqual(bffSettings.requests[2].body, { first_name: 'Anne' });
+    }
+    assert.match(view.html, /value="ANNE"/);
+    assert.match(view.html, /value="LE GALL"/);
+    assert.match(view.text(), /Votre profil a été enregistré/);
+    await view.fire((props) => props.type === 'text' && props.value === 'ANNE', 'onChange', { target: { value: 'Another draft' } });
+    assert.match(view.html, /value="Another draft"/);
+    assert.doesNotMatch(view.text(), /Votre profil a été enregistré/);
+    assert.equal(view.hostElements((props) => props.type === 'submit')[0].props.disabled, false);
+  });
+}
 
 test('editing a field and submitting the form saves the profile with PATCH /settings/profile', async () => {
   await renderLoadedPage();

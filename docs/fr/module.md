@@ -14,6 +14,7 @@ Domaine fonctionnel: Paramètres personnels.
 
 - Formulaire de prénom, nom, e-mail et téléphone.
 - Confirmation de sauvegarde à partir du profil relu par le BFF.
+- Une seule sauvegarde du profil à la fois : les quatre champs et le bouton sont verrouillés pendant l’attente, même après changement d’onglet. Un refus conserve le brouillon et permet de réessayer ; un succès affiche le profil renvoyé et libère les champs pour une nouvelle modification.
 - Liste de sessions dans l’onglet Sécurité avec état d’indisponibilité distinct.
 - Onglet Système : aide adaptée aux fonctions disponibles, téléchargements locaux de demande/signalement en texte et diagnostic navigateur minimal en JSON. Aucun envoi automatique.
 

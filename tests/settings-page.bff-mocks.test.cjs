@@ -69,6 +69,8 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
   assert.deepEqual(front.browserCalls, [{ method: 'GET', path: '/settings/bootstrap' }]);
   assert.equal(view.find('AppShell').length, 1);
+  assert.match(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
+  assert.doesNotMatch(html, /<\/main>\s*<footer\b/);
   assert.equal(view.props('AppShell').activeItem, 'settings');
   assert.deepEqual(view.props('AppShell').user, {
     first_name: 'Anne Marie',

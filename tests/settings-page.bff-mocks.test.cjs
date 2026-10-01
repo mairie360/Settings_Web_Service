@@ -82,8 +82,8 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.equal(typeof view.props('AppShell').onLogout, 'function');
   assert.doesNotMatch(html, /aria-label="Notifications"|>Administration</);
   assert.match(html, /<nav role="tablist" aria-label="Paramètres"/);
-  assert.match(html, /<button id="settings-tab-profile" type="button" role="tab" aria-selected="true" tabindex="0"[^>]*>Profil<\/button>/);
-  assert.match(html, /<div role="tabpanel" id="settings-panel-profile" aria-labelledby="settings-tab-profile">/);
+  assert.match(html, /<button id="settings-tab-profile" type="button" role="tab" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg aria-hidden="true"[^]*?Profil<\/button>/);
+  assert.match(html, /<div role="tabpanel" id="settings-panel-profile" aria-labelledby="settings-tab-profile"[^>]*>/);
   assert.match(html, /<h2[^>]*>Informations personnelles<\/h2>/);
   assert.match(html, /<input[^>]*type="text"[^>]*required=""[^>]*value="Anne Marie"/);
   assert.match(html, /<input[^>]*type="email"[^>]*value="anne\.le-gall@mairie\.test"/);
@@ -112,7 +112,7 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
 
   await view.click('Sécurité');
 
-  assert.match(view.html, /<button id="settings-tab-security" type="button" role="tab" aria-selected="true" tabindex="0"[^>]*>Sécurité<\/button>/);
+  assert.match(view.html, /<button id="settings-tab-security" type="button" role="tab" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg aria-hidden="true"[^]*?Sécurité<\/button>/);
   assert.match(view.html, /<h2[^>]*>Sessions<\/h2>/);
   const createdAt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })
     .format(new Date('2026-09-15T08:00:00Z'));

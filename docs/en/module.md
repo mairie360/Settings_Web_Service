@@ -13,6 +13,7 @@ Business domain: Personal settings.
 ## Available capabilities
 
 - Form for first name, last name, email and phone.
+- Prototype-aligned icon tabs (two mobile, three intermediate, six desktop columns), a white selected pill with blue text, and a one/two-column contact form. Arrow keys, Home and End retain focus-following selection; decorative icons do not change accessible names. Only existing fields are displayed, not unsupported demo profile data.
 - Save confirmation based on the profile read back by the BFF.
 - One profile save at a time: the four fields and submit are locked while pending, even after switching tabs. A refused save keeps the draft and allows retry; a successful save displays the returned profile and releases the fields for new edits.
 - Session list in the Security tab with a separate unavailable state.

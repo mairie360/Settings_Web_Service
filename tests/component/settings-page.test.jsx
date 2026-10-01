@@ -40,6 +40,37 @@ beforeEach(() => {
 });
 
 describe("Settings page", () => {
+  it("renders six recognizable tabs with hidden icons and a responsive four-field grid", async () => {
+    await openSettings();
+    const navigation = screen.getByRole("tablist", { name: "Paramètres" });
+    expect(navigation.className).toBe("settings-tabs");
+    for (const label of ["Profil", "Sécurité", "Notifications", "Apparence", "Général", "Système"]) {
+      const tab = within(navigation).getByRole("tab", { name: label, exact: true });
+      expect(tab.querySelector('svg[aria-hidden="true"][focusable="false"]')).toBeTruthy();
+      expect(tab.className).toBe("settings-tab");
+      expect(tab.getAttribute("aria-controls")).toBe(tab.getAttribute("aria-selected") === "true"
+        ? tab.id.replace("-tab-", "-panel-") : null);
+    }
+    const grid = screen.getByRole("textbox", { name: "Prénom" }).closest(".settings-profile-fields");
+    expect(within(grid).getAllByRole("textbox")).toHaveLength(4);
+    expect(screen.getByRole("tabpanel").className).toBe("settings-panel");
+    expect(loadSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps focus-following keyboard selection after adding decorative icons", async () => {
+    const user = await openSettings();
+    const tabs = within(screen.getByRole("tablist", { name: "Paramètres" })).getAllByRole("tab");
+    await user.click(tabs[0]);
+    for (const [key, selected] of [["{ArrowLeft}", 5], ["{ArrowRight}", 0], ["{End}", 5], ["{Home}", 0], ["{ArrowRight}", 1]]) {
+      await user.keyboard(key);
+      expect(document.activeElement).toBe(tabs[selected]);
+      expect(tabs[selected].getAttribute("aria-selected")).toBe("true");
+      expect(screen.getByRole("tabpanel").getAttribute("aria-labelledby")).toBe(tabs[selected].id);
+    }
+    expect(loadSettings).toHaveBeenCalledTimes(1);
+    expect(saveProfile).not.toHaveBeenCalled();
+  });
+
   it("renders contract-backed profile fields without an invented session", async () => {
     await openSettings();
 

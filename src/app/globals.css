@@ -26,3 +26,68 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Prototype presentation; business fields and unavailable states stay contract-backed. */
+.settings-shell main { padding: 32px; }
+.settings-page {
+  min-width: 0;
+  color: #172033;
+  font-family: system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.5;
+}
+.settings-page > header h1 { font-size: 28px; line-height: 1.25; }
+.settings-page > header p { margin-top: 8px; color: #5f6770; }
+.settings-page > [role="alert"], .settings-page > [role="status"] { margin-top: 16px; }
+.settings-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin: 26px 0 32px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #e4e0dc;
+}
+.settings-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 8px;
+  border-radius: 12px;
+  color: #3f454c;
+  font-size: 15.9375px;
+  line-height: 1.4286;
+  font-weight: 500;
+}
+.settings-tab svg { flex-shrink: 0; }
+.settings-tab:hover { background: #ffffff99; }
+.settings-tab[aria-selected="true"] { background: white; color: #1256a6; box-shadow: 0 1px 3px #0000001a, 0 1px 2px -1px #0000001a; }
+.settings-page :is(button, input, textarea, summary):focus-visible { outline: 2px solid #1256a6; outline-offset: 2px; }
+.settings-panel > :is(form, section) { padding: 20px; border-color: #d8d2ca; border-radius: 12px; box-shadow: 0 5px 15px rgb(23 32 51 / 14%), 0 1px 3px rgb(23 32 51 / 12%); }
+.settings-panel h2 { font-size: 17px; line-height: 25.5px; font-weight: 400; }
+.settings-profile-fields { display: grid; gap: 17px; margin-top: 25.5px; }
+.settings-profile-fields label { min-width: 0; font-size: 15.9375px; line-height: 1.4286; font-weight: 500; }
+.settings-profile-fields input {
+  height: 38.25px;
+  border-color: #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #172033;
+  font-weight: 400;
+}
+@media (min-width: 640px) {
+  .settings-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
+  .settings-tab { height: 28px; padding-inline: 16px; }
+  .settings-page > header h1 { font-size: 30px; }
+  .settings-panel > :is(form, section) { padding: 25.5px; }
+}
+@media (min-width: 1024px) {
+  .settings-tabs { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .settings-profile-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .settings-shell main { padding: 20px 14px; }
+}

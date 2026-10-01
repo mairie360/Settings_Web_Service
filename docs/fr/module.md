@@ -13,6 +13,7 @@ Domaine fonctionnel: Paramètres personnels.
 ## Fonctions disponibles
 
 - Formulaire de prénom, nom, e-mail et téléphone.
+- Onglets à icônes alignés sur le prototype (deux colonnes mobile, trois intermédiaires, six desktop), sélection blanche au texte bleu et coordonnées sur une/deux colonnes. Flèches, Home et End conservent la sélection et le focus ; les icônes décoratives ne changent pas les noms accessibles. Aucun champ fictif du profil de démonstration n’est ajouté.
 - Confirmation de sauvegarde à partir du profil relu par le BFF.
 - Une seule sauvegarde du profil à la fois : les quatre champs et le bouton sont verrouillés pendant l’attente, même après changement d’onglet. Un refus conserve le brouillon et permet de réessayer ; un succès affiche le profil renvoyé et libère les champs pour une nouvelle modification.
 - Liste de sessions dans l’onglet Sécurité avec état d’indisponibilité distinct.

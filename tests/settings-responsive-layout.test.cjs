@@ -31,8 +31,7 @@ test('Settings presentation includes the actual prototype spacing, typography an
 test('Settings shared navigation inherits the prototype default type scale without a fixed header override', () => {
   assert.match(css, /html\s*\{\s*font-size: 17px;/);
   assert.match(css, /@theme inline\s*\{[^}]*--font-sans: system-ui, sans-serif;/);
-  assert.match(css, /@theme inline\s*\{[^}]*--text-xs: \.8125rem;/);
-  assert.match(css, /@theme inline\s*\{[^}]*--text-sm: \.9375rem;/);
+  assert.doesNotMatch(css, /--text-(?:xs|sm)\s*:/);
   assert.match(css, /body\s*\{[^}]*font-family: system-ui, sans-serif;/);
   assert.doesNotMatch(css, /(?:header|\.h-16)\s*\{[^}]*(?:height|min-height|max-height):/);
 });

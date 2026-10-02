@@ -18,7 +18,7 @@ Business domain: Personal settings.
 - Save confirmation based on the profile read back by the BFF.
 - One profile save at a time: the four fields and submit are locked while pending, even after switching tabs. A refused save keeps the draft and allows retry; a successful save displays the returned profile and releases the fields for new edits.
 - Session list in the Security tab with a separate unavailable state.
-- System tab: truthful help, local support/report text downloads and a minimal browser diagnostic JSON. Files are not sent automatically.
+- System tab: reference-style named help/support/report dialogs with native modal focus containment, Escape/Close and opener focus restoration. Support/report preparation failures retain the draft for retry; successful preparation closes the dialog and only announces download initiation. Each new request opens blank. Truthful help, local text exports and a minimal browser diagnostic JSON remain available without automatic transmission.
 
 ## Typical workflow
 

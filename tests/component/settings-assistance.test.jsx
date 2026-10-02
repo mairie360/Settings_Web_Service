@@ -1,13 +1,25 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "@/app/page";
 import { loadSettings } from "@/lib/settings-api";
 import { downloadLocalFile } from "@/lib/local-assistance";
 
 vi.mock("@/lib/settings-api", () => ({ loadSettings: vi.fn(), saveProfile: vi.fn() }));
 vi.mock("@/lib/local-assistance", async (original) => ({ ...await original(), downloadLocalFile: vi.fn() }));
+
+// jsdom has no native dialog methods. These test doubles only model open/close;
+// browser focus containment, Escape and background isolation require native QA.
+const dialogMethods = new Map(["showModal", "close"].map((name) => [name, Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, name)]));
+Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value() { this.setAttribute("open", ""); } });
+Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value() { this.removeAttribute("open"); this.dispatchEvent(new Event("close")); } });
+afterAll(() => {
+  for (const [name, descriptor] of dialogMethods) {
+    if (descriptor) Object.defineProperty(HTMLDialogElement.prototype, name, descriptor);
+    else delete HTMLDialogElement.prototype[name];
+  }
+});
 
 beforeEach(() => {
   vi.mocked(loadSettings).mockResolvedValue({
@@ -29,6 +41,7 @@ describe("local Settings assistance", () => {
   it("shows truthful help without deployment fixtures or extra business calls", async () => {
     const user = await openSystem();
     await user.click(screen.getByText("Centre d’aide"));
+    expect(screen.getByRole("dialog", { name: "Centre d’aide" })).toBeTruthy();
     expect(screen.getByText(/Cette page ne permet pas encore de les révoquer/)).toBeTruthy();
     expect(screen.getByText(/préférences Notifications, Apparence et Général ne sont pas encore disponibles/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Vider le cache" })).toBeNull();
@@ -47,6 +60,11 @@ describe("local Settings assistance", () => {
     expect(file.content).toContain("Une question <b>en texte</b>");
     expect(file.content).not.toMatch(/Private|private-session|private@example|192\.0\.2/);
     expect(screen.getByRole("status").textContent).toContain("Aucun message n’a été envoyé");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    const trigger = screen.getByRole("button", { name: action });
+    expect(document.activeElement).toBe(trigger);
+    await user.click(trigger);
+    expect(screen.getByRole("textbox", { name: "Votre message" }).value).toBe("");
     expect(loadSettings).toHaveBeenCalledTimes(1);
   });
 
@@ -67,6 +85,7 @@ describe("local Settings assistance", () => {
     await user.type(screen.getByRole("textbox", { name: "Votre message" }), "My draft");
     await user.click(screen.getByRole("button", { name: "Télécharger la demande" }));
     expect(screen.getByRole("textbox", { name: "Votre message" }).value).toBe("My draft");
+    expect(screen.getByRole("dialog", { name: "Signalement" }).contains(screen.getByRole("alert"))).toBe(true);
     expect(screen.getByRole("alert").textContent).not.toContain("private error");
     expect(screen.queryByRole("status")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Télécharger la demande" }));
@@ -95,9 +114,38 @@ describe("local Settings assistance", () => {
     const prepare = screen.getByRole("button", { name: "Préparer une demande de support" });
     prepare.focus(); await user.keyboard("{Enter}");
     expect(prepare.getAttribute("aria-expanded")).toBe("true");
-    await user.tab(); await user.tab();
     expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Votre message" }));
-    const result = await axe(document.querySelector("main"));
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Fermer" }));
+    await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Votre message" }));
+    const result = await axe(screen.getByRole("dialog", { name: "Demande de support" }));
     expect(result.violations.filter(({ impact }) => impact === "serious" || impact === "critical")).toEqual([]);
+  });
+
+  it("names help, focuses its heading and restores the opener after Close", async () => {
+    const user = await openSystem();
+    const trigger = screen.getByRole("button", { name: "Centre d’aide" });
+    await user.click(trigger);
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Centre d’aide" }));
+    await user.tab(); await user.tab();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Fermer" }));
+    await user.click(screen.getByRole("button", { name: "Fermer" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+    expect(loadSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles native cancellation and starts a blank draft on the next opening", async () => {
+    const user = await openSystem();
+    const trigger = screen.getByRole("button", { name: "Signaler un problème" });
+    await user.click(trigger);
+    await user.type(screen.getByRole("textbox", { name: "Votre message" }), "Discarded on close");
+    fireEvent(screen.getByRole("dialog", { name: "Signalement" }), new Event("cancel"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+    await user.click(trigger);
+    expect(screen.getByRole("textbox", { name: "Votre message" }).value).toBe("");
+    expect(downloadLocalFile).not.toHaveBeenCalled();
   });
 });

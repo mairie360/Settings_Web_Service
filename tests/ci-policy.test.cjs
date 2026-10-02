@@ -12,9 +12,12 @@ test('Settings uses the shared frontend workflow with Semgrep enabled', () => {
   const reusableWorkflows = [...workflow.matchAll(/^\s+uses:\s+mairie360\/CICD\/\.github\/workflows\/frontend-cicd\.yml@(v(\d+)\.(\d+)\.(\d+))\s*$/gm)];
   assert.equal(reusableWorkflows.length, 1, 'Settings must call the shared frontend workflow once');
   const [, version, major, minor, patch] = reusableWorkflows[0];
-  assert.equal(Number(major), 3, 'a new major workflow version requires review');
-  assert.ok(Number(minor) > 1 || (Number(minor) === 1 && Number(patch) >= 1),
-    'the shared workflow must include the Semgrep security audit');
+  // PR #74 already moved main to v4.0.1. That published workflow retains
+  // blocking Semgrep/Gitleaks and npm audit before build/tests, with named
+  // secrets and no consumer override. Keep the major-review guard (v5 fails).
+  assert.equal(Number(major), 4, 'a new major workflow version requires review');
+  assert.ok(Number(minor) > 0 || Number(patch) >= 1,
+    'the shared workflow must include the reviewed v4.0.1 security audits');
   assert.equal(workflow.match(/cicd_version:\s*"([^"]+)"/)?.[1], version,
     'the reusable workflow ref and input must use the same version');
   assert.doesNotMatch(workflow, /semgrep_fail_on_findings:\s*false|semgrep_config:|continue-on-error:/);

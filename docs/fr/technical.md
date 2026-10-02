@@ -53,7 +53,7 @@ L’état React gère l’affichage et les opérations en cours. Ce dépôt ne d
 
 ## Installation et lancement local
 
-Utiliser Node.js 22 pour reproduire le job de contrats et npm avec le fichier de verrouillage versionné. Les versions des autres jobs et de Docker sont précisées plus bas.
+Utiliser Node.js 24 et npm >=11.10 avec le fichier de verrouillage versionné pour reproduire la CI et son délai npm de sept jours. Le seul package déjà exempté de ce délai est la bibliothèque UI interne. Les versions des autres jobs et de Docker sont précisées plus bas.
 
 Les dépendances privées `@mairie360/*` nécessitent un accès GitHub Packages. Configurer `NODE_AUTH_TOKEN` dans l’environnement avec un jeton autorisé à lire ces packages, conformément à `.npmrc`. Ne pas enregistrer la valeur dans Git.
 
@@ -157,9 +157,22 @@ Pour une modification uniquement documentaire, vérifier les liens, l’exactitu
 
 ## CI/CD et exécution Docker
 
-Le job `contracts.yml` utilise Node.js 22, `actions/checkout@v7` et `actions/setup-node@v7`. Il s’exécute sur push, pull request et lancement manuel; il installe avec `npm ci`, contrôle les contrats et lance les tests dédiés.
+Le job `contracts.yml` utilise Node.js 24 et des commits immuables pour `actions/checkout` et `actions/setup-node`. Il s’exécute sur push, pull request et lancement manuel; il installe avec `npm ci`, contrôle les contrats et lance les tests dédiés.
 
-`cicd.yml` appelle `mairie360/CICD/.github/workflows/frontend-cicd.yml@v2.0.0`, avec `cicd_version: v2.0.0` et `node_version: "23"`. Les étapes réutilisables et les environnements GitHub déterminent les contrôles, publications et déploiements effectifs.
+`cicd.yml` appelle `mairie360/CICD/.github/workflows/frontend-cicd.yml@v4.0.1`, avec `cicd_version: v4.0.1` et `node_version: "24"`. Ce workflow partagé existant bloque build/tests sur les audits npm et Semgrep/Gitleaks. Sa publication Dev sur main est automatique ; Staging/Prod gardent des gates d’environnement distincts. Aucun pin ou accord de déploiement n’est changé ici.
+
+MAIR-230 / issue #79 ajoute le job consommateur `required_security_scan` nommé
+`CICD / Code Security Audit (Semgrep)` : la protection attend encore ce nom
+historique après le renommage partagé en v4. Ce job réexécute VRAIMENT les DEUX
+scanners, sans alias succès : historique du front et actions publiées v4.0.1 au
+commit immuable `539847726d4058a9565c4f682c2d1d8302874b06`, mêmes six règles
+frontend, findings/crashes explicitement bloquants. Images épinglées publiées
+et masquage des secrets Gitleaks inchangés. Les deux scans Semgrep ont des noms
+d’artefact SARIF distincts. Le job a seulement `contents: read`, sans mapping
+de secret, identifiant checkout persisté ni exclusion supplémentaire ; aucun
+accès/ruleset/contrôle de sécurité n’est contourné. Le scan partagé et les autres
+gates restent actifs. Les tests de régression contrôlent ce câblage ; la CI doit
+prouver le succès du vrai scan avant une fusion normale.
 
 Le Dockerfile utilise par défaut `NODE_VERSION=23.1.0` et le build Next.js `standalone`; la commande de l’image est `["node", "server.js"]`. Le port de l’image et les mappings Compose peuvent différer du port local proposé plus haut.
 

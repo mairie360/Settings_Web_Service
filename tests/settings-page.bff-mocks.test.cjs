@@ -174,6 +174,26 @@ test('system assistance is local and does not fetch unsupported settings', async
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
 });
 
+test('reference help opens a named dialog and closes without another settings read', async () => {
+  await renderLoadedPage(); await view.click('Système'); await view.click('Centre d’aide');
+  assert.match(view.html, /<dialog[^>]*aria-labelledby="settings-assistance-title"/);
+  assert.match(view.html, /id="settings-assistance-title"[^>]*>Centre d’aide/);
+  assert.match(view.text(), /Cette page ne permet pas encore de les révoquer/);
+  await view.click('Fermer');
+  assert.doesNotMatch(view.html, /Cette page ne permet pas encore de les révoquer/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+});
+
+test('dismissing and reopening a reference request clears its draft, not the profile', async () => {
+  await renderLoadedPage(); await view.click('Système'); await view.click('Signaler un problème');
+  await view.fire((props) => props.id === 'settings-assistance-message', 'onChange', { target: { value: 'Discarded request' } });
+  await view.click('Fermer'); await view.click('Signaler un problème');
+  assert.doesNotMatch(view.html, /Discarded request/);
+  await view.click('Fermer'); await view.click('Profil');
+  assert.match(view.html, /Anne Marie/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+});
+
 for (const [action, name] of [['Préparer une demande de support', 'demande-support-settings.txt'], ['Signaler un problème', 'signalement-settings.txt']]) {
   test(`local assistance exports ${name} without calling the BFF`, async (t) => {
     const exports = [];
@@ -185,6 +205,7 @@ for (const [action, name] of [['Préparer une demande de support', 'demande-supp
     assert.match(exports[0].content, /Une question <b>texte<\/b>/);
     assert.doesNotMatch(exports[0].content, /anne\.le-gall|192\.0\.2|Anne Marie/);
     assert.match(view.text(), /Aucun message n’a été envoyé/);
+    assert.doesNotMatch(view.html, /id="settings-assistance-message"/);
     assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
   });
 }

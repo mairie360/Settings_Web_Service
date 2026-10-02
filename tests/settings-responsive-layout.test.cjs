@@ -35,3 +35,10 @@ test('Settings shared navigation inherits the prototype default type scale witho
   assert.match(css, /body\s*\{[^}]*font-family: system-ui, sans-serif;/);
   assert.doesNotMatch(css, /(?:header|\.h-16)\s*\{[^}]*(?:height|min-height|max-height):/);
 });
+
+test('reference assistance dialogs bound width and height and scroll their content', () => {
+  assert.match(css, /\.settings-assistance-dialog\s*\{[^}]*width: min\(600px, calc\(100% - 32px\)\)/);
+  assert.match(css, /\.settings-assistance-dialog\s*\{[^}]*max-height: calc\(100dvh - 32px\)/);
+  assert.match(css, /\.settings-assistance-dialog\s*\{[^}]*overflow: auto/);
+  assert.match(css, /\.settings-assistance-dialog::backdrop\s*\{[^}]*background: #0006/);
+});

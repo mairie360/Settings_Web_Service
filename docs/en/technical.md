@@ -52,7 +52,7 @@ React state manages display and pending operations. This repository defines no b
 
 ## Installation and local startup
 
-Use Node.js 22 to reproduce the contract job and npm with the committed lockfile. Other job and Docker versions are detailed below.
+Use Node.js 24 and npm >=11.10 with the committed lockfile to reproduce the CI toolchain and its seven-day npm release-age policy. The internal UI package is the only existing age exception. Other job and Docker versions are detailed below.
 
 Private `@mairie360/*` dependencies require GitHub Packages access. Set `NODE_AUTH_TOKEN` in the environment to a token allowed to read these packages, as configured in `.npmrc`. Do not commit its value.
 
@@ -155,9 +155,22 @@ For documentation-only changes, check links, accuracy in both languages and `git
 
 ## CI/CD and Docker execution
 
-The `contracts.yml` job uses Node.js 22, `actions/checkout@v7` and `actions/setup-node@v7`. It runs on pushes, pull requests and manual dispatch; it installs with `npm ci`, checks contracts and runs the associated tests.
+The `contracts.yml` job uses Node.js 24 and immutable commit references for `actions/checkout` and `actions/setup-node`. It runs on pushes, pull requests and manual dispatch; it installs with `npm ci`, checks contracts and runs the associated tests.
 
-`cicd.yml` calls `mairie360/CICD/.github/workflows/frontend-cicd.yml@v2.0.0`, with `cicd_version: v2.0.0` and `node_version: "23"`. Reusable steps and GitHub environments determine actual checks, publications and deployments.
+`cicd.yml` calls `mairie360/CICD/.github/workflows/frontend-cicd.yml@v4.0.1`, with `cicd_version: v4.0.1` and `node_version: "24"`. This existing shared workflow blocks build/tests on npm audit and Semgrep/Gitleaks. Its Dev publication is automatic on main; Staging/Prod retain distinct environment gates. No deployment pins or approvals are changed here.
+
+MAIR-230 / issue #79 adds a consumer-only `required_security_scan` job named
+`CICD / Code Security Audit (Semgrep)` because protection still requires that
+legacy name after the shared v4 rename. This job really reruns BOTH scanners,
+not a success alias: it checks out frontend history and the published v4.0.1
+actions at immutable commit `539847726d4058a9565c4f682c2d1d8302874b06`, uses the
+same six frontend rulesets and explicitly blocks on findings/crashes. Published
+pinned scanner images and redacted Gitleaks remain unchanged. The two Semgrep
+runs have distinct SARIF artifact names. The job has `contents: read` only,
+no secret mapping or persisted checkout credentials, no exclusion override,
+and no access/ruleset/security bypass. The existing shared audit and all other
+gates continue to run. Regression tests check this compatibility wiring; CI
+must prove the actual scan succeeds before normal merge.
 
 The Dockerfile defaults to `NODE_VERSION=23.1.0` and the Next.js `standalone` build; the image command is `["node", "server.js"]`. Image ports and Compose mappings can differ from the local port suggested above.
 

@@ -83,6 +83,21 @@ body {
   color: #172033;
   font-weight: 400;
 }
+.settings-assistance-dialog {
+  width: min(600px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  overflow: auto;
+  border: 1px solid #e0dbd4;
+  border-radius: 16px;
+  padding: 28px;
+  background: white;
+  color: #172033;
+  box-shadow: 0 20px 60px #0003;
+}
+.settings-assistance-dialog::backdrop { background: #0006; }
+.settings-assistance-dialog > * + * { margin-top: 20px; }
+.settings-assistance-dialog :is(input, textarea) { min-width: 0; }
 @media (min-width: 640px) {
   .settings-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
   .settings-tab { height: 28px; padding-inline: 16px; }

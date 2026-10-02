@@ -17,8 +17,6 @@ html {
   --color-foreground: var(--foreground);
   --font-sans: system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
-  --text-xs: .8125rem;
-  --text-sm: .9375rem;
 }
 
 @media (prefers-color-scheme: dark) {

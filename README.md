@@ -43,6 +43,21 @@ credential. No API/BFF, cluster pin, registry access or Staging/Prod gate is
 changed by this consumer packaging fix. MAIR-436 remains open for its other
 frontend and workflow-hardening criteria.
 
+Both isolated Compose test stacks also supply this same build secret from the
+existing `NODE_AUTH_TOKEN` environment. It is not a container runtime secret or
+environment variable, and no test-stack API/BFF service or scan rule is changed.
+`docker compose --env-file /dev/null -f docker-compose-security.yml config --no-interpolate`
+(and the performance variant) validates the configuration without starting
+services; it is not evidence that the dynamic/performance tests have passed.
+
+The runner retains Node, curl and the traced application dependencies, but does
+not include npm/npx, yarn or corepack: package installation belongs only to the
+builder, and the standalone runtime starts `node server.js`. This removes the
+unused vulnerable global npm dependencies identified by the blocking image
+scan of `dev-f522ee3`; no scan exclusion or policy downgrade is used. The
+`runtime-base` target can be built without any npm credential to check Node,
+curl and removal of these CLIs; only the main pipeline verifies the full image.
+
 ## Contracts and background / Contrats et compléments
 
 - [BFF.md](BFF.md)

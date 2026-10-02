@@ -21,10 +21,18 @@ test('only existing Settings profile fields form a bounded desktop grid with vis
   assert.match(css, /\.settings-profile-fields input\s*\{[^}]*background: #f8fafc/);
 });
 
-test('Settings presentation includes the actual prototype spacing, typography and card shadow without global root changes', () => {
+test('Settings presentation includes the actual prototype spacing, typography and card shadow', () => {
   assert.match(css, /\.settings-shell main\s*\{\s*padding: 32px/);
   assert.match(css, /@media \(max-width: 767px\)[\s\S]*?\.settings-shell main\s*\{\s*padding: 20px 14px/);
   assert.match(css, /\.settings-page\s*\{[^}]*font-size: 17px/);
   assert.match(css, /\.settings-panel > :is\(form, section\)\s*\{[^}]*box-shadow: 0 5px 15px rgb\(23 32 51 \/ 14%\)/);
-  assert.doesNotMatch(css, /html\s*\{[^}]*font-size/);
+});
+
+test('Settings shared navigation inherits the prototype default type scale without a fixed header override', () => {
+  assert.match(css, /html\s*\{\s*font-size: 17px;/);
+  assert.match(css, /@theme inline\s*\{[^}]*--font-sans: system-ui, sans-serif;/);
+  assert.match(css, /@theme inline\s*\{[^}]*--text-xs: \.8125rem;/);
+  assert.match(css, /@theme inline\s*\{[^}]*--text-sm: \.9375rem;/);
+  assert.match(css, /body\s*\{[^}]*font-family: system-ui, sans-serif;/);
+  assert.doesNotMatch(css, /(?:header|\.h-16)\s*\{[^}]*(?:height|min-height|max-height):/);
 });

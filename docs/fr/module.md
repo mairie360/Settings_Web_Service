@@ -13,6 +13,7 @@ Domaine fonctionnel: Paramètres personnels.
 ## Fonctions disponibles
 
 - Formulaire de prénom, nom, e-mail et téléphone.
+- La navigation commune et la page reprennent l’échelle racine de 17px et la police système du prototype, avec des petits textes lisibles. Le header partagé conserve sa hauteur en rem (68px avec ce réglage par défaut), sans hauteur fixe imposée. Il s’agit uniquement de présentation : les préférences sauvegardées de police, thème et densité restent indisponibles.
 - Onglets à icônes alignés sur le prototype (deux colonnes mobile, trois intermédiaires, six desktop), sélection blanche au texte bleu et coordonnées sur une/deux colonnes. Flèches, Home et End conservent la sélection et le focus ; les icônes décoratives ne changent pas les noms accessibles. Aucun champ fictif du profil de démonstration n’est ajouté.
 - Confirmation de sauvegarde à partir du profil relu par le BFF.
 - Une seule sauvegarde du profil à la fois : les quatre champs et le bouton sont verrouillés pendant l’attente, même après changement d’onglet. Un refus conserve le brouillon et permet de réessayer ; un succès affiche le profil renvoyé et libère les champs pour une nouvelle modification.

@@ -1,27 +1,23 @@
-# --- Stage 1: Build ---
-ARG NODE_VERSION=23.1.0
-FROM node:${NODE_VERSION}-bookworm-slim AS builder
+# syntax=docker/dockerfile:1
+# MAIR-436: keep the exact Node release aligned with both CI workflows.
+ARG NODE_VERSION=24.21.0
+FROM node:${NODE_VERSION}-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS dependencies
 WORKDIR /app
 
-# On déclare l'argument pour le token (passé via --build-arg dans ta CI)
-ARG NODE_AUTH_TOKEN
-
-# Optimisation du cache pour les dépendances
+# Keep the tracked npm policy read-only and the existing CI credential ephemeral.
+# Neither mount is included in this layer; a missing secret must fail closed.
 COPY package.json package-lock.json ./
+RUN --mount=type=secret,id=node_auth_token,env=NODE_AUTH_TOKEN,required=true \
+    --mount=type=bind,source=.npmrc,target=/app/.npmrc \
+    npm ci
 
-# Configuration temporaire de npm pour le registre GitHub
-# On crée un .npmrc à la volée, on installe, puis on le supprimera
-RUN echo "@mairie360:registry=https://npm.pkg.github.com" > .npmrc && \
-    echo "//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}" >> .npmrc && \
-    npm ci && \
-    rm .npmrc
-
-# Copie du code source et build
+# --- Build ---
+FROM dependencies AS builder
 COPY . .
 RUN npm run build
 
-# --- Stage 2: Runner ---
-FROM node:${NODE_VERSION}-bookworm-slim AS runner
+# --- Runner ---
+FROM node:${NODE_VERSION}-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS runner
 WORKDIR /app
 
 # Sécurité & Healthcheck

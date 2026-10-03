@@ -24,6 +24,15 @@ unavailable states, keyboard navigation and serious/critical axe findings
 with synthetic contract-shaped responses; they do not prove behavior against
 a live BFF or replace manual accessibility review.
 
+Profile saves keep one in-flight PATCH and freeze all four inputs until it
+settles. A successful HTTP status alone does not confirm a usable profile:
+the page checks the published `SettingsProfile` shape before replacing either
+the confirmed data or the draft. An unusable reply keeps the draft, displays
+an error and unlocks retry without inventing missing fields. Optional phone
+may be absent, null or a string; valid server normalizations remain authoritative.
+The fault-injection tests intentionally return invalid confirmations and do not
+claim that those replies conform to the contract or occur on deployed services.
+
 ## Container packaging (MAIR-436)
 
 The Dockerfile and both Node CI inputs use Node `24.21.0`. The official

@@ -24,6 +24,19 @@ unavailable states, keyboard navigation and serious/critical axe findings
 with synthetic contract-shaped responses; they do not prove behavior against
 a live BFF or replace manual accessibility review.
 
+### Read recovery (MAIR-456)
+
+After an initial refusal, **Réessayer** explicitly repeats the existing bootstrap
+GET. When sessions are unavailable, **Actualiser les paramètres** refreshes the
+same response. Reads are single-flight, abort on unmount, ignore stale results
+and cannot compete with profile saves. The received profile becomes the new
+confirmed baseline; all dirty contact fields, including edits made while the
+read is pending, remain in the draft. Clean fields adopt the received values.
+Read recovery never repeats a PATCH or clears an independent save/logout error.
+Component regressions cover refusal, keyboard retry, concurrent guards,
+StrictMode cleanup and draft preservation; HTTP contract tests verify the real
+page/client/proxy trace. Synthetic responses are test-only, not deployed data.
+
 ## Container packaging (MAIR-436)
 
 The Dockerfile and both Node CI inputs use Node `24.21.0`. The official

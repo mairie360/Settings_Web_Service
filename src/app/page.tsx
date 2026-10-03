@@ -61,6 +61,15 @@ function profilePatch(initial: Profile, current: Profile): ProfilePatch {
   return patch;
 }
 
+function isConfirmedProfile(value: unknown): value is Profile {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const profile = value as Record<string, unknown>;
+  return typeof profile.first_name === "string"
+    && typeof profile.last_name === "string"
+    && typeof profile.email === "string"
+    && (profile.phone === undefined || profile.phone === null || typeof profile.phone === "string");
+}
+
 export default function Home() {
   const [data, setData] = useState<Bootstrap | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -118,6 +127,9 @@ export default function Home() {
 
     try {
       const saved = await saveProfile(patch);
+      if (!isConfirmedProfile(saved)) {
+        throw new Error("L’enregistrement du profil n’a pas été confirmé. Réessayez.");
+      }
       setProfile(saved);
       setData((current) => current ? { ...current, profile: saved } : current);
       setStatus("Votre profil a été enregistré.");

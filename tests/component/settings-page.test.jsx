@@ -106,6 +106,44 @@ describe("Settings page", () => {
     expect(screen.queryByText("Votre profil a été enregistré.")).toBeNull();
   });
 
+  it.each([
+    ["incomplete object", {}],
+    ["null", null],
+    ["array", []],
+    ["missing first name", { last_name: "Returned", email: "returned@example.invalid" }],
+    ["non-string surname", { ...bootstrap().profile, last_name: 42 }],
+    ["non-string email", { ...bootstrap().profile, email: false }],
+    ["non-string phone", { ...bootstrap().profile, phone: 42 }],
+    ["body-less response", undefined],
+  ])("retains all four draft fields after an unusable %s confirmation and permits retry", async (_label, reply) => {
+    vi.mocked(saveProfile).mockResolvedValueOnce(reply);
+    const user = await openSettings();
+    const draft = { first_name: "Draft", last_name: "Surname", email: "draft@example.invalid", phone: "+33987654321" };
+    const fields = [["Prénom", "first_name"], ["Nom", "last_name"], ["E-mail", "email"], ["Téléphone", "phone"]];
+    for (const [label, field] of fields) {
+      fireEvent.change(screen.getByRole("textbox", { name: label }), { target: { value: draft[field] } });
+    }
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("L’enregistrement du profil n’a pas été confirmé. Réessayez.");
+    expect(saveProfile).toHaveBeenCalledExactlyOnceWith(draft);
+    expect(screen.queryByText("Votre profil a été enregistré.")).toBeNull();
+    for (const [label, field] of fields) {
+      expect(screen.getByRole("textbox", { name: label }).value).toBe(draft[field]);
+      expect(screen.getByRole("textbox", { name: label }).disabled).toBe(false);
+    }
+    await user.click(screen.getByRole("tab", { name: "Sécurité", exact: true }));
+    await user.click(screen.getByRole("tab", { name: "Profil", exact: true }));
+    for (const [label, field] of fields) expect(screen.getByRole("textbox", { name: label }).value).toBe(draft[field]);
+    vi.mocked(saveProfile).mockResolvedValueOnce({ ...draft, first_name: "Official", phone: null });
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    expect(saveProfile.mock.calls).toEqual([[draft], [draft]]);
+    expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("Official");
+    expect(screen.getByRole("textbox", { name: "Téléphone" }).value).toBe("");
+    expect(screen.getByRole("button", { name: "Enregistrer" }).disabled).toBe(true);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText("Votre profil a été enregistré.")).toBeTruthy();
+  });
+
   it("locks one pending save across tab returns, retains a refused draft and unlocks a confirmed retry", async () => {
     let rejectSave;
     vi.mocked(saveProfile).mockImplementationOnce(() => new Promise((resolve, reject) => { rejectSave = reject; }));

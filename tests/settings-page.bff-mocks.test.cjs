@@ -50,6 +50,55 @@ afterEach(() => {
 const upstream = () => bffSettings.requests.map((request) => `${request.method} ${request.template}`);
 const profileInputs = () => [...view.html.matchAll(/<input\b[^>]*>/g)].map(([html]) => html);
 
+for (const [label, reply] of [
+  ['missing object', { body: {} }],
+  ['null', { body: null }],
+  ['array', { body: [] }],
+  ['missing required name', { body: { last_name: 'Reply', email: 'reply@example.invalid' } }],
+  ['non-string surname', { body: fixtures.profile({ last_name: 42 }) }],
+  ['non-string email', { body: fixtures.profile({ email: false }) }],
+  ['non-string optional phone', { body: fixtures.profile({ phone: 42 }) }],
+  ['empty JSON body', { raw: '' }],
+  ['body-less 204', { status: 204 }],
+]) {
+  test(`a ${label} save response retains the draft and never confirms a profile`, async () => {
+    await renderLoadedPage();
+    await view.fire(props => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Submitted draft' } });
+    // Intentional fault injection, not evidence that this response satisfies the published DTO.
+    bffSettings.on('PATCH', '/settings/profile', { ...reply, outOfContract: true });
+    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    assert.doesNotMatch(view.text(), /Votre profil a été enregistré/);
+    assert.match(view.html, /role="alert"/);
+    assert.match(view.html, /value="Submitted draft"/);
+    assert.match(view.html, /value="Le Gall"/);
+    assert.match(view.html, /value="anne\.le-gall@mairie\.test"/);
+    assert.equal(view.hostElements(props => props.type === 'submit')[0].props.disabled, false);
+    assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
+    assert.deepEqual(bffSettings.requests[1].body, { first_name: 'Submitted draft' });
+    bffSettings.on('PATCH', '/settings/profile', { body: fixtures.profile({ first_name: 'OFFICIAL', last_name: 'RECEIVED' }) });
+    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    assert.deepEqual(bffSettings.requests[2].body, bffSettings.requests[1].body);
+    assert.match(view.html, /value="OFFICIAL"/);
+    assert.match(view.html, /value="RECEIVED"/);
+    assert.match(view.text(), /Votre profil a été enregistré/);
+    assert.equal(view.hostElements(props => props.type === 'submit')[0].props.disabled, true);
+  });
+}
+
+for (const [label, phone] of [['absent', undefined], ['null', null], ['string', '+33987654321']]) {
+  test(`a confirmed profile accepts the contract ${label} optional phone`, async () => {
+    await renderLoadedPage();
+    await view.fire(props => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Submitted draft' } });
+    const saved = fixtures.profile({ first_name: 'OFFICIAL', phone });
+    if (phone === undefined) delete saved.phone;
+    bffSettings.on('PATCH', '/settings/profile', { body: saved });
+    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    assert.match(view.text(), /Votre profil a été enregistré/);
+    assert.match(view.html, /value="OFFICIAL"/);
+    assert.doesNotMatch(view.html, /role="alert"/);
+  });
+}
+
 async function renderLoadedPage(body = fixtures.bootstrap()) {
   bffSettings.on('GET', '/settings/bootstrap', { body });
   view = mount(React.createElement(Home));

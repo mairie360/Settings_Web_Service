@@ -50,6 +50,45 @@ afterEach(() => {
 const upstream = () => bffSettings.requests.map((request) => `${request.method} ${request.template}`);
 const profileInputs = () => [...view.html.matchAll(/<input\b[^>]*>/g)].map(([html]) => html);
 
+test('an explicit retry recovers an initial upstream refusal through GET only', async () => {
+  // Intentional fault injection: 502 is not a published response; it is not contract conformance evidence.
+  bffSettings.on('GET', '/settings/bootstrap', { status: 502, body: fixtures.error('Lecture refusée'), outOfContract: true });
+  view = mount(React.createElement(Home));
+  await view.waitFor(html => html.includes('Le profil est indisponible.'));
+  assert.match(view.html, /Lecture refusée/);
+  assert.doesNotMatch(view.html, /role="tablist"/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+  bffSettings.on('GET', '/settings/bootstrap', { body: fixtures.bootstrap() });
+  await view.click('Réessayer');
+  await view.waitFor(html => html.includes('Informations personnelles'));
+  assert.doesNotMatch(view.html, /Lecture refusée/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap']);
+  assert.deepEqual(front.browserCalls, [
+    { method: 'GET', path: '/settings/bootstrap' },
+    { method: 'GET', path: '/settings/bootstrap' },
+  ]);
+});
+
+test('refreshing unavailable sessions keeps dirty fields and updates clean fields without a PATCH', async () => {
+  await renderLoadedPage(fixtures.bootstrap({ sessions: [], sources: { sessions: 'unavailable' } }));
+  await view.fire((props, text, tag) => tag === 'input' && props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Draft' } });
+  const received = fixtures.bootstrap();
+  received.profile.last_name = 'Received surname';
+  bffSettings.on('GET', '/settings/bootstrap', { body: received });
+  await view.click('Actualiser les paramètres');
+  await view.waitFor(html => html.includes('Received surname'));
+  assert.match(view.html, /value="Draft"/);
+  assert.match(view.html, /value="Received surname"/);
+  assert.doesNotMatch(view.html, /Votre profil a été enregistré/);
+  await view.click('Sécurité');
+  assert.doesNotMatch(view.text(), /Les sessions sont temporairement indisponibles/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap']);
+  assert.deepEqual(front.browserCalls, [
+    { method: 'GET', path: '/settings/bootstrap' },
+    { method: 'GET', path: '/settings/bootstrap' },
+  ]);
+});
+
 async function renderLoadedPage(body = fixtures.bootstrap()) {
   bffSettings.on('GET', '/settings/bootstrap', { body });
   view = mount(React.createElement(Home));

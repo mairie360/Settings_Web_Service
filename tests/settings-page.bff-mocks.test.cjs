@@ -99,11 +99,87 @@ for (const [label, phone] of [['absent', undefined], ['null', null], ['string', 
   });
 }
 
+test('an explicit retry recovers an initial upstream refusal through GET only', async () => {
+  // Intentional fault injection: 502 is not a published response; it is not contract conformance evidence.
+  bffSettings.on('GET', '/settings/bootstrap', { status: 502, body: fixtures.error('Lecture refusée'), outOfContract: true });
+  view = mount(React.createElement(Home));
+  await view.waitFor(html => html.includes('Le profil est indisponible.'));
+  assert.match(view.html, /Lecture refusée/);
+  assert.doesNotMatch(view.html, /role="tablist"/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+  bffSettings.on('GET', '/settings/bootstrap', { body: fixtures.bootstrap() });
+  await view.click('Réessayer');
+  await view.waitFor(html => html.includes('Informations personnelles'));
+  assert.doesNotMatch(view.html, /Lecture refusée/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap']);
+  assert.deepEqual(front.browserCalls, [
+    { method: 'GET', path: '/settings/bootstrap' },
+    { method: 'GET', path: '/settings/bootstrap' },
+  ]);
+});
+
+test('refreshing unavailable sessions keeps dirty fields and updates clean fields without a PATCH', async () => {
+  await renderLoadedPage(fixtures.bootstrap({ sessions: [], sources: { sessions: 'unavailable' } }));
+  await view.fire((props, text, tag) => tag === 'input' && props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Draft' } });
+  const received = fixtures.bootstrap();
+  received.profile.last_name = 'Received surname';
+  bffSettings.on('GET', '/settings/bootstrap', { body: received });
+  await view.click('Actualiser les paramètres');
+  await view.waitFor(html => html.includes('Received surname'));
+  assert.match(view.html, /value="Draft"/);
+  assert.match(view.html, /value="Received surname"/);
+  assert.doesNotMatch(view.html, /Votre profil a été enregistré/);
+  await view.click('Sécurité');
+  assert.doesNotMatch(view.text(), /Les sessions sont temporairement indisponibles/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap']);
+  assert.deepEqual(front.browserCalls, [
+    { method: 'GET', path: '/settings/bootstrap' },
+    { method: 'GET', path: '/settings/bootstrap' },
+  ]);
+});
+
 async function renderLoadedPage(body = fixtures.bootstrap()) {
   bffSettings.on('GET', '/settings/bootstrap', { body });
   view = mount(React.createElement(Home));
   return view.waitFor((html) => !html.includes('Chargement des paramètres'));
 }
+
+test('an unusable profile reply does not poison a recovered read or repeat its PATCH', async () => {
+  await renderLoadedPage(fixtures.bootstrap({ sessions: [], sources: { sessions: 'unavailable' } }));
+  await view.fire(props => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Retained draft' } });
+  // Deliberately malformed confirmation, not a conforming deployed BFF response.
+  bffSettings.on('PATCH', '/settings/profile', { body: {}, outOfContract: true });
+  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  assert.match(view.text(), /L’enregistrement du profil n’a pas été confirmé/);
+  const received = fixtures.bootstrap({ sessions: [], sources: { sessions: 'unavailable' } });
+  received.profile.first_name = 'Read name';
+  received.profile.last_name = 'Read surname';
+  bffSettings.on('GET', '/settings/bootstrap', { body: received });
+  await view.click('Actualiser les paramètres');
+  await view.waitFor(html => html.includes('Read surname'));
+  assert.match(view.html, /value="Retained draft"/);
+  assert.match(view.html, /value="Read surname"/);
+  assert.match(view.text(), /L’enregistrement du profil n’a pas été confirmé/);
+  assert.doesNotMatch(view.text(), /Votre profil a été enregistré/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile', 'GET /settings/bootstrap']);
+
+  const official = fixtures.profile({ first_name: 'Confirmed name', last_name: 'Confirmed surname' });
+  bffSettings.on('PATCH', '/settings/profile', { body: official });
+  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  assert.deepEqual(bffSettings.requests[3].body, { first_name: 'Retained draft' });
+  assert.match(view.text(), /Votre profil a été enregistré/);
+  assert.match(view.html, /value="Confirmed name"/);
+  assert.doesNotMatch(view.text(), /L’enregistrement du profil n’a pas été confirmé/);
+
+  await view.fire(props => props.type === 'text' && props.value === 'Confirmed name', 'onChange', { target: { value: 'Next draft' } });
+  const next = fixtures.bootstrap({ profile: { ...official, last_name: 'Read after confirmation' } });
+  bffSettings.on('GET', '/settings/bootstrap', { body: next });
+  await view.click('Actualiser les paramètres');
+  await view.waitFor(html => html.includes('Read after confirmation'));
+  assert.match(view.html, /value="Next draft"/);
+  assert.match(view.html, /value="Read after confirmation"/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile', 'GET /settings/bootstrap', 'PATCH /settings/profile', 'GET /settings/bootstrap']);
+});
 
 test('the first pass renders the loading state, the next one the profile form filled from GET /settings/bootstrap', async () => {
   bffSettings.on('GET', '/settings/bootstrap', { body: fixtures.bootstrap() });

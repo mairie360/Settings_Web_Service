@@ -17,6 +17,7 @@ Business domain: Personal settings.
 - Prototype-aligned icon tabs (two mobile, three intermediate, six desktop columns), a white selected pill with blue text, and a one/two-column contact form. Arrow keys, Home and End retain focus-following selection; decorative icons do not change accessible names. Only existing fields are displayed, not unsupported demo profile data.
 - Save confirmation based on the profile read back by the BFF.
 - One profile save at a time: the four fields and submit are locked while pending, even after switching tabs. A refused save keeps the draft and allows retry; a successful save displays the returned profile and releases the fields for new edits.
+- An unusable successful profile response is not a confirmation: the draft and last confirmed identity remain intact. Explicit bootstrap recovery preserves dirty fields and independent save errors, adopts clean received fields, and never repeats a PATCH. Only a validated save response advances the confirmed baseline used by later reads.
 - Session list in the Security tab with a separate unavailable state.
 - System tab: reference-style named help/support/report dialogs with native modal focus containment, Escape/Close and opener focus restoration. Support/report preparation failures retain the draft for retry; successful preparation closes the dialog and only announces download initiation. Each new request opens blank. Truthful help, local text exports and a minimal browser diagnostic JSON remain available without automatic transmission.
 

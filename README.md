@@ -33,6 +33,30 @@ may be absent, null or a string; valid server normalizations remain authoritativ
 The fault-injection tests intentionally return invalid confirmations and do not
 claim that those replies conform to the contract or occur on deployed services.
 
+### Read recovery (MAIR-456)
+
+After an initial refusal, **Réessayer** explicitly repeats the existing bootstrap
+GET. When sessions are unavailable, **Actualiser les paramètres** refreshes the
+same response. Reads are single-flight, abort on unmount, ignore stale results
+and cannot compete with profile saves. The received profile becomes the new
+confirmed baseline; all dirty contact fields, including edits made while the
+read is pending, remain in the draft. Clean fields adopt the received values.
+Read recovery never repeats a PATCH or clears an independent save/logout error.
+Component regressions cover refusal, keyboard retry, concurrent guards,
+StrictMode cleanup and draft preservation; HTTP contract tests verify the real
+page/client/proxy trace. Synthetic responses are test-only, not deployed data.
+
+### Composed recovery and confirmation
+
+The confirmation check runs before updating the read baseline. An unusable
+save reply cannot turn a subsequent bootstrap read into a draft reset or a
+false acknowledgement. Cross-feature HTTP and React regressions cover the
+invalid save, explicit read with draft retention and independent save error,
+explicit valid retry, and a later read adopting clean fields from the new
+confirmed baseline. Read/save guards and both individual regression suites
+remain intact. This candidate does not change the shared-library pin or claim
+that its required remote CI, deployed behavior or current-local integration pass.
+
 ## Container packaging (MAIR-436)
 
 The Dockerfile and both Node CI inputs use Node `24.21.0`. The official

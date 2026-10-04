@@ -17,6 +17,7 @@ Domaine fonctionnel: Paramètres personnels.
 - Onglets à icônes alignés sur le prototype (deux colonnes mobile, trois intermédiaires, six desktop), sélection blanche au texte bleu et coordonnées sur une/deux colonnes. Flèches, Home et End conservent la sélection et le focus ; les icônes décoratives ne changent pas les noms accessibles. Aucun champ fictif du profil de démonstration n’est ajouté.
 - Confirmation de sauvegarde à partir du profil relu par le BFF.
 - Une seule sauvegarde du profil à la fois : les quatre champs et le bouton sont verrouillés pendant l’attente, même après changement d’onglet. Un refus conserve le brouillon et permet de réessayer ; un succès affiche le profil renvoyé et libère les champs pour une nouvelle modification.
+- Une réponse de sauvegarde réussie mais inexploitable ne confirme rien : le brouillon et l’identité confirmée restent intacts. La reprise explicite du bootstrap conserve les champs modifiés et l’erreur de sauvegarde indépendante, adopte les champs reçus non modifiés et ne répète jamais le PATCH. Seule une réponse de sauvegarde validée avance la référence confirmée utilisée par les lectures suivantes.
 - Liste de sessions dans l’onglet Sécurité avec état d’indisponibilité distinct.
 - Onglet Système : aide adaptée aux fonctions disponibles, téléchargements locaux de demande/signalement en texte et diagnostic navigateur minimal en JSON. Aucun envoi automatique.
 

@@ -57,6 +57,40 @@ confirmed baseline. Read/save guards and both individual regression suites
 remain intact. This candidate does not change the shared-library pin or claim
 that its required remote CI, deployed behavior or current-local integration pass.
 
+## Paired sidebar comparison — MAIR-182 / issue #24
+
+A disposable copy of the preserved reference's exact `src` and `public` was
+rebuilt with the available Next 16.3.6 / published UI 0.6.10 toolchain. This is
+source-reference evidence, not certification of its original Next 15 install.
+At 1280×720, the consumer now matches the reference's 44px sidebar links,
+positions and lateral shadow; mobile stacking stays below the drawer close
+control. The heading, header and tabs' vertical positions remain unchanged.
+At measured 390×844, all six panels stay bounded; Close, Shift+Tab/Tab and Escape
+restore the opener. Arrow keys/Home/End, draft retention across tabs and the
+shared Profile link are checked. Measured 640/768/1920 widths also stay bounded.
+
+The short four-field published profile has no desktop vertical scrollbar, unlike
+the reference's longer unsupported profile. Its natural 15px wider content is
+intentional: no artificial gutter or demo photo/service/job/biography fields are
+added. Preferences, administrator role and real authenticated Dev acceptance
+remain separate blockers; no exhaustive pixel or deployed persistence claim.
+151 sequential Node tests and 41 component tests pass, with 90.17% lines,
+90.96% branches and 94.67% functions (unchanged 60% gates). Types, published
+Settings 1.1.0 contract and one-worker production build pass; lint retains one
+existing warning. Six disposable calls (four GET and two identical PATCH)
+exercise refused save, retained draft, explicit confirmed retry and reload.
+Zero validator violations include the declared simulated 503 exception; this
+does not certify a deployed BFF or real account. Servers are stopped, original
+data unchanged. Required green CI and integration are still prerequisites.
+
+Comparaison sur copie exacte de l'ancienne référence, pas certification de son
+installation d'origine. Sidebar 44px/ombre, fermeture et focus mobile, six
+panneaux, clavier, profil direct et brouillon sont vérifiés. La largeur naturelle
+du profil court reste volontaire, sans fausses données ou sauvegardes. Les
+chiffres de tests et appels ci-dessus concernent les fixtures jetables ; CI,
+intégration, rôle publié et recette Dev réelle restent distincts. Aucun API/BFF,
+contrat, auth, dépendance, workflow, environnement ou pin de cluster modifié.
+
 ## Container packaging (MAIR-436)
 
 The Dockerfile and both Node CI inputs use Node `24.21.0`. The official

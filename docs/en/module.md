@@ -13,6 +13,7 @@ Business domain: Personal settings.
 ## Available capabilities
 
 - Form for first name, last name, email and phone.
+- The Settings sidebar restores the reference's 44px link height and lateral shadow. Its mobile stacking remains below the published drawer close control. The short contract-backed profile retains its natural width: unsupported reference fields are not copied to force a scrollbar or visual equivalence.
 - The shared navigation and page use the prototype's default 17px root scale and system font. Navigation retains the reference's standard small-text tokens; the existing Settings panel's larger labels remain scoped to that panel. The shared header keeps its rem-based sizing (68px at this default), rather than a fixed-height override. This is presentation only: saved font, theme and density preferences remain unavailable.
 - Prototype-aligned icon tabs (two mobile, three intermediate, six desktop columns), a white selected pill with blue text, and a one/two-column contact form. Arrow keys, Home and End retain focus-following selection; decorative icons do not change accessible names. Only existing fields are displayed, not unsupported demo profile data.
 - Save confirmation based on the profile read back by the BFF.

@@ -13,6 +13,7 @@ Domaine fonctionnel: Paramètres personnels.
 ## Fonctions disponibles
 
 - Formulaire de prénom, nom, e-mail et téléphone.
+- La sidebar Settings retrouve les liens de 44px et l’ombre latérale de la référence. Son empilement mobile reste sous le bouton Fermer du tiroir publié. Le profil court conforme au contrat conserve sa largeur naturelle : aucun champ non pris en charge n’est copié pour forcer une scrollbar ou une équivalence visuelle.
 - La navigation commune et la page reprennent l’échelle racine de 17px et la police système du prototype. La navigation conserve les tailles standard des petits textes de la référence ; les labels agrandis du panneau Settings existant restent limités à ce panneau. Le header partagé conserve sa hauteur en rem (68px avec ce réglage par défaut), sans hauteur fixe imposée. Il s’agit uniquement de présentation : les préférences sauvegardées de police, thème et densité restent indisponibles.
 - Onglets à icônes alignés sur le prototype (deux colonnes mobile, trois intermédiaires, six desktop), sélection blanche au texte bleu et coordonnées sur une/deux colonnes. Flèches, Home et End conservent la sélection et le focus ; les icônes décoratives ne changent pas les noms accessibles. Aucun champ fictif du profil de démonstration n’est ajouté.
 - Confirmation de sauvegarde à partir du profil relu par le BFF.

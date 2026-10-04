@@ -45,4 +45,12 @@ Support/report drafts accept 1–5,000 characters and remain in memory only; lea
 
 ## Developing or operating this module
 
+The composed recovery/profile-confirmation candidate consumes published UI0.6.10.
+Native actual390x844 checks retain dirty fields and the save error during GET-only
+recovery; only a usable returned profile confirms a save. Later reads update clean
+fields against that confirmation while preserving a new draft. The disposable
+server restart and declared invalid/error response fixtures do not prove deployed
+persistence. 150 Node and41 component tests, types/contract/lint/build pass locally;
+actual required CI, integration and exact current-local delivery remain separate.
+
 The [technical guide](technical.md) covers architecture, configuration, routes, session handling, persistence, tests and CI/CD. It describes sources of truth and contract synchronization with associated repositories.

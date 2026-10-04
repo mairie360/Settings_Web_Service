@@ -116,3 +116,39 @@ Le pin exact et l'intégrité du package publié sont alignés sur Elearning san
 le rétrograder. Les tests de release vérifient le manifeste, le lockfile et le
 vrai package installé. Une validation isolée ne remplace pas la CI verte,
 l'intégration des sept consommateurs et la recette de la copie locale livrée.
+
+## Composed profile recovery with published UI — 4 October 2026
+
+The existing profile-confirmation and bootstrap-recovery changes are composed
+with the approved shared UI0.6.10 consumer pin. The real published tarball was
+verified against the lockfile SHA512 before installation in an isolated QA copy;
+all other locked dependencies and the user's installed UI0.6.8 remain unchanged.
+150 Node tests (seven suites, sequential), 41 component tests, TypeScript,
+published Settings1.1.0 contract and production webpack build pass. Original
+coverage gates remain60%; lint has one inherited warning, not a disabled rule.
+
+Native desktop1280x720 initial refusal/retry and actual mobile390x844 profile
+checks retain all four draft fields and the save error after an unusable response.
+GET-only recovery does not resubmit the save. Explicit confirmed retry displays
+the returned profile; the next read updates clean fields against that new baseline
+and retains a later dirty first name. The shared mobile drawer traps/restores
+keyboard focus. Root17px, document390px, no framework overlay; console logs empty.
+Only the measured390px recipe counts as mobile, not an earlier ignored override.
+
+The first disposable server stopped before read recovery; its terminal state and
+four-request ledger were retained, then the fixture restarted for the three-call
+continuation. Seven upstream calls total (five GET, two PATCH); one browser fetch
+during downtime reached no mock. Zero validator violations within the explicit
+simulated refusals/unusable-response exceptions, not zero strict deviations or
+proof of deployed authorization/persistence. Both servers are stopped. This is
+not an exhaustive fresh paired prototype comparison, complete image/deployment
+test or a green required CI. Issues remain open until integration and exact
+main/local-current verification; no API/BFF, contract/client/auth/security change.
+
+Les reprises de lecture et confirmations du profil sont vérifiées ensemble avec
+le vrai package UI publié. Le brouillon et l'erreur restent indépendants du GET ;
+seule une réponse de profil utilisable confirme l'enregistrement. Les chiffres
+ci-dessus distinguent les appels amont du fetch pendant l'arrêt du serveur et les
+exceptions simulées. La preuve mobile est réellement390x844 ; aucune autorisation
+ou persistance déployée, parité exhaustive ou intégration main n'est revendiquée.
+Les deux versions locales et les dépendances utilisateur restent préservées.

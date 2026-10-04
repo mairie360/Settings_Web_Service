@@ -45,4 +45,13 @@ Les brouillons de demande/signalement acceptent 1 à 5 000 caractères et resten
 
 ## Pour développer ou exploiter ce module
 
+Le candidat composé reprise/confirmation du profil consomme UI0.6.10 publié.
+La recette native réelle390x844 conserve les champs modifiés et l'erreur pendant
+la reprise GET seule ; seul un profil retourné utilisable confirme la sauvegarde.
+Les lectures suivantes actualisent les champs non modifiés par rapport à cette
+confirmation sans perdre un nouveau brouillon. Le redémarrage du serveur jetable
+et les réponses invalides/refusées déclarées ne prouvent pas la persistance
+déployée. 150tests Node et41composants, types/contrat/lint/build passent localement ;
+vraie CI requise, intégration et livraison locale exacte restent distinctes.
+
 Le [guide technique](technical.md) détaille architecture, configuration, routes, session, persistance, tests et CI/CD. Il décrit les sources de vérité et les étapes de synchronisation des contrats avec les dépôts associés.

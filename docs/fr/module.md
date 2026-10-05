@@ -1,5 +1,16 @@
 # Settings_Web_Service — Présentation du module
 
+## Reconnexion — MAIR-405
+
+Un visiteur sans cookie ou avec une session expirée rejoint le Login configuré
+avant l’affichage de Settings. Un401 pendant une lecture/enregistrement délègue
+une seule fois au flux Login de déconnexion/reconnexion ; l’écriture refusée
+n’est jamais rejouée automatiquement. Un403 ou une panne du service conserve le
+brouillon et la reprise habituelle. Aucun succès par stockage local ni session
+fictive n’est ajouté. Sans configuration Login valide, un état d’indisponibilité
+contrôlé apparaît. Ce contrôle frontend ne certifie ni authenticité du jeton,
+révocation serveur ni permissions déployées.
+
 [Documentation technique](technical.md) · [English](../en/module.md) · [README](../../README.md)
 
 Permettre à l’utilisateur de modifier ses coordonnées et de consulter ses sessions. L’interface affiche explicitement les réglages qui ne sont pas encore disponibles.

@@ -1,5 +1,34 @@
 # Settings_Web_Service
 
+## Protected session navigation — MAIR-405 frontend slice
+
+Restore the preserved prototype's early cookie presence/expiry gate without its
+implicit localhost Login fallback. Anonymous/expired page requests redirect only
+to a validated runtime `LOGIN_FRONT_URL` (503 if unavailable); non-GET documents
+use 303 rather than replaying a body. Protected Settings data and metadata return
+an uncached same-origin JSON401, never a cross-origin fetch redirect. A real401
+hands the browser to the existing Login `/logout` flow once, with no mutation
+replay. Aborted reads cannot navigate after unmount; 400/403/503 remain distinct
+business/service errors. Authenticated requests retain the nonce CSP. The
+`COOKIE_DOMAIN` setting controls expiry of a document's rejected shared cookie.
+
+This is an early navigation check, **not JWT signature verification, server
+revocation or authorization**. The unchanged BFF/proxy still owns real token and
+permission checks. The mixed audit's role/Admin link, instance timezone and
+deployed acceptance remain open; no backend, contract, demo data, dependency,
+security gate or deployment is changed. Focused17regressions (12initially red),
+168Node/41component tests and existing60% gates pass. Native proof and genuine CI
+must be qualified separately before main/current-local integration.
+
+Rétablir la garde cookie du prototype, sans URL Login locale implicite. Les pages
+sans session/expirées rejoignent la destination validée ; les données/métadonnées
+renvoient un401JSON de même origine. Le navigateur délègue une seule fois la
+reconnexion au flux Login existant, sans rejouer l’écriture ni confondre403/503
+avec une expiration. Les lectures annulées ne naviguent pas. CSP conservée,
+`COOKIE_DOMAIN` utilisé pour effacer le cookie rejeté d’un document. Ceci ne
+certifie ni signature JWT, révocation, rôle admin, fuseau ni environnement réel ;
+MAIR405 reste un audit partiellement traité et aucun BFF/API n’est modifié.
+
 Let users update contact details and inspect sessions. The interface explicitly identifies settings that are not yet available.
 
 Permettre à l’utilisateur de modifier ses coordonnées et de consulter ses sessions. L’interface affiche explicitement les réglages qui ne sont pas encore disponibles.

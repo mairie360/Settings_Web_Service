@@ -1,5 +1,15 @@
 # Settings_Web_Service — Module overview
 
+## Reconnection — MAIR-405
+
+Visitors without a cookie or with an expired session are sent to configured
+Login before Settings renders. During a read/save, a401 triggers the existing
+Login logout/reconnection handoff once; the failed save is never automatically
+replayed. A403 or unavailable service still preserves the draft and normal
+recovery. No storage-based success or fictitious session is introduced. Missing
+Login configuration reports a controlled unavailability. This frontend check
+does not certify token authenticity, server revocation or deployed permissions.
+
 [Technical documentation](technical.md) · [Français](../fr/module.md) · [README](../../README.md)
 
 Let users update contact details and inspect sessions. The interface explicitly identifies settings that are not yet available.

@@ -1,5 +1,15 @@
 # Settings_Web_Service
 
+## Local browser information — MAIR-471
+
+System restores the reference's visible browser/operating-system information
+using the existing coarse local detector. Labels are estimates, not a device
+inventory; unknown or inaccessible information is not replaced by fixture data.
+Server rendering uses a deterministic placeholder, resolved after hydration with
+stable string snapshots and no event subscription, network request or storage.
+No raw user-agent, browser version, profile/session or deployment metadata is
+displayed or transmitted. Assistance and diagnostic exports remain unchanged.
+
 ## Protected session navigation — MAIR-405 frontend slice
 
 Restore the preserved prototype's early cookie presence/expiry gate without its

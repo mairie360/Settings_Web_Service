@@ -31,7 +31,7 @@ Domaine fonctionnel: Paramètres personnels.
 - Une seule sauvegarde du profil à la fois : les quatre champs et le bouton sont verrouillés pendant l’attente, même après changement d’onglet. Un refus conserve le brouillon et permet de réessayer ; un succès affiche le profil renvoyé et libère les champs pour une nouvelle modification.
 - Une réponse de sauvegarde réussie mais inexploitable ne confirme rien : le brouillon et l’identité confirmée restent intacts. La reprise explicite du bootstrap conserve les champs modifiés et l’erreur de sauvegarde indépendante, adopte les champs reçus non modifiés et ne répète jamais le PATCH. Seule une réponse de sauvegarde validée avance la référence confirmée utilisée par les lectures suivantes.
 - Liste de sessions dans l’onglet Sécurité avec état d’indisponibilité distinct.
-- Onglet Système : aide adaptée aux fonctions disponibles, téléchargements locaux de demande/signalement en texte et diagnostic navigateur minimal en JSON. Aucun envoi automatique.
+- Onglet Système : familles estimées du navigateur actuel et du système (MAIR-471), aide adaptée, téléchargements locaux de demande/signalement en texte et diagnostic minimal en JSON. Les versions navigateur/déploiement et quotas de la référence ne sont pas copiés ; une information inconnue ou inaccessible reste explicite. Aucun envoi automatique ni nouvel appel métier.
 
 ## Parcours type
 

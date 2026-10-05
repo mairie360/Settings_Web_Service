@@ -6,6 +6,7 @@ import {
   assistanceFile, diagnosticFile, downloadLocalFile, MAX_ASSISTANCE_MESSAGE,
 } from "@/lib/local-assistance";
 import type { AssistanceKind } from "@/lib/local-assistance";
+import SettingsBrowserInformation from "@/components/settings-browser-information";
 
 const buttonClass = "rounded border border-[#d8d2ca] px-4 py-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#155bb5]";
 
@@ -79,6 +80,7 @@ export default function SettingsAssistance() {
     <section className="space-y-5 rounded-lg border border-[#e0dbd4] bg-white p-6">
       <h2 className="text-xl font-semibold">Système et assistance</h2>
       <p>La version déployée, sa date de mise à jour et l’espace de stockage ne sont pas fournis par le service.</p>
+      <SettingsBrowserInformation />
       <div className="flex flex-wrap gap-3">
         <button type="button" className={buttonClass} aria-haspopup="dialog" aria-expanded={kind === "help"} aria-controls="settings-assistance-dialog" onClick={(event) => prepare("help", event)}>Centre d’aide</button>
         <button type="button" className={buttonClass} aria-haspopup="dialog" aria-expanded={kind === "support"} aria-controls="settings-assistance-dialog" onClick={(event) => prepare("support", event)}>Préparer une demande de support</button>

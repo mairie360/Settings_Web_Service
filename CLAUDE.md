@@ -57,6 +57,15 @@ These commands run offline. After a bump, also move the `bff-settings` image tag
 - **Session navigation and security headers** — MAIR-405 restores an early cookie-presence/decoded-expiry gate (not signature/permission verification). Protected Settings data and explicitly matched `/openapi.json`/`/swagger.json` return no-store JSON401 without an upstream call; missing/expired document sessions go to validated runtime Login or controlled503, rejected document cookies are expired on optional `COOKIE_DOMAIN`. Non-GET documents use303, not body replay. The client checks cancellation before/after fetch and delegates a real401 once to the existing Login `/logout` flow, never replaying a write or confusing403/503 with authentication. Keep the BFF's real verification and existing CSP nonce/directives intact. Other dot/static/API matcher exclusions are unchanged. `src/app/layout.tsx` stays dynamic for per-request CSP. Server revocation/admin role/timezone are separate unresolved audit findings; do not invent their contracts or modify backend code.
 - `next.config.ts` sets `output: 'standalone'` (required by the Dockerfile), `poweredByHeader: false` and static security headers on every route (`tests/security-headers.test.cjs` pins them, and the ZAP baseline fails without them).
 
+### Local browser information (MAIR-471)
+
+`settings-browser-information.tsx` reuses `deviceFamilies` for two coarse labels.
+Keep its stable string `useSyncExternalStore` snapshots, deterministic server
+placeholder and no-event subscription: never read navigator during server render,
+persist a raw user-agent, guess an unknown device, or add network/storage reads.
+Browser versions and deployment metadata remain deliberately absent. The existing
+assistance/download allowlist and modal behavior must remain unchanged.
+
 ## CI/CD
 
 - `.github/workflows/cicd.yml` calls `mairie360/CICD/.github/workflows/frontend-cicd.yml@v2.3.1` (`package_name: settings-front`, `node_version: "23"`, `cicd_version: v2.3.1`, `secrets: inherit`; Renovate bumps the `@v` pin and `cicd_version` together). Up to the dev release it runs: `npm ci` → `npm run lint` + `npm audit --audit-level=high` (high/critical advisories block) → `npm run build` → `npm test --if-present` (uploads `coverage/lcov.info` to Codecov) → on `main`, builds `Dockerfile` with `NODE_AUTH_TOKEN` as build-arg and pushes `ghcr.io/mairie360/settings-front:dev-<sha>` / `dev-latest`. Some jobs set up Node without a registry, so the committed `.npmrc` must keep the `@mairie360` registry + `${NODE_AUTH_TOKEN}` lines.

@@ -66,6 +66,8 @@ test('the reusable workflow receives only its declared named secrets', () => {
   assert.deepEqual(mappings.map(([, name, source]) => [name, source]), [
     ['CODECOV_TOKEN', 'CODECOV_TOKEN'],
     ['N8N_WEBHOOK_SECRET', 'N8N_WEBHOOK_SECRET'],
+    // AI pre-audit of the RGAA check (release-prod), MAIR-320.
+    ['ANTHROPIC_API_KEY', 'ANTHROPIC_API_KEY'],
   ]);
 });
 

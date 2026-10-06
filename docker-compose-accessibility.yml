@@ -1,10 +1,13 @@
-# Stack de test de performance ISOLÉE pour le front Settings (Settings_Web_Service).
+# Accessibility (RGAA) test stack of the settings front (MAIR-316 / MAIR-317).
 #
-#   ./performance_test.sh (local: builds the front when IMAGE_REF is empty,
-#                          NODE_AUTH_TOKEN exported for the build)
-#   IMAGE_REF=<image>:dev-<sha> ./performance_test.sh   (CI, MAIR-317: the published image)
+#   ./accessibility_test.sh        (local: builds the front when IMAGE_REF is empty)
 #
-# k6-perf-test fails when a threshold of load-test.js is exceeded.
+# Same stack as docker-compose-security.yml (database + seed, core-api, bff-settings), with the
+# front on ${IMAGE_REF} (staging-<sha> in the CI, release-prod job) and, instead of ZAP, the runner
+# of the RGAA engine of mairie360/CICD (cicd-repo/tests/a11y), which plays the states of rgaa.yaml
+# and writes rgaa-report/. Every state is played logged in as the seed user 2, with an accessToken
+# the engine signs with the JWT_SECRET below (session / users of rgaa.yaml). Exit codes: 0 ok,
+# 1 state unreachable / undeclared criterion, 2 invalid rgaa.yaml, 3 rate below RGAA_MIN_RATE.
 
 volumes:
   postgres-data:
@@ -33,7 +36,7 @@ x-api-env: &api-env
 services:
   postgres:
     image: ${DB_IMAGE:-ghcr.io/mairie360/database:1.3.0}
-    container_name: settings-front-perf-db
+    container_name: settings-front-a11y-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
@@ -52,7 +55,7 @@ services:
 
   liquibase:
     image: ${LIQUIBASE_IMAGE:-ghcr.io/mairie360/liquibase-migrations:1.3.0}
-    container_name: settings-front-perf-liquibase
+    container_name: settings-front-a11y-liquibase
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,7 +72,7 @@ services:
 
   seeder:
     image: postgres:18-alpine
-    container_name: settings-front-perf-seeder
+    container_name: settings-front-a11y-seeder
     depends_on:
       liquibase:
         condition: service_completed_successfully
@@ -84,7 +87,7 @@ services:
 
   redis:
     image: redis:8.4.0-bookworm
-    container_name: settings-front-perf-redis
+    container_name: settings-front-a11y-redis
     expose:
       - "6379"
     volumes:
@@ -99,7 +102,7 @@ services:
 
   core-api:
     image: ${CORE_API_IMAGE:-ghcr.io/mairie360/core-api:1.2.0}
-    container_name: settings-front-perf-core-api
+    container_name: settings-front-a11y-core-api
     depends_on:
       liquibase:
         condition: service_completed_successfully
@@ -118,7 +121,7 @@ services:
 
   core-api-ready:
     image: curlimages/curl:latest
-    container_name: settings-front-perf-core-api-ready
+    container_name: settings-front-a11y-core-api-ready
     depends_on:
       core-api:
         condition: service_started
@@ -130,7 +133,7 @@ services:
 
   bff-settings:
     image: ${BFF_SETTINGS_IMAGE:-ghcr.io/mairie360/bff-settings:1.1.0}
-    container_name: settings-front-perf-bff-settings
+    container_name: settings-front-a11y-bff-settings
     depends_on:
       seeder:
         condition: service_completed_successfully
@@ -146,7 +149,7 @@ services:
 
   bff-settings-ready:
     image: curlimages/curl:latest
-    container_name: settings-front-perf-bff-settings-ready
+    container_name: settings-front-a11y-bff-settings-ready
     depends_on:
       bff-settings:
         condition: service_started
@@ -157,9 +160,9 @@ services:
       - backend
 
   settings-front:
-    # Published image (dev-<sha> in the CI, MAIR-317); the test script builds one locally.
+    # Published image (staging-<sha> in the CI); accessibility_test.sh builds one locally.
     image: ${IMAGE_REF:?IMAGE_REF must name the front image to test}
-    container_name: settings-front-perf-front
+    container_name: settings-front-a11y-front
     depends_on:
       bff-settings-ready:
         condition: service_completed_successfully
@@ -179,18 +182,25 @@ services:
       retries: 10
       start_period: 30s
 
-  k6-perf-test:
-    image: grafana/k6:latest
-    container_name: settings-front-perf-k6
+  a11y:
+    image: ${A11Y_RUNNER_IMAGE:?A11Y_RUNNER_IMAGE comes from cicd-repo/tests/a11y/runner-image}
+    # Run as the caller (accessibility_test.sh exports them), so that rgaa-report/ and
+    # .rgaa-ai-cache/ are not root-owned in the checkout.
+    user: "${RGAA_UID:-0}:${RGAA_GID:-0}"
+    container_name: settings-front-a11y-runner
     depends_on:
       settings-front:
         condition: service_healthy
-    volumes:
-      - ./load-test.js:/load-test.js:ro
+    command: ["sh", "/engine/run.sh"]
     environment:
-      BASE_URL: http://settings-front:5000
-      JWT_SECRET: 'b"secret"'
-      PERF_USER_ID: "2"
-    command: ["run", "/load-test.js"]
+      RGAA_MIN_RATE: ${RGAA_MIN_RATE:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_WORKSPACE_ID: ${ANTHROPIC_WORKSPACE_ID:-}
+      RGAA_AI_MODEL: ${RGAA_AI_MODEL:-}
+    volumes:
+      - ./cicd-repo/tests/a11y:/engine:ro
+      - ./rgaa.yaml:/scope/rgaa.yaml:ro
+      - ./rgaa-report:/report
+      - ./.rgaa-ai-cache:/ai-cache
     networks:
       - backend

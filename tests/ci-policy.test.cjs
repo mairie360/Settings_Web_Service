@@ -66,6 +66,8 @@ test('the reusable workflow receives only its declared named secrets', () => {
   assert.deepEqual(mappings.map(([, name, source]) => [name, source]), [
     ['CODECOV_TOKEN', 'CODECOV_TOKEN'],
     ['N8N_WEBHOOK_SECRET', 'N8N_WEBHOOK_SECRET'],
+    // AI pre-audit of the RGAA check (release-prod), MAIR-320.
+    ['ANTHROPIC_API_KEY', 'ANTHROPIC_API_KEY'],
   ]);
 });
 
@@ -134,22 +136,31 @@ test('Docker dependency installation requires ephemeral secret and policy mounts
 
 test('Docker excludes local environments and CI artifacts but keeps the tracked npm policy', () => {
   const ignored = read('.dockerignore').split(/\r?\n/).map((line) => line.trim());
-  for (const pattern of ['node_modules', '.next', '.git', '.env*', '.npmrc.*', 'cicd-repo', 'coverage', 'test-results', 'playwright-report']) {
+  for (const pattern of ['node_modules', '.next', '.git', '.env*', '.npmrc.*', 'cicd-repo', 'rgaa-report', '.rgaa-ai-cache', 'coverage', 'test-results', 'playwright-report']) {
     assert.ok(ignored.includes(pattern), `${pattern} must be excluded from the build context`);
   }
   assert.ok(!ignored.includes('.npmrc') && !ignored.includes('.npmrc*'),
     'the read-only npm policy mount requires the tracked placeholder-only .npmrc');
 });
 
-test('isolated test stacks pass only a build secret to the frontend Dockerfile', () => {
-  for (const file of ['docker-compose-security.yml', 'docker-compose-performance.yml']) {
+test('isolated test stacks run the published image, the scripts build it with a secret only', () => {
+  const stacks = {
+    'docker-compose-security.yml': 'security_test.sh',
+    'docker-compose-performance.yml': 'performance_test.sh',
+    'docker-compose-accessibility.yml': 'accessibility_test.sh',
+  };
+  for (const [file, script] of Object.entries(stacks)) {
     const compose = read(file);
-    assert.match(compose, /^secrets:\n  node_auth_token:\n    environment: NODE_AUTH_TOKEN\n/m);
-    const frontend = compose.split('  settings-front:\n')[1]?.split('\n  security-scan:')[0]?.split('\n  k6-perf-test:')[0];
+    const frontend = compose.split('  settings-front:\n')[1]?.split('\n  security-scan:')[0]?.split('\n  k6-perf-test:')[0]?.split('\n  a11y:')[0];
     assert.ok(frontend, `${file} must keep the isolated frontend service`);
-    assert.match(frontend, /build:\n      context: \.\n      dockerfile: Dockerfile\n      secrets:\n        - node_auth_token\n/);
-    assert.doesNotMatch(compose, /NODE_AUTH_TOKEN:\s*\$\{|\bbuild-arg\b/);
-    assert.doesNotMatch(frontend, /args:|environment:[\s\S]*NODE_AUTH_TOKEN|\/run\/secrets/);
+    // The CI exports IMAGE_REF (dev-<sha> for ZAP / k6, staging-<sha> for RGAA): never rebuilt.
+    assert.match(frontend, /image: \$\{IMAGE_REF:\?/);
+    assert.doesNotMatch(frontend, /build:|args:|NODE_AUTH_TOKEN|\/run\/secrets/);
+    const code = compose.split('\n').filter((line) => !line.trimStart().startsWith('#')).join('\n');
+    assert.doesNotMatch(code, /NODE_AUTH_TOKEN|\bbuild-arg\b/);
+    const shell = read(script);
+    assert.match(shell, /docker build -t settings-front:local --secret id=node_auth_token,env=NODE_AUTH_TOKEN \./);
+    assert.doesNotMatch(shell, /--build-arg|up -d --build/);
   }
 });
 

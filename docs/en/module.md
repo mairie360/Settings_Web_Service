@@ -1,5 +1,17 @@
 # Settings_Web_Service — Module overview
 
+## Coherent bootstrap reads — MAIR-456
+
+The frontend checks the consumed profile, session array, session field types
+and declared source availability before replacing any confirmed data. A
+malformed successful read exposes a controlled French retry message, never a
+raw JavaScript error or invented empty session list. Initial loading stays
+unavailable; refreshing keeps the confirmed identity, clean fields, latest
+dirty edits, current tab and independent save/logout errors. A deliberate valid
+GET merges against the unchanged confirmed baseline; no save is replayed.
+Optional phone/revocation and invalid string-date display fallbacks retain
+their existing contract semantics. Routes, permissions and API/BFF are unchanged.
+
 ## Reconnection — MAIR-405
 
 Visitors without a cookie or with an expired session are sent to configured

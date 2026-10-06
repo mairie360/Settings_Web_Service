@@ -118,6 +118,81 @@ test('an explicit retry recovers an initial upstream refusal through GET only', 
   ]);
 });
 
+const malformedBootstraps = [
+  ['null', null], ['array', []], ['missing sections', {}],
+  ['null profile', fixtures.bootstrap({ profile: null })],
+  ['missing profile field', fixtures.bootstrap({ profile: { last_name: 'Unverified', email: 'unverified@example.invalid' } })],
+  ['invalid phone', fixtures.bootstrap({ profile: fixtures.profile({ phone: 42 }) })],
+  ['non-array sessions', fixtures.bootstrap({ sessions: {} })],
+  ['null session', fixtures.bootstrap({ sessions: [null] })],
+  ['array session', fixtures.bootstrap({ sessions: [[]] })],
+  ['null sources', fixtures.bootstrap({ sources: null })],
+  ['array sources', fixtures.bootstrap({ sources: [] })],
+  ['missing source', fixtures.bootstrap({ sources: {} })],
+  ['unknown source', fixtures.bootstrap({ sources: { sessions: 'partial' } })],
+  ...['id', 'device_info', 'ip_address', 'created_at', 'expires_at', 'revoked_at']
+    .map(field => [`non-string session ${field}`, fixtures.bootstrap({ sessions: [fixtures.session('s-1', { [field]: 42 })] })]),
+];
+for (const [name, body] of malformedBootstraps) {
+  for (const mode of ['initial', 'refresh']) {
+    test(`${mode} rejects a ${name} bootstrap before changing confirmed data and recovers by GET only`, async () => {
+      const message = 'Les paramètres reçus sont incohérents. Réessayez.';
+      if (mode === 'refresh') {
+        await renderLoadedPage(fixtures.bootstrap({ sources: { sessions: 'unavailable' } }));
+        await view.fire(props => props.type === 'tel', 'onChange', { target: { value: '+33999999999' } });
+      }
+      // Deliberately malformed success; never claim it conforms to the published response.
+      bffSettings.on('GET', '/settings/bootstrap', { body, outOfContract: true });
+      if (mode === 'initial') view = mount(React.createElement(Home));
+      else await view.click('Actualiser les paramètres');
+      await view.waitFor(html => html.includes(message));
+      assert.match(view.html, /role="alert"/);
+      assert.doesNotMatch(view.text(), /Cannot read|TypeError|Votre profil a été enregistré/);
+      assert.equal(bffSettings.requests.length, mode === 'initial' ? 1 : 2, 'no automatic retry');
+      assert.equal(bffSettings.requests.filter(request => request.method !== 'GET').length, 0);
+      if (mode === 'initial') assert.doesNotMatch(view.html, /role="tablist"/);
+      else {
+        assert.match(view.html, /value="Anne Marie"/);
+        assert.match(view.html, /value="Le Gall"/);
+        assert.match(view.html, /value="anne\.le-gall@mairie\.test"/);
+        assert.match(view.html, /value="\+33999999999"/);
+        assert.doesNotMatch(view.text(), /Unverified/);
+        await view.click('Sécurité');
+        assert.match(view.text(), /Les sessions sont temporairement indisponibles/);
+        assert.doesNotMatch(view.text(), /Aucune session à afficher/);
+        await view.click('Profil');
+      }
+      bffSettings.on('GET', '/settings/bootstrap', { body: fixtures.bootstrap({ profile: fixtures.profile({ last_name: 'Confirmed surname' }) }) });
+      await view.click(mode === 'initial' ? 'Réessayer' : 'Actualiser les paramètres');
+      await view.waitFor(html => html.includes('Confirmed surname'));
+      assert.doesNotMatch(view.text(), /paramètres reçus sont incohérents/);
+      assert.equal(bffSettings.requests.length, mode === 'initial' ? 2 : 3);
+      assert.equal(bffSettings.requests.filter(request => request.method !== 'GET').length, 0);
+      if (mode === 'refresh') {
+        assert.match(view.html, /value="\+33999999999"/);
+        bffSettings.on('PATCH', '/settings/profile', { body: fixtures.profile({ last_name: 'Confirmed surname', phone: '+33999999999' }) });
+        await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+        assert.deepEqual(bffSettings.requests.at(-1).body, { phone: '+33999999999' });
+        assert.equal(bffSettings.requests.filter(request => request.method !== 'GET').length, 1);
+      }
+    });
+  }
+}
+
+for (const phone of [undefined, null, '+33123456789']) {
+  test(`bootstrap keeps contract-valid optional phone ${String(phone)} and dates with an explicit display fallback`, async () => {
+    const profile = fixtures.profile({ phone });
+    if (phone === undefined) delete profile.phone;
+    const session = fixtures.session('s-1', { created_at: 'not-a-date', expires_at: '2026-02-30T08:00:00Z', revoked_at: undefined });
+    delete session.revoked_at;
+    await renderLoadedPage(fixtures.bootstrap({ profile, sessions: [session] }));
+    await view.click('Sécurité');
+    assert.match(view.text(), /Date indisponible/);
+    assert.doesNotMatch(view.text(), /paramètres reçus sont incohérents/);
+    assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+  });
+}
+
 test('refreshing unavailable sessions keeps dirty fields and updates clean fields without a PATCH', async () => {
   await renderLoadedPage(fixtures.bootstrap({ sessions: [], sources: { sessions: 'unavailable' } }));
   await view.fire((props, text, tag) => tag === 'input' && props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Draft' } });

@@ -1,5 +1,18 @@
 # Settings_Web_Service — Présentation du module
 
+## Lectures bootstrap cohérentes — MAIR-456
+
+Le front vérifie le profil consommé, le tableau de sessions, leurs types et la
+disponibilité déclarée avant de remplacer les données confirmées. Une lecture
+réussie mais malformée affiche une reprise lisible, jamais une erreur JavaScript
+brute ni une fausse liste vide. Au chargement initial, les données restent
+indisponibles ; en actualisation, identité confirmée, champs propres, dernières
+saisies, onglet et erreurs indépendantes de sauvegarde/déconnexion sont conservés.
+Un GET valide volontaire fusionne contre la référence confirmée inchangée,
+sans rejouer une sauvegarde. Téléphone/révocation optionnels et repli des dates
+textuelles invalides gardent leur sémantique actuelle. Routes, droits et API/BFF
+restent inchangés.
+
 ## Reconnexion — MAIR-405
 
 Un visiteur sans cookie ou avec une session expirée rejoint le Login configuré

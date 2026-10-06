@@ -70,6 +70,22 @@ function isConfirmedProfile(value: unknown): value is Profile {
     && (profile.phone === undefined || profile.phone === null || typeof profile.phone === "string");
 }
 
+function isConfirmedBootstrap(value: unknown): value is Bootstrap {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const bootstrap = value as Record<string, unknown>;
+  if (!isConfirmedProfile(bootstrap.profile) || !Array.isArray(bootstrap.sessions)) return false;
+  if (!bootstrap.sources || typeof bootstrap.sources !== "object" || Array.isArray(bootstrap.sources)) return false;
+  const sources = bootstrap.sources as Record<string, unknown>;
+  if (sources.sessions !== "available" && sources.sessions !== "unavailable") return false;
+  return bootstrap.sessions.every((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const session = value as Record<string, unknown>;
+    return ["id", "device_info", "ip_address", "created_at", "expires_at"]
+      .every((field) => typeof session[field] === "string")
+      && (session.revoked_at === undefined || session.revoked_at === null || typeof session.revoked_at === "string");
+  });
+}
+
 export default function Home() {
   const [data, setData] = useState<Bootstrap | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -93,6 +109,9 @@ export default function Home() {
     try {
       const result = await loadSettings(controller.signal);
       if (controller.signal.aborted || readRef.current !== controller) return;
+      if (!isConfirmedBootstrap(result)) {
+        throw new Error("Les paramètres reçus sont incohérents. Réessayez.");
+      }
       confirmedProfileRef.current = result.profile;
       setData(result);
       // Merge against the previous confirmed profile, including edits made during the read.

@@ -32,11 +32,14 @@ const profileFields: ReadonlyArray<{
   label: string;
   type: "email" | "tel" | "text";
   required: boolean;
+  /** Who sees the value, under the field (GDPR, MAIR-292). */
+  hint?: string;
 }> = [
   { field: "first_name", label: "Prénom", type: "text", required: true },
   { field: "last_name", label: "Nom", type: "text", required: true },
   { field: "email", label: "E-mail", type: "email", required: true },
-  { field: "phone", label: "Téléphone", type: "tel", required: false },
+  // Decision of the mairie (MAIR-292): the directory shows the phone to every agent, for work.
+  { field: "phone", label: "Téléphone", type: "tel", required: false, hint: "Visible par tous les agents de la mairie (usage professionnel)." },
 ];
 
 const unavailableSections: Record<Exclude<TabId, "profile" | "security" | "system">, string> = {
@@ -182,18 +185,22 @@ export default function Home() {
               <form onSubmit={save} aria-busy={saving} className="space-y-4 rounded-lg border border-[#e0dbd4] bg-white p-6">
                 <h2 className="text-xl font-semibold">Informations personnelles</h2>
                 <div className="settings-profile-fields">
-                {profileFields.map(({ field, label, type, required }) => (
-                  <label className="block" key={field}>
-                    <span className="mb-1 block">{label}</span>
-                    <input
-                      className="w-full rounded border border-[#d8d2ca] px-3 py-2"
-                      type={type}
-                      required={required}
-                      disabled={saving}
-                      value={profile[field] ?? ""}
-                      onChange={(event) => updateProfile(field, event.target.value)}
-                    />
-                  </label>
+                {profileFields.map(({ field, label, type, required, hint }) => (
+                  <div key={field}>
+                    <label className="block">
+                      <span className="mb-1 block">{label}</span>
+                      <input
+                        className="w-full rounded border border-[#d8d2ca] px-3 py-2"
+                        type={type}
+                        required={required}
+                        disabled={saving}
+                        aria-describedby={hint ? `settings-${field}-hint` : undefined}
+                        value={profile[field] ?? ""}
+                        onChange={(event) => updateProfile(field, event.target.value)}
+                      />
+                    </label>
+                    {hint && <p id={`settings-${field}-hint`} className="mt-1 text-sm text-[#4c5258]">{hint}</p>}
+                  </div>
                 ))}
                 </div>
                 <button

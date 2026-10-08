@@ -88,6 +88,9 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.match(html, /<input[^>]*type="text"[^>]*required=""[^>]*value="Anne Marie"/);
   assert.match(html, /<input[^>]*type="email"[^>]*value="anne\.le-gall@mairie\.test"/);
   assert.match(html, /<input[^>]*type="tel"[^>]*value="\+33123456789"/);
+  // MAIR-292: the form says who sees the phone number.
+  assert.match(html, /<input[^>]*type="tel"[^>]*aria-describedby="settings-phone-hint"/);
+  assert.match(html, /<p id="settings-phone-hint"[^>]*>Visible par tous les agents de la mairie \(usage professionnel\)\.<\/p>/);
   assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Enregistrer<\/button>/);
   assert.match(html, /Aucune modification à enregistrer\./);
   assert.doesNotMatch(html, /role="alert"/);

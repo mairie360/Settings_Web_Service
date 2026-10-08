@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@mairie360/bff-settings-openapi": "1.1.0",
-    "@mairie360/lib-components": "0.6.10",
+    "@mairie360/lib-components": "0.6.11",
     "next": "16.3.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -40,6 +40,9 @@
   },
   "overrides": {
     "postcss": "8.5.28",
-    "next": { ".": "$next", "sharp": "^0.35.5" }
+    "next": {
+      ".": "$next",
+      "sharp": "^0.35.5"
+    }
   }
 }

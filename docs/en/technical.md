@@ -1,5 +1,25 @@
 # Settings_Web_Service — Technical documentation
 
+## Cookie gate and real401 handoff — MAIR-405
+
+Middleware restores the reference's presence/decoded-expiry check before nonce
+CSP on authenticated requests. It is not signature verification: opaque tokens
+are forwarded for the unchanged BFF's real verification. Data under `/settings/`
+and the explicitly matched `/openapi.json`/`/swagger.json` receive no-store JSON401
+without an upstream call when the cookie is missing/expired. Other documents go
+to validated runtime `LOGIN_FRONT_URL` (307 for GET/HEAD,303 otherwise); absent or
+unsafe configuration fails closed with503. Cookie deletion honours optional
+`COOKIE_DOMAIN` and does not claim server revocation. Static asset exclusions are
+unchanged except the two explicit metadata entries.
+
+The client checks AbortSignal before sending and after receiving, then hands
+real401 to the existing Login `/logout` navigation once per Location. It never
+replays a PATCH, accepts a401 as success, reads browser tokens or navigates on
+400/403/503/network failures. Invalid Login yields a controlled message. Public
+URL validation is shared with existing navigation. The contract/proxy, CSP
+directives, dependencies, CI gates, permissions and deployments are unchanged.
+The audit's admin-role, timezone and real-session findings remain separate.
+
 ## Shared footer — MAIR-180
 
 The unchanged CI audit exposed the transitive tooling dependency
@@ -44,7 +64,7 @@ Notifications, appearance and general remain unavailable. System hosts local ass
 
 `src/components/settings-assistance.tsx` handles user-triggered exports without an effect, timer loop, network call or persistence. `src/lib/local-assistance.ts` validates authored text (nonblank, at most 5,000 characters), builds plain-text/JSON files and requests a Blob download. An appended temporary anchor is removed immediately; its object URL is revoked after one second on success or immediately on failure. The UI reports a download request, not a confirmed saved file or delivered support message. Raw exceptions never reach the assistance UI or exported diagnostic.
 
-Only coarse browser/OS labels are derived from `navigator.userAgent` when the diagnostic button is clicked. The raw string is never exported; unknown families remain unidentified. The JSON allowlist is `module`, `generatedAt`, `browser`, `operatingSystem`, `capabilities.objectUrls`. No business DTO is passed to the component, no storage is read/cleared and no deployment version/date or quota is invented. No new environment, package, route, permission or BFF operation is required.
+Only coarse browser/OS labels are derived from `navigator.userAgent` when the diagnostic button is clicked. MAIR-471 also displays those local families through `settings-browser-information.tsx`: `useSyncExternalStore` uses stable string snapshots, a no-event subscription and a deterministic server placeholder, so no browser access occurs during SSR or hydration's initial render. Unknown families remain unidentified; an inaccessible getter displays unavailability without raw exceptions. No raw user-agent or browser version is rendered, retained in application storage or exported. The diagnostic JSON allowlist remains `module`, `generatedAt`, `browser`, `operatingSystem`, `capabilities.objectUrls`. No business DTO is passed to the component, no storage is read/cleared and no deployment version/date or quota is invented. No new environment, package, route, permission or BFF operation is required.
 
 Node tests cover export validation/content/privacy and download cleanup; component tests exercise the real page, keyboard access, axe checks, errors/retry and the absence of additional bootstrap calls. The contract harness also verifies the System tab adds no upstream operation.
 
@@ -132,7 +152,7 @@ The AppShell account menu validates the runtime `LOGIN_FRONT_URL` and navigates 
 
 The generic proxy returns 400 for an invalid path, 404 for a path outside the contract, 405 for a disallowed method and 502 when the service is unreachable or times out. Upstream responses are preserved, including empty 204/205/304 bodies.
 
-Every response carries `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` and `Cross-Origin-Resource-Policy`, `Cross-Origin-Embedder-Policy` and `Cross-Origin-Opener-Policy` (`next.config.ts`), and `X-Powered-By` is disabled. [src/middleware.ts](../../src/middleware.ts) adds a `Content-Security-Policy` with a per-request nonce to every page (it does not redirect unauthenticated users), which Next.js applies to its scripts. Pages are therefore rendered on demand (`dynamic = "force-dynamic"` in the layout). Stylesheets are limited to the origin and the nonce; only `style` attributes rendered by shared components are allowed through `style-src-attr 'unsafe-inline'`, and `next dev` also allows `'unsafe-eval'`. Any new external resource (image, font, API called from the browser) must be added to the policy in `src/lib/content-security-policy.ts`.
+Every response carries `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` and `Cross-Origin-Resource-Policy`, `Cross-Origin-Embedder-Policy` and `Cross-Origin-Opener-Policy` (`next.config.ts`), and `X-Powered-By` is disabled. [src/middleware.ts](../../src/middleware.ts) adds a `Content-Security-Policy` with a per-request nonce to each page that passes the session gate, which Next.js applies to its scripts. Pages are therefore rendered on demand (`dynamic = "force-dynamic"` in the layout). Stylesheets are limited to the origin and the nonce; only `style` attributes rendered by shared components are allowed through `style-src-attr 'unsafe-inline'`, and `next dev` also allows `'unsafe-eval'`. Any new external resource (image, font, API called from the browser) must be added to the policy in `src/lib/content-security-policy.ts`.
 
 ## Synchronization and verification
 

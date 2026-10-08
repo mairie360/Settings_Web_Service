@@ -50,11 +50,211 @@ afterEach(() => {
 const upstream = () => bffSettings.requests.map((request) => `${request.method} ${request.template}`);
 const profileInputs = () => [...view.html.matchAll(/<input\b[^>]*>/g)].map(([html]) => html);
 
+for (const [label, reply] of [
+  ['missing object', { body: {} }],
+  ['null', { body: null }],
+  ['array', { body: [] }],
+  ['missing required name', { body: { last_name: 'Reply', email: 'reply@example.invalid' } }],
+  ['non-string surname', { body: fixtures.profile({ last_name: 42 }) }],
+  ['non-string email', { body: fixtures.profile({ email: false }) }],
+  ['non-string optional phone', { body: fixtures.profile({ phone: 42 }) }],
+  ['empty JSON body', { raw: '' }],
+  ['body-less 204', { status: 204 }],
+]) {
+  test(`a ${label} save response retains the draft and never confirms a profile`, async () => {
+    await renderLoadedPage();
+    await view.fire(props => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Submitted draft' } });
+    // Intentional fault injection, not evidence that this response satisfies the published DTO.
+    bffSettings.on('PATCH', '/settings/profile', { ...reply, outOfContract: true });
+    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    assert.doesNotMatch(view.text(), /Votre profil a été enregistré/);
+    assert.match(view.html, /role="alert"/);
+    assert.match(view.html, /value="Submitted draft"/);
+    assert.match(view.html, /value="Le Gall"/);
+    assert.match(view.html, /value="anne\.le-gall@mairie\.test"/);
+    assert.equal(view.hostElements(props => props.type === 'submit')[0].props.disabled, false);
+    assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
+    assert.deepEqual(bffSettings.requests[1].body, { first_name: 'Submitted draft' });
+    bffSettings.on('PATCH', '/settings/profile', { body: fixtures.profile({ first_name: 'OFFICIAL', last_name: 'RECEIVED' }) });
+    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    assert.deepEqual(bffSettings.requests[2].body, bffSettings.requests[1].body);
+    assert.match(view.html, /value="OFFICIAL"/);
+    assert.match(view.html, /value="RECEIVED"/);
+    assert.match(view.text(), /Votre profil a été enregistré/);
+    assert.equal(view.hostElements(props => props.type === 'submit')[0].props.disabled, true);
+  });
+}
+
+for (const [label, phone] of [['absent', undefined], ['null', null], ['string', '+33987654321']]) {
+  test(`a confirmed profile accepts the contract ${label} optional phone`, async () => {
+    await renderLoadedPage();
+    await view.fire(props => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Submitted draft' } });
+    const saved = fixtures.profile({ first_name: 'OFFICIAL', phone });
+    if (phone === undefined) delete saved.phone;
+    bffSettings.on('PATCH', '/settings/profile', { body: saved });
+    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    assert.match(view.text(), /Votre profil a été enregistré/);
+    assert.match(view.html, /value="OFFICIAL"/);
+    assert.doesNotMatch(view.html, /role="alert"/);
+  });
+}
+
+test('an explicit retry recovers an initial upstream refusal through GET only', async () => {
+  // Intentional fault injection: 502 is not a published response; it is not contract conformance evidence.
+  bffSettings.on('GET', '/settings/bootstrap', { status: 502, body: fixtures.error('Lecture refusée'), outOfContract: true });
+  view = mount(React.createElement(Home));
+  await view.waitFor(html => html.includes('Le profil est indisponible.'));
+  assert.match(view.html, /Lecture refusée/);
+  assert.doesNotMatch(view.html, /role="tablist"/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+  bffSettings.on('GET', '/settings/bootstrap', { body: fixtures.bootstrap() });
+  await view.click('Réessayer');
+  await view.waitFor(html => html.includes('Informations personnelles'));
+  assert.doesNotMatch(view.html, /Lecture refusée/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap']);
+  assert.deepEqual(front.browserCalls, [
+    { method: 'GET', path: '/settings/bootstrap' },
+    { method: 'GET', path: '/settings/bootstrap' },
+  ]);
+});
+
+const malformedBootstraps = [
+  ['null', null], ['array', []], ['missing sections', {}],
+  ['null profile', fixtures.bootstrap({ profile: null })],
+  ['missing profile field', fixtures.bootstrap({ profile: { last_name: 'Unverified', email: 'unverified@example.invalid' } })],
+  ['invalid phone', fixtures.bootstrap({ profile: fixtures.profile({ phone: 42 }) })],
+  ['non-array sessions', fixtures.bootstrap({ sessions: {} })],
+  ['null session', fixtures.bootstrap({ sessions: [null] })],
+  ['array session', fixtures.bootstrap({ sessions: [[]] })],
+  ['null sources', fixtures.bootstrap({ sources: null })],
+  ['array sources', fixtures.bootstrap({ sources: [] })],
+  ['missing source', fixtures.bootstrap({ sources: {} })],
+  ['unknown source', fixtures.bootstrap({ sources: { sessions: 'partial' } })],
+  ...['id', 'device_info', 'ip_address', 'created_at', 'expires_at', 'revoked_at']
+    .map(field => [`non-string session ${field}`, fixtures.bootstrap({ sessions: [fixtures.session('s-1', { [field]: 42 })] })]),
+];
+for (const [name, body] of malformedBootstraps) {
+  for (const mode of ['initial', 'refresh']) {
+    test(`${mode} rejects a ${name} bootstrap before changing confirmed data and recovers by GET only`, async () => {
+      const message = 'Les paramètres reçus sont incohérents. Réessayez.';
+      if (mode === 'refresh') {
+        await renderLoadedPage(fixtures.bootstrap({ sources: { sessions: 'unavailable' } }));
+        await view.fire(props => props.type === 'tel', 'onChange', { target: { value: '+33999999999' } });
+      }
+      // Deliberately malformed success; never claim it conforms to the published response.
+      bffSettings.on('GET', '/settings/bootstrap', { body, outOfContract: true });
+      if (mode === 'initial') view = mount(React.createElement(Home));
+      else await view.click('Actualiser les paramètres');
+      await view.waitFor(html => html.includes(message));
+      assert.match(view.html, /role="alert"/);
+      assert.doesNotMatch(view.text(), /Cannot read|TypeError|Votre profil a été enregistré/);
+      assert.equal(bffSettings.requests.length, mode === 'initial' ? 1 : 2, 'no automatic retry');
+      assert.equal(bffSettings.requests.filter(request => request.method !== 'GET').length, 0);
+      if (mode === 'initial') assert.doesNotMatch(view.html, /role="tablist"/);
+      else {
+        assert.match(view.html, /value="Anne Marie"/);
+        assert.match(view.html, /value="Le Gall"/);
+        assert.match(view.html, /value="anne\.le-gall@mairie\.test"/);
+        assert.match(view.html, /value="\+33999999999"/);
+        assert.doesNotMatch(view.text(), /Unverified/);
+        await view.click('Sécurité');
+        assert.match(view.text(), /Les sessions sont temporairement indisponibles/);
+        assert.doesNotMatch(view.text(), /Aucune session à afficher/);
+        await view.click('Profil');
+      }
+      bffSettings.on('GET', '/settings/bootstrap', { body: fixtures.bootstrap({ profile: fixtures.profile({ last_name: 'Confirmed surname' }) }) });
+      await view.click(mode === 'initial' ? 'Réessayer' : 'Actualiser les paramètres');
+      await view.waitFor(html => html.includes('Confirmed surname'));
+      assert.doesNotMatch(view.text(), /paramètres reçus sont incohérents/);
+      assert.equal(bffSettings.requests.length, mode === 'initial' ? 2 : 3);
+      assert.equal(bffSettings.requests.filter(request => request.method !== 'GET').length, 0);
+      if (mode === 'refresh') {
+        assert.match(view.html, /value="\+33999999999"/);
+        bffSettings.on('PATCH', '/settings/profile', { body: fixtures.profile({ last_name: 'Confirmed surname', phone: '+33999999999' }) });
+        await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+        assert.deepEqual(bffSettings.requests.at(-1).body, { phone: '+33999999999' });
+        assert.equal(bffSettings.requests.filter(request => request.method !== 'GET').length, 1);
+      }
+    });
+  }
+}
+
+for (const phone of [undefined, null, '+33123456789']) {
+  test(`bootstrap keeps contract-valid optional phone ${String(phone)} and dates with an explicit display fallback`, async () => {
+    const profile = fixtures.profile({ phone });
+    if (phone === undefined) delete profile.phone;
+    const session = fixtures.session('s-1', { created_at: 'not-a-date', expires_at: '2026-02-30T08:00:00Z', revoked_at: undefined });
+    delete session.revoked_at;
+    await renderLoadedPage(fixtures.bootstrap({ profile, sessions: [session] }));
+    await view.click('Sécurité');
+    assert.match(view.text(), /Date indisponible/);
+    assert.doesNotMatch(view.text(), /paramètres reçus sont incohérents/);
+    assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+  });
+}
+
+test('refreshing unavailable sessions keeps dirty fields and updates clean fields without a PATCH', async () => {
+  await renderLoadedPage(fixtures.bootstrap({ sessions: [], sources: { sessions: 'unavailable' } }));
+  await view.fire((props, text, tag) => tag === 'input' && props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Draft' } });
+  const received = fixtures.bootstrap();
+  received.profile.last_name = 'Received surname';
+  bffSettings.on('GET', '/settings/bootstrap', { body: received });
+  await view.click('Actualiser les paramètres');
+  await view.waitFor(html => html.includes('Received surname'));
+  assert.match(view.html, /value="Draft"/);
+  assert.match(view.html, /value="Received surname"/);
+  assert.doesNotMatch(view.html, /Votre profil a été enregistré/);
+  await view.click('Sécurité');
+  assert.doesNotMatch(view.text(), /Les sessions sont temporairement indisponibles/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap']);
+  assert.deepEqual(front.browserCalls, [
+    { method: 'GET', path: '/settings/bootstrap' },
+    { method: 'GET', path: '/settings/bootstrap' },
+  ]);
+});
+
 async function renderLoadedPage(body = fixtures.bootstrap()) {
   bffSettings.on('GET', '/settings/bootstrap', { body });
   view = mount(React.createElement(Home));
   return view.waitFor((html) => !html.includes('Chargement des paramètres'));
 }
+
+test('an unusable profile reply does not poison a recovered read or repeat its PATCH', async () => {
+  await renderLoadedPage(fixtures.bootstrap({ sessions: [], sources: { sessions: 'unavailable' } }));
+  await view.fire(props => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Retained draft' } });
+  // Deliberately malformed confirmation, not a conforming deployed BFF response.
+  bffSettings.on('PATCH', '/settings/profile', { body: {}, outOfContract: true });
+  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  assert.match(view.text(), /L’enregistrement du profil n’a pas été confirmé/);
+  const received = fixtures.bootstrap({ sessions: [], sources: { sessions: 'unavailable' } });
+  received.profile.first_name = 'Read name';
+  received.profile.last_name = 'Read surname';
+  bffSettings.on('GET', '/settings/bootstrap', { body: received });
+  await view.click('Actualiser les paramètres');
+  await view.waitFor(html => html.includes('Read surname'));
+  assert.match(view.html, /value="Retained draft"/);
+  assert.match(view.html, /value="Read surname"/);
+  assert.match(view.text(), /L’enregistrement du profil n’a pas été confirmé/);
+  assert.doesNotMatch(view.text(), /Votre profil a été enregistré/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile', 'GET /settings/bootstrap']);
+
+  const official = fixtures.profile({ first_name: 'Confirmed name', last_name: 'Confirmed surname' });
+  bffSettings.on('PATCH', '/settings/profile', { body: official });
+  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  assert.deepEqual(bffSettings.requests[3].body, { first_name: 'Retained draft' });
+  assert.match(view.text(), /Votre profil a été enregistré/);
+  assert.match(view.html, /value="Confirmed name"/);
+  assert.doesNotMatch(view.text(), /L’enregistrement du profil n’a pas été confirmé/);
+
+  await view.fire(props => props.type === 'text' && props.value === 'Confirmed name', 'onChange', { target: { value: 'Next draft' } });
+  const next = fixtures.bootstrap({ profile: { ...official, last_name: 'Read after confirmation' } });
+  bffSettings.on('GET', '/settings/bootstrap', { body: next });
+  await view.click('Actualiser les paramètres');
+  await view.waitFor(html => html.includes('Read after confirmation'));
+  assert.match(view.html, /value="Next draft"/);
+  assert.match(view.html, /value="Read after confirmation"/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile', 'GET /settings/bootstrap', 'PATCH /settings/profile', 'GET /settings/bootstrap']);
+});
 
 test('the first pass renders the loading state, the next one the profile form filled from GET /settings/bootstrap', async () => {
   bffSettings.on('GET', '/settings/bootstrap', { body: fixtures.bootstrap() });

@@ -36,6 +36,12 @@ test('Settings shared navigation inherits the prototype default type scale witho
   assert.doesNotMatch(css, /(?:header|\.h-16)\s*\{[^}]*(?:height|min-height|max-height):/);
 });
 
+test('Settings restores reference sidebar rhythm and shadow without covering the mobile close control', () => {
+  assert.match(css, /\.settings-shell \[aria-label="Navigation principale"\]\s*\{[^}]*position: relative;[^}]*z-index: 20;[^}]*box-shadow: 8px 0 24px rgb\(12 28 48 \/ 28%\)/);
+  assert.match(css, /\.settings-shell \[aria-label="Navigation principale"\] nav button\s*\{[^}]*min-height: 44px;[^}]*flex-shrink: 0/);
+  assert.match(css, /\.settings-shell \[aria-label="Navigation mobile"\] \[aria-label="Navigation principale"\]\s*\{[^}]*z-index: 0/);
+});
+
 test('reference assistance dialogs bound width and height and scroll their content', () => {
   assert.match(css, /\.settings-assistance-dialog\s*\{[^}]*width: min\(600px, calc\(100% - 32px\)\)/);
   assert.match(css, /\.settings-assistance-dialog\s*\{[^}]*max-height: calc\(100dvh - 32px\)/);

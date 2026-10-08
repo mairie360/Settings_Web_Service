@@ -1,7 +1,7 @@
 "use client";
 
 import { AppShell } from "@mairie360/lib-components";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { formatSessionDate } from "@/lib/session-date";
@@ -61,29 +61,83 @@ function profilePatch(initial: Profile, current: Profile): ProfilePatch {
   return patch;
 }
 
+function isConfirmedProfile(value: unknown): value is Profile {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const profile = value as Record<string, unknown>;
+  return typeof profile.first_name === "string"
+    && typeof profile.last_name === "string"
+    && typeof profile.email === "string"
+    && (profile.phone === undefined || profile.phone === null || typeof profile.phone === "string");
+}
+
+function isConfirmedBootstrap(value: unknown): value is Bootstrap {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const bootstrap = value as Record<string, unknown>;
+  if (!isConfirmedProfile(bootstrap.profile) || !Array.isArray(bootstrap.sessions)) return false;
+  if (!bootstrap.sources || typeof bootstrap.sources !== "object" || Array.isArray(bootstrap.sources)) return false;
+  const sources = bootstrap.sources as Record<string, unknown>;
+  if (sources.sessions !== "available" && sources.sessions !== "unavailable") return false;
+  return bootstrap.sessions.every((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const session = value as Record<string, unknown>;
+    return ["id", "device_info", "ip_address", "created_at", "expires_at"]
+      .every((field) => typeof session[field] === "string")
+      && (session.revoked_at === undefined || session.revoked_at === null || typeof session.revoked_at === "string");
+  });
+}
+
 export default function Home() {
   const [data, setData] = useState<Bootstrap | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("profile");
   const [error, setError] = useState("");
+  const [readError, setReadError] = useState("");
+  const [logoutError, setLogoutError] = useState("");
+  const [reading, setReading] = useState(true);
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  const readRef = useRef<AbortController | null>(null);
+  const confirmedProfileRef = useRef<Profile | null>(null);
+
+  const readSettings = useCallback(async () => {
+    if (readRef.current || savingRef.current) return;
+    const controller = new AbortController();
+    const baseline = confirmedProfileRef.current;
+    readRef.current = controller;
+
+    try {
+      const result = await loadSettings(controller.signal);
+      if (controller.signal.aborted || readRef.current !== controller) return;
+      if (!isConfirmedBootstrap(result)) {
+        throw new Error("Les paramètres reçus sont incohérents. Réessayez.");
+      }
+      confirmedProfileRef.current = result.profile;
+      setData(result);
+      // Merge against the previous confirmed profile, including edits made during the read.
+      setProfile((current) => baseline && current
+        ? { ...result.profile, ...profilePatch(baseline, current) }
+        : result.profile);
+      setReadError("");
+    } catch (reason) {
+      if (!controller.signal.aborted && readRef.current === controller) {
+        setReadError(reason instanceof Error ? reason.message : "Les paramètres n’ont pas pu être chargés.");
+      }
+    } finally {
+      if (readRef.current === controller) {
+        readRef.current = null;
+        setReading(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
-
-    void loadSettings(controller.signal)
-      .then((result) => {
-        setData(result);
-        setProfile(result.profile);
-      })
-      .catch((reason: Error) => {
-        if (!controller.signal.aborted) setError(reason.message);
-      });
-
-    return () => controller.abort();
-  }, []);
+    void readSettings();
+    return () => {
+      readRef.current?.abort();
+      readRef.current = null;
+    };
+  }, [readSettings]);
 
   const patch = data && profile ? profilePatch(data.profile, profile) : {};
   const hasChanges = Object.keys(patch).length > 0;
@@ -109,7 +163,7 @@ export default function Home() {
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (savingRef.current || !profile || !data || !hasChanges) return;
+    if (savingRef.current || readRef.current || !profile || !data || !hasChanges) return;
 
     savingRef.current = true;
     setSaving(true);
@@ -118,6 +172,10 @@ export default function Home() {
 
     try {
       const saved = await saveProfile(patch);
+      if (!isConfirmedProfile(saved)) {
+        throw new Error("L’enregistrement du profil n’a pas été confirmé. Réessayez.");
+      }
+      confirmedProfileRef.current = saved;
       setProfile(saved);
       setData((current) => current ? { ...current, profile: saved } : current);
       setStatus("Votre profil a été enregistré.");
@@ -141,7 +199,7 @@ export default function Home() {
         last_name: data.profile.last_name,
         email: data.profile.email,
       } : undefined}
-      onLogout={() => void logoutAndRedirect().catch(() => setError("La déconnexion est temporairement indisponible."))}
+      onLogout={() => void logoutAndRedirect().catch(() => setLogoutError("La déconnexion est temporairement indisponible."))}
       sidebarProps={{ brandLogoSrc: "/mairie360-logo.png" }}
     >
       <section className="settings-page">
@@ -151,10 +209,27 @@ export default function Home() {
         </header>
 
         {error ? <p role="alert" className="rounded border border-red-200 bg-white p-4 text-red-700">{error}</p> : null}
+        {readError ? <p role="alert" className="rounded border border-red-200 bg-white p-4 text-red-700">{readError}</p> : null}
+        {logoutError ? <p role="alert" className="rounded border border-red-200 bg-white p-4 text-red-700">{logoutError}</p> : null}
         {status ? <p role="status" className="rounded border border-green-200 bg-white p-4 text-green-800">{status}</p> : null}
+        {!data || data.sources.sessions === "unavailable" || readError ? (
+          <button
+            type="button"
+            className="rounded border border-[#d8d2ca] bg-white px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={reading || saving}
+            aria-busy={reading}
+            onClick={() => {
+              if (readRef.current || savingRef.current) return;
+              setReading(true);
+              void readSettings();
+            }}
+          >
+            {reading ? "Chargement…" : data ? "Actualiser les paramètres" : "Réessayer"}
+          </button>
+        ) : null}
 
         {!data || !profile ? (
-          <p role="status">{error ? "Le profil est indisponible." : "Chargement des paramètres…"}</p>
+          <p role="status">{!reading && readError ? "Le profil est indisponible." : "Chargement des paramètres…"}</p>
         ) : (
           <>
             <nav role="tablist" aria-label="Paramètres" className="settings-tabs">
@@ -179,7 +254,7 @@ export default function Home() {
 
             <div role="tabpanel" id={`settings-panel-${activeTab}`} aria-labelledby={`settings-tab-${activeTab}`} className="settings-panel">
             {activeTab === "profile" ? (
-              <form onSubmit={save} aria-busy={saving} className="space-y-4 rounded-lg border border-[#e0dbd4] bg-white p-6">
+              <form onSubmit={save} aria-busy={saving || reading} className="space-y-4 rounded-lg border border-[#e0dbd4] bg-white p-6">
                 <h2 className="text-xl font-semibold">Informations personnelles</h2>
                 <div className="settings-profile-fields">
                 {profileFields.map(({ field, label, type, required }) => (
@@ -199,7 +274,7 @@ export default function Home() {
                 <button
                   className="rounded bg-[#155bb5] px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
                   type="submit"
-                  disabled={saving || !hasChanges}
+                  disabled={saving || reading || !hasChanges}
                 >
                   {saving ? "Enregistrement…" : "Enregistrer"}
                 </button>

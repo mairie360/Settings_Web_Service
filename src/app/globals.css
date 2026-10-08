@@ -34,6 +34,20 @@ body {
 
 /* Prototype presentation; business fields and unavailable states stay contract-backed. */
 .settings-shell main { padding: 32px; }
+/* Reference sidebar presentation stays local to this AppShell consumer. */
+.settings-shell [aria-label="Navigation principale"] {
+  position: relative;
+  z-index: 20;
+  box-shadow: 8px 0 24px rgb(12 28 48 / 28%);
+}
+.settings-shell [aria-label="Navigation principale"] nav button {
+  min-height: 44px;
+  flex-shrink: 0;
+}
+/* Keep the published drawer's close control above its navigation content. */
+.settings-shell [aria-label="Navigation mobile"] [aria-label="Navigation principale"] {
+  z-index: 0;
+}
 .settings-page {
   min-width: 0;
   color: #172033;

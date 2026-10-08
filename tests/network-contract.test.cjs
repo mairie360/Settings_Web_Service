@@ -83,6 +83,7 @@ describe('network surface of src/', () => {
       'lib/front-urls.ts MESSAGE_FRONT_URL',
       'lib/front-urls.ts ELEARNING_FRONT_URL',
       'lib/front-urls.ts ADMINISTRATION_FRONT_URL',
+      'middleware.ts COOKIE_DOMAIN',
       'middleware.ts NODE_ENV',
     ]);
   });

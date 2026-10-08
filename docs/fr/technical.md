@@ -1,5 +1,25 @@
 # Settings_Web_Service — Documentation technique
 
+## Garde cookie et délégation du401 — MAIR-405
+
+Le middleware rétablit la présence/expiration décodée du prototype avant la CSP
+nonce des requêtes avec cookie. Il ne valide pas la signature : les jetons opaques
+sont transmis pour la vraie vérification du BFF inchangé. Les données `/settings/`
+et les chemins explicitement couverts `/openapi.json`/`/swagger.json` reçoivent
+un401JSON no-store sans appel amont si le cookie manque/est expiré. Les autres
+documents rejoignent `LOGIN_FRONT_URL` validée à l’exécution (307GET/HEAD,303sinon),
+ou un503 contrôlé si elle est absente/dangereuse. L’effacement du cookie respecte
+`COOKIE_DOMAIN` facultatif, sans prétendre révoquer le serveur. Les exclusions
+d’assets ne changent pas, sauf les deux entrées explicites de métadonnées.
+
+Le client contrôle AbortSignal avant/après la requête et délègue le vrai401 au
+flux Login `/logout` existant une fois par Location. Pas de PATCH rejoué, de401
+accepté comme succès, de jeton browser lu ni de navigation sur400/403/503/réseau.
+Une URL Login invalide produit un message contrôlé. Sa validation est partagée
+avec la navigation existante. Contrat/proxy, CSP, dépendances, contrôles CI,
+permissions et déploiements restent inchangés. Rôle admin, fuseau et session
+réelle restent des constats distincts ouverts dans l’audit.
+
 ## Pied de page partagé — MAIR-180
 
 L’audit CI inchangé a détecté la dépendance d’outillage transitive
@@ -45,7 +65,7 @@ Notifications, apparence et général restent indisponibles. Système propose un
 
 `src/components/settings-assistance.tsx` déclenche les exports dans les gestionnaires d’interaction, sans effet, boucle de timers, appel réseau ou persistance. `src/lib/local-assistance.ts` valide le texte saisi (non vide, au plus 5 000 caractères), construit les fichiers texte/JSON et demande un téléchargement Blob. Le lien temporairement ajouté est supprimé immédiatement ; son URL d’objet est révoquée après une seconde en cas de succès ou immédiatement en cas d’échec. L’interface confirme la demande de téléchargement, pas la sauvegarde du fichier ni l’envoi d’un message de support. Les erreurs brutes ne sont jamais affichées ni exportées.
 
-Seules les familles du navigateur et du système sont déduites de `navigator.userAgent` au clic sur le diagnostic. La chaîne brute n’est jamais exportée ; une famille inconnue reste non identifiée. Les seuls champs JSON sont `module`, `generatedAt`, `browser`, `operatingSystem`, `capabilities.objectUrls`. Aucun DTO métier n’est transmis au composant, aucun stockage n’est lu/effacé et aucune version/date de déploiement ni quota n’est inventé. Aucune nouvelle variable, dépendance, route, permission ou opération BFF.
+Seules les familles du navigateur et du système sont déduites de `navigator.userAgent` au clic sur le diagnostic. MAIR-471 affiche également ces familles dans `settings-browser-information.tsx` : `useSyncExternalStore` utilise des snapshots string stables, sans abonnement événementiel, et un placeholder serveur déterministe. Aucun accès navigateur pendant SSR ou le premier rendu d’hydratation ; famille inconnue non identifiée, getter inaccessible affiché indisponible sans erreur brute. Ni chaîne user-agent ni version navigateur affichée, stockée ou exportée. Les seuls champs JSON restent `module`, `generatedAt`, `browser`, `operatingSystem`, `capabilities.objectUrls`. Aucun DTO métier n’est transmis au composant, aucun stockage n’est lu/effacé et aucune version/date de déploiement ni quota n’est inventé. Aucune nouvelle variable, dépendance, route, permission ou opération BFF.
 
 Les tests Node couvrent validation/contenu/confidentialité des exports et nettoyage du téléchargement ; les tests de composants exercent la vraie page, le clavier, axe, les erreurs/reprises et l’absence de nouvel appel bootstrap. Le harness de contrat vérifie également que Système n’ajoute aucune opération amont.
 
@@ -134,7 +154,7 @@ Le menu de compte de l’AppShell valide `LOGIN_FRONT_URL` à l’exécution pui
 
 Le proxy générique répond 400 pour un chemin invalide, 404 pour un chemin hors contrat, 405 pour une méthode interdite et 502 si le service est injoignable ou dépasse le délai. Les réponses amont sont conservées, y compris les corps vides 204/205/304.
 
-Toutes les réponses portent `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` et `Cross-Origin-Resource-Policy`, `Cross-Origin-Embedder-Policy` et `Cross-Origin-Opener-Policy` (`next.config.ts`), et `X-Powered-By` est désactivé. [src/middleware.ts](../../src/middleware.ts) ajoute sur chaque page une `Content-Security-Policy` avec un nonce propre à chaque requête (il ne redirige pas les utilisateurs non authentifiés), que Next.js applique à ses scripts. Les pages sont donc rendues à la demande (`dynamic = "force-dynamic"` dans le layout). Les feuilles de style sont limitées à l'origine et au nonce ; seuls les attributs `style` rendus par les composants partagés passent par `style-src-attr 'unsafe-inline'`, et `next dev` autorise aussi `'unsafe-eval'`. Toute nouvelle ressource externe (image, police, API appelée depuis le navigateur) doit être ajoutée à la politique dans `src/lib/content-security-policy.ts`.
+Toutes les réponses portent `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` et `Cross-Origin-Resource-Policy`, `Cross-Origin-Embedder-Policy` et `Cross-Origin-Opener-Policy` (`next.config.ts`), et `X-Powered-By` est désactivé. [src/middleware.ts](../../src/middleware.ts) ajoute sur chaque page ayant passé la garde de session une `Content-Security-Policy` avec un nonce propre à chaque requête, que Next.js applique à ses scripts. Les pages sont donc rendues à la demande (`dynamic = "force-dynamic"` dans le layout). Les feuilles de style sont limitées à l'origine et au nonce ; seuls les attributs `style` rendus par les composants partagés passent par `style-src-attr 'unsafe-inline'`, et `next dev` autorise aussi `'unsafe-eval'`. Toute nouvelle ressource externe (image, police, API appelée depuis le navigateur) doit être ajoutée à la politique dans `src/lib/content-security-policy.ts`.
 
 ## Synchronisation et vérifications
 

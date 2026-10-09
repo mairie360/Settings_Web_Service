@@ -9,15 +9,10 @@ const read = (path) => readFileSync(join(root, path), 'utf8');
 
 test('Settings uses the shared frontend workflow with Semgrep enabled', () => {
   const workflow = read('.github/workflows/cicd.yml');
-  const reusableWorkflows = [...workflow.matchAll(/^\s+uses:\s+mairie360\/CICD\/\.github\/workflows\/frontend-cicd\.yml@(v(\d+)\.(\d+)\.(\d+))\s*$/gm)];
+  const reusableWorkflows = [...workflow.matchAll(/^\s+uses:\s+mairie360\/CICD\/\.github\/workflows\/frontend-cicd\.yml@([a-f0-9]{40})\s*$/gm)];
   assert.equal(reusableWorkflows.length, 1, 'Settings must call the shared frontend workflow once');
-  const [, version, major, minor, patch] = reusableWorkflows[0];
-  // PR #74 already moved main to v4.0.1. That published workflow retains
-  // blocking Semgrep/Gitleaks and npm audit before build/tests, with named
-  // secrets and no consumer override. Keep the major-review guard (v5 fails).
-  assert.equal(Number(major), 4, 'a new major workflow version requires review');
-  assert.ok(Number(minor) > 0 || Number(patch) >= 1,
-    'the shared workflow must include the reviewed v4.0.1 security audits');
+  const [, version] = reusableWorkflows[0];
+  assert.equal(version, 'f5ea4257ac51aa2969f9ddb84730fbebce8f42a7', 'only the integrated reviewed workflow commit is accepted');
   assert.equal(workflow.match(/cicd_version:\s*"([^"]+)"/)?.[1], version,
     'the reusable workflow ref and input must use the same version');
   assert.doesNotMatch(workflow, /semgrep_fail_on_findings:\s*false|semgrep_config:|continue-on-error:/);
@@ -51,11 +46,11 @@ test('the legacy required security name runs real immutable blocking scanners', 
   }
   assert.match(job, /fetch-depth: 0/);
   assert.equal([...job.matchAll(/persist-credentials: false/g)].length, 2);
-  assert.match(job, /repository: mairie360\/CICD\s*\n          ref: 539847726d4058a9565c4f682c2d1d8302874b06/);
-  assert.match(job, /uses: \.\/cicd-repo\/actions\/semgrep/);
+  assert.match(job, /repository: mairie360\/CICD\s*\n          ref: f5ea4257ac51aa2969f9ddb84730fbebce8f42a7/);
+  assert.match(job, /uses: \.\/cicd-repo\/actions\/frontend-semgrep-pypi/);
   assert.match(job, /config: p\/typescript p\/react p\/owasp-top-ten p\/secrets p\/dockerfile p\/github-actions/);
   assert.match(job, /artifact_name: semgrep-required-check-sarif/);
-  assert.match(job, /uses: \.\/cicd-repo\/actions\/gitleaks/);
+  assert.match(job, /uses: \.\/cicd-repo\/actions\/frontend-gitleaks/);
   assert.equal([...job.matchAll(/fail_on_findings: "true"/g)].length, 2);
 });
 

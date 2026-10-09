@@ -219,3 +219,5 @@ For a proxy error, compare the path and method with the inventory, then check th
 - [docker-compose.yml](../../docker-compose.yml)
 
 Historical supplements: [BFF.md](../../BFF.md), [BACKEND.md](../../BACKEND.md). Proposed requirements must remain distinct from implemented behavior.
+
+Presentation checks mount the actual Settings page, its real React hooks and published UI 0.6.12 with the existing canonical bootstrap fixture at the API-function boundary. Computed styles cover typography, shell/sidebar/drawer, tab selection, the four profile fields and opening/closing bounded assistance content. Parsed policies preserve breakpoint associations, the Tailwind font token, focus outline and backdrop configuration. JSDOM does not compile Tailwind, evaluate media queries, measure native geometry or establish deployed BFF response schemas, persistence or RGAA compliance. Native responsive/dialog/keyboard recipes and HTTP contract tests remain separate; no product, contract or RGAA configuration changes.

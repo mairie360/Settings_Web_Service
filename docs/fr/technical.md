@@ -221,3 +221,5 @@ En cas d’erreur de proxy, comparer la route et la méthode à l’inventaire, 
 - [docker-compose.yml](../../docker-compose.yml)
 
 Compléments historiques: [BFF.md](../../BFF.md), [BACKEND.md](../../BACKEND.md). Les besoins proposés doivent rester distincts du comportement effectivement implémenté.
+
+Les contrôles de présentation montent la vraie page Paramètres, ses hooks React et UI publiée 0.6.12 avec la fixture bootstrap canonique existante à la frontière des fonctions API. Ils vérifient les styles calculés de la typographie, de la navigation/du tiroir, des onglets sélectionnés, des quatre champs du profil et de la fenêtre d’aide. Les politiques analysées conservent les associations de breakpoints, le token de police, le focus et le fond de la fenêtre. JSDOM ne compile pas Tailwind, ne calcule pas les media queries et ne prouve ni géométrie native, schémas des BFF déployés, persistance ni conformité RGAA. Les recettes natives et tests HTTP restent distincts ; le produit, les contrats et la configuration RGAA sont inchangés.

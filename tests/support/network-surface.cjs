@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
 const { SRC, sourceFiles } = require('./load-ts.cjs');
+const { propertyName } = require('./source-policy.cjs');
 
 // Inventaire statique de tout ce qui peut émettre une requête réseau dans `src/` (AST TypeScript, .ts et .tsx) :
 // API réseau brutes, appels `requestBff` (navigateur → BFF_Settings via le proxy), relais `forwardToBff` (serveur →
@@ -19,16 +20,18 @@ const calleeName = (expression) => (ts.isIdentifier(expression) ? expression.tex
 function requestMethod(init) {
   if (!init) return 'GET';
   if (!ts.isObjectLiteralExpression(init)) return undefined;
-  const property = init.properties.find((candidate) => candidate.name && candidate.name.getText() === 'method');
+  const property = init.properties.find((candidate) => candidate.name && propertyName(candidate.name) === 'method');
   if (!property) return 'GET';
   return ts.isPropertyAssignment(property) ? literalText(property.initializer)?.toUpperCase() : undefined;
 }
+
+const isProcessEnv = node => ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'process' && node.name.text === 'env';
 
 /** `process.env.X` ou `process.env['X']` → `X`. */
 function envName(node) {
   if (!ts.isPropertyAccessExpression(node) && !ts.isElementAccessExpression(node)) return undefined;
   const target = node.expression;
-  if (!ts.isPropertyAccessExpression(target) || target.getText() !== 'process.env') return undefined;
+  if (!isProcessEnv(target)) return undefined;
   return ts.isPropertyAccessExpression(node) ? node.name.text : literalText(node.argumentExpression) ?? '<dynamique>';
 }
 
@@ -59,7 +62,7 @@ function scanNetworkSurface() {
         if (name === 'requestBff') surface.requestBff.push({ file: relative, at: at(node), method: requestMethod(second), path: literalText(first) });
         if (name === 'forwardToBff') surface.forwardToBff.push({ file: relative, at: at(node), baseUrl: node.arguments[1]?.getText() });
       }
-      const opaqueEnv = ts.isPropertyAccessExpression(node) && node.getText() === 'process.env' && envName(node.parent) === undefined;
+      const opaqueEnv = isProcessEnv(node) && envName(node.parent) === undefined;
       const env = opaqueEnv ? '<process.env sans nom littéral>' : envName(node);
       if (env && !surface.env.some((entry) => entry.name === env && entry.file === relative)) surface.env.push({ file: relative, name: env, at: at(node) });
       const text = literalText(node);

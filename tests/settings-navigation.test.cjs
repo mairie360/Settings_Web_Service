@@ -7,11 +7,14 @@ const { getActiveFrontHrefs } = requireSrc('lib/navigation.ts');
 
 afterEach(() => {
   delete process.env.DASHBOARD_FRONT_URL;
+  delete process.env.SETTINGS_FRONT_URL;
   setBrowserFrontUrls({});
   delete global.window;
 });
 
 test('server layout reads configured frontend destinations at runtime', () => {
+  process.env.SETTINGS_FRONT_URL = ' https://settings.example.test/ ';
+  assert.equal(readFrontUrlsFromEnv().SETTINGS_FRONT_URL, 'https://settings.example.test/');
   process.env.DASHBOARD_FRONT_URL = 'https://dashboard.example.test/';
   assert.equal(readFrontUrlsFromEnv().DASHBOARD_FRONT_URL, 'https://dashboard.example.test/');
 });

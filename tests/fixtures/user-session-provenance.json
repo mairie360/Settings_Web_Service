@@ -1,0 +1,12 @@
+{
+  "source": "https://github.com/mairie360/BFF_user/blob/56dec0d557034637505755f6eacf020168fecbc0/contracts/openapi.json",
+  "commit": "56dec0d557034637505755f6eacf020168fecbc0",
+  "blob": "2c3a3cfab68d299757b42163c0612fbb7edbc441",
+  "fixtureSha256": "c13c99cbb833a7cb52c709d9d1ec43d1ca7737165021aa387c498fb87bccbb26",
+  "paths": [
+    "/me",
+    "/auth/refresh",
+    "/auth/logout"
+  ],
+  "qualification": "Repository-published User operations delegated through actual Login frontend; no BFF/SDK pin or source changes, no deployed authentication claim"
+}

@@ -1,5 +1,6 @@
 // Front destinations are supplied at runtime so one image can be promoted unchanged.
 export const FRONT_URL_KEYS = [
+  "SETTINGS_FRONT_URL",
   "LOGIN_FRONT_URL",
   "DASHBOARD_FRONT_URL",
   "PROJECT_FRONT_URL",
@@ -17,6 +18,7 @@ let browserFrontUrls: FrontUrls = {};
 /** Server only: read public frontend destinations from the runtime environment. */
 export function readFrontUrlsFromEnv(): FrontUrls {
   return {
+    SETTINGS_FRONT_URL: process.env.SETTINGS_FRONT_URL?.trim() || undefined,
     LOGIN_FRONT_URL: process.env.LOGIN_FRONT_URL?.trim() || undefined,
     DASHBOARD_FRONT_URL: process.env.DASHBOARD_FRONT_URL?.trim() || undefined,
     PROJECT_FRONT_URL: process.env.PROJECT_FRONT_URL?.trim() || undefined,

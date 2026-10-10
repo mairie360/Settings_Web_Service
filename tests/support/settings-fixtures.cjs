@@ -1,6 +1,7 @@
 // Réponses BFF conformes aux contrats (validées dans network-contract.test.cjs) et session des tests.
 
-const ACCESS_TOKEN = 'session-anne';
+const encode = value => Buffer.from(JSON.stringify(value)).toString('base64url');
+const ACCESS_TOKEN = `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode({ sub: '1', exp: Math.floor(Date.now() / 1000) + 3600 })}.signature`;
 
 /** SettingsProfile (BFF_Settings). */
 function profile(overrides = {}) {

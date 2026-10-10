@@ -10,12 +10,9 @@ const policy = require('./support/source-policy.cjs');
 
 // Le contrat de référence du front est celui publié par BFF_Settings dans le paquet @mairie360/bff-settings-openapi,
 // à la version exacte épinglée dans package.json, reconstruit dans contracts/openapi.json.
-// Vérification statique (AST de tout src/, .ts et .tsx) que le front ne parle au réseau qu'à travers ce contrat :
-// - le navigateur n'appelle que sa propre origine, via `requestBff`, sur des opérations du paquet publié ;
-// - le serveur Next.js ne relaie que vers un seul BFF, BFF_Settings, à travers le proxy dont la liste blanche
-//   (contracts/openapi.json) expose exactement les opérations du paquet publié ;
-// - aucune autre API réseau, bibliothèque HTTP, URL absolue ou paquet OpenAPI d'un autre BFF n'est utilisé.
-// Les comportements correspondants sont exercés contre un mock dans settings.bff-mocks.test.cjs.
+// The browser uses its own Settings origin. Business operations use the exact
+// Settings SDK contract; the server delegates renewal/logout and the actual
+// User /me role read to the existing Login owner, without another SDK client.
 
 const PACKAGE = '@mairie360/bff-settings-openapi';
 // Reconstruction exacte du paquet publié à la version épinglée (vérifiée par package-contract.test.cjs).
@@ -40,10 +37,12 @@ describe('published BFF_Settings contract in src/', () => {
 });
 
 describe('network surface of src/', () => {
-  test('only the BFF client and the BFF proxy use a raw network API', () => {
+  test('only declared data, role and logout adapters use a raw network API', () => {
     assert.deepEqual(surface.raw.map(({ file, api }) => `${file} ${api}`), [
       'lib/bff-client.ts fetch',
-      'lib/bff-proxy.ts fetch',
+      'lib/logout.ts fetch',
+      'lib/session-role-proxy.ts fetch',
+      'lib/session-role.ts fetch',
     ]);
   });
 
@@ -51,7 +50,7 @@ describe('network surface of src/', () => {
     assert.deepEqual(surface.absoluteUrls.map(({ file, url }) => `${file} ${url}`), []);
   });
 
-  test('every browser call goes through requestBff from src/lib/settings-api.ts', () => {
+  test('every business request uses requestBff from src/lib/settings-api.ts', () => {
     assert.ok(surface.requestBff.length > 0);
     assert.deepEqual([...new Set(surface.requestBff.map(({ file }) => file))], ['lib/settings-api.ts']);
   });
@@ -64,29 +63,25 @@ describe('network surface of src/', () => {
     assert.deepEqual(surface.requestBff.map(({ method, path: pathname }) => `${method} ${pathname}`), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
   });
 
-  test('the front relays to a single BFF: only the contract proxy forwards, to configuredBffUrl()', () => {
+  test('business requests use the Settings contract proxy and configured BFF URL', () => {
     assert.deepEqual(surface.forwardToBff.map(({ file }) => file), ['lib/bff-proxy.ts']);
     assert.ok(policy.calls(policy.parse('src/lib/bff-proxy.ts'), 'forwardToBff').every(node => policy.configuredUrl(node.arguments[1])));
   });
 
-  test('the contract catch-all proxy is the only server route', () => {
-    assert.deepEqual(surface.routes, ['app/[...path]/route.ts']);
+  test('only the business relay and explicit Login owner adapters are server routes', () => {
+    assert.deepEqual(surface.routes, ['app/[...path]/route.ts', 'app/api/auth/logout/route.ts', 'app/api/auth/role/route.ts', 'app/api/bff/[...path]/route.ts']);
   });
 
   test('environment reads are limited to the BFF and explicit active-front navigation URLs', () => {
-    assert.deepEqual(surface.env.map(({ file, name }) => `${file} ${name}`), [
-      'lib/bff-proxy.ts SETTINGS_BFF_URL',
-      'lib/bff-proxy.ts BFF_SETTINGS_BASE_URL',
-      'lib/front-urls.ts LOGIN_FRONT_URL',
-      'lib/front-urls.ts DASHBOARD_FRONT_URL',
-      'lib/front-urls.ts PROJECT_FRONT_URL',
-      'lib/front-urls.ts CALENDAR_FRONT_URL',
-      'lib/front-urls.ts MESSAGE_FRONT_URL',
-      'lib/front-urls.ts ELEARNING_FRONT_URL',
-      'lib/front-urls.ts ADMINISTRATION_FRONT_URL',
-      'middleware.ts COOKIE_DOMAIN',
-      'middleware.ts NODE_ENV',
-    ]);
+    const expected = {
+      'app/api/auth/logout/route.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL'],
+      'lib/bff-proxy.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL', 'SETTINGS_BFF_URL', 'BFF_SETTINGS_BASE_URL'],
+      'lib/front-urls.ts': ['SETTINGS_FRONT_URL', 'LOGIN_FRONT_URL', 'DASHBOARD_FRONT_URL', 'PROJECT_FRONT_URL', 'CALENDAR_FRONT_URL', 'MESSAGE_FRONT_URL', 'ELEARNING_FRONT_URL', 'ADMINISTRATION_FRONT_URL'],
+      'lib/session-role-proxy.ts': ['SETTINGS_FRONT_URL', 'LOGIN_FRONT_URL', 'NODE_ENV'],
+      'middleware.ts': ['NODE_ENV'],
+    };
+    assert.deepEqual(surface.env.map(({ file, name }) => `${file} ${name}`).sort(),
+      Object.entries(expected).flatMap(([file, names]) => names.map(name => `${file} ${name}`)).sort());
   });
 
   test('the browser Content-Security-Policy only allows same-origin connections', () => {

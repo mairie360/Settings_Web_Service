@@ -25,7 +25,7 @@ function appRoutes() {
   };
   walk(APP, []);
   const rank = (route) => Math.max(0, ...route.segments.map((segment) => (segment.startsWith('[...') ? 2 : segment.startsWith('[') ? 1 : 0)));
-  return routes.sort((a, b) => rank(a) - rank(b));
+  return routes.sort((a, b) => rank(a) - rank(b) || b.segments.length - a.segments.length);
 }
 
 function matchRoute(routes, segments) {
@@ -52,7 +52,7 @@ function matchRoute(routes, segments) {
  *   `upstreams` : URL(s) du BFF du front que le serveur Next.js a le droit de joindre (plusieurs quand un test
  *   fait varier l'URL configurée, par exemple vers un port fermé).
  */
-function createFront({ cookies = {}, upstreams }) {
+function createFront({ cookies = {}, upstreams, owner }) {
   const realFetch = globalThis.fetch;
   const server = new AsyncLocalStorage();
   const routes = appRoutes();
@@ -63,6 +63,10 @@ function createFront({ cookies = {}, upstreams }) {
   async function serverFetch(input, init = {}) {
     const url = new URL(input instanceof Request ? input.url : String(input));
     const { route } = server.getStore();
+    if (owner && url.origin === owner.origin) {
+      owner.calls.push({ method: init.method ?? 'GET', url });
+      return owner.handle(new NextRequest(url, init));
+    }
     upstreamCalls.push({ route, method: init.method ?? 'GET', url });
     if (!upstreams().some((allowed) => allowed && new URL(allowed).origin === url.origin)) {
       violations.push(`serveur (${route}) : ${init.method ?? 'GET'} ${url.href} ne vise pas BFF_Settings`);
@@ -85,10 +89,19 @@ function createFront({ cookies = {}, upstreams }) {
     if (typeof handler !== 'function') return new Response(null, { status: 405 });
 
     const headers = new Headers(init.headers);
+    if (!headers.has('origin')) headers.set('origin', ORIGIN);
+    if (!headers.has('sec-fetch-site')) headers.set('sec-fetch-site', 'same-origin');
     const cookie = Object.entries(cookies).map(([name, value]) => `${name}=${value}`).join('; ');
     if (cookie && !headers.has('cookie')) headers.set('cookie', cookie);
     const request = new NextRequest(url, { ...init, method, headers });
-    return server.run({ route: found.route.file }, () => handler(request, { params: Promise.resolve(found.params) }));
+    const response = await server.run({ route: found.route.file }, () => handler(request, { params: Promise.resolve(found.params) }));
+    for (const cookie of response.headers.getSetCookie()) {
+      const [pair, ...attributes] = cookie.split(';');
+      const [name, ...value] = pair.split('=');
+      if (attributes.some(item => /^\s*max-age=0\s*$/i.test(item))) delete cookies[name.trim()];
+      else cookies[name.trim()] = value.join('=');
+    }
+    return response;
   }
 
   return {
@@ -99,10 +112,14 @@ function createFront({ cookies = {}, upstreams }) {
     upstreamCalls,
     routes,
     install() {
+      this.previousFrontUrl = process.env.SETTINGS_FRONT_URL;
+      process.env.SETTINGS_FRONT_URL = ORIGIN;
       globalThis.fetch = (input, init) => (server.getStore() ? serverFetch(input, init) : browserFetch(input, init));
     },
     uninstall() {
       globalThis.fetch = realFetch;
+      if (this.previousFrontUrl === undefined) delete process.env.SETTINGS_FRONT_URL;
+      else process.env.SETTINGS_FRONT_URL = this.previousFrontUrl;
     },
     reset() {
       violations.length = 0;

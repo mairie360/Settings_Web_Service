@@ -4,6 +4,8 @@ import { axe } from "jest-axe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "@/app/page";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
+import { loadSessionRole } from "@/lib/session-role";
+import { setBrowserFrontUrls } from "@/lib/front-urls";
 
 vi.mock("@/lib/settings-api", () => ({
   loadSettings: vi.fn(),
@@ -32,6 +34,7 @@ async function openSettings() {
 }
 
 beforeEach(() => {
+  setBrowserFrontUrls({ ADMINISTRATION_FRONT_URL: "https://admin.test.example/" });
   vi.mocked(loadSettings).mockResolvedValue(bootstrap());
   vi.mocked(saveProfile).mockImplementation(async (patch) => ({
     ...bootstrap().profile,
@@ -267,4 +270,12 @@ describe("Settings page", () => {
     const results = await axe(document.querySelector("main"));
     expect(results.violations.filter(({ impact }) => impact === "serious" || impact === "critical")).toEqual([]);
   });
+});
+
+for (const [isAdmin, expected] of [[true, true], [false, false]]) it(`administration command follows the authoritative role result ${isAdmin}`, async () => {
+  vi.mocked(loadSessionRole).mockResolvedValueOnce(isAdmin);
+  await openSettings();
+  if (expected) expect((await screen.findAllByRole('button', { name: 'Administration', exact: true })).length).toBeGreaterThan(0);
+  else expect(screen.queryAllByRole('button', { name: 'Administration', exact: true })).toHaveLength(0);
+  expect(loadSessionRole).toHaveBeenCalledTimes(1);
 });

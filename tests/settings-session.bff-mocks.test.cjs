@@ -28,7 +28,7 @@ before(async () => {
   // Upstream fetches keep the existing harness's AsyncLocalStorage isolation.
   globalThis.fetch = (input, init = {}) => {
     const url = new URL(input instanceof Request ? input.url : String(input), ORIGIN);
-    if (url.origin !== ORIGIN) return routedFetch(input, init);
+    if (url.origin !== ORIGIN || url.pathname.startsWith('/api/')) return routedFetch(input, init);
     const headers = new Headers(init.headers);
     headers.set('cookie', Object.entries(front.cookies).map(([key, value]) => `${key}=${value}`).join('; '));
     const gate = middleware(new NextRequest(url, { ...init, headers }));
@@ -52,8 +52,8 @@ beforeEach(() => {
   process.env.LOGIN_FRONT_URL = 'https://login.test.example/';
   delete process.env.COOKIE_DOMAIN;
   destinations = [];
-  globalThis.window = { location: { replace: href => destinations.push(href) } };
-  setBrowserFrontUrls({ LOGIN_FRONT_URL: process.env.LOGIN_FRONT_URL });
+  globalThis.window = { location: { origin: ORIGIN, pathname: '/', search: '', assign: href => destinations.push(href) } };
+  setBrowserFrontUrls({ LOGIN_FRONT_URL: process.env.LOGIN_FRONT_URL, SETTINGS_FRONT_URL: ORIGIN });
 });
 afterEach(() => assert.deepEqual([...front.violations, ...mock.violations], []));
 const page = (cookies = {}, pathname = '/', method = 'GET') => new NextRequest(`${ORIGIN}${pathname}`, {
@@ -62,13 +62,17 @@ const page = (cookies = {}, pathname = '/', method = 'GET') => new NextRequest(`
 
 for (const [label, cookie] of [
   ['missing', undefined], ['empty', ''], ['expired', jwt(1)], ['malformed JWT payload', 'e30.not-json.fixture'],
+  ['opaque', 'opaque-session'], ['two segments', 'a.b'], ['missing expiry', jwt(undefined)], ['non-numeric expiry', jwt('4102444800')], ['null expiry', jwt(null)],
 ]) {
   test(`${label} cookie redirects a page to configured Login without rendering Settings`, () => {
     const response = middleware(page(cookie === undefined ? {} : { accessToken: cookie }));
     assert.equal(response.status, 307);
-    assert.equal(response.headers.get('location'), 'https://login.test.example/');
+    const destination = new URL(response.headers.get('location'));
+    assert.equal(destination.origin, 'https://login.test.example');
+    assert.equal(destination.searchParams.get('redirect'), ORIGIN + '/');
+    assert.equal(destination.searchParams.get('resumeSession'), '1');
     assert.equal(response.headers.get('cache-control'), 'no-store');
-    assert.equal(response.cookies.get('accessToken').value, '');
+    assert.equal(response.headers.get('set-cookie'), null);
     assert.equal(mock.requests.length, 0);
   });
 }
@@ -94,12 +98,11 @@ test('missing, unsafe or credential-bearing Login configuration fails closed ins
   }
 });
 
-test('expired document cookies are cleared on the configured shared domain; non-GET documents do not replay bodies', () => {
+test('document refusal does not change cookies and non-GET documents do not replay bodies', () => {
   process.env.COOKIE_DOMAIN = '.test.example';
   const response = middleware(page({ accessToken: jwt(1) }, '/', 'POST'));
   assert.equal(response.status, 303);
-  assert.match(response.headers.get('set-cookie'), /Domain=\.test\.example/);
-  assert.match(response.headers.get('set-cookie'), /Max-Age=0/);
+  assert.equal(response.headers.get('set-cookie'), null);
 });
 
 test('metadata with dotted paths is explicitly covered without broadening static-asset matching', () => {
@@ -108,27 +111,21 @@ test('metadata with dotted paths is explicitly covered without broadening static
   assert.ok(config.matcher.some(value => value.includes('_next/static') && value.includes('.*\\..*')));
   for (const pathname of ['/openapi.json', '/swagger.json']) {
     const response = middleware(page({}, pathname));
-    assert.equal(response.status, 401);
-    assert.equal(response.headers.get('location'), null);
+    assert.equal(response.status, 307);
+    assert.equal(new URL(response.headers.get('location')).searchParams.get('redirect'), ORIGIN + pathname);
     assert.equal(mock.requests.length, 0);
   }
 });
 
-for (const [label, token] of [['absent', undefined], ['expired', jwt(1)]]) {
-  test(`${label} cookie blocks read and mutation with same-origin 401, no upstream call and one Login handoff`, async () => {
-    if (token !== undefined) front.cookies.accessToken = token;
-    const results = await Promise.allSettled([loadSettings(), saveProfile({ first_name: 'Unsubmitted' })]);
-    assert.deepEqual(results.map(result => result.status), ['rejected', 'rejected']);
-    assert.deepEqual(destinations, ['https://login.test.example/logout']);
-    assert.equal(mock.requests.length, 0);
-    assert.equal(front.upstreamCalls.length, 0);
-    const response = middleware(page({}, '/settings/bootstrap'));
-    assert.equal(response.status, 401);
-    assert.equal(response.headers.get('location'), null);
-    assert.equal(response.headers.get('cache-control'), 'no-store');
-    assert.deepEqual(await response.json(), fixtures.error('Votre session a expiré. Veuillez vous reconnecter.'));
-  });
-}
+test('an expired document keeps its canonical query for the Login owner recovery', () => {
+  const response = middleware(page({ accessToken: jwt(1) }, '/?tab=security'));
+  assert.equal(response.status, 307);
+  const target = new URL(response.headers.get('location'));
+  assert.equal(target.searchParams.get('redirect'), ORIGIN + '/?tab=security');
+  assert.equal(target.searchParams.get('resumeSession'), '1');
+  assert.equal(response.headers.get('set-cookie'), null);
+  assert.equal(mock.requests.length, 0);
+});
 
 test('valid cookie reaches the unchanged contract proxy; a real upstream 401 is not accepted as success', async () => {
   front.cookies.accessToken = jwt(4102444800);
@@ -136,8 +133,9 @@ test('valid cookie reaches the unchanged contract proxy; a real upstream 401 is 
   assert.deepEqual(await loadSettings(), fixtures.bootstrap());
   assert.equal(mock.requests[0].headers.authorization, `Bearer ${front.cookies.accessToken}`);
   mock.on('PATCH', '/settings/profile', { status: 401, body: fixtures.error('Session refusée'), outOfContract: true });
-  await assert.rejects(saveProfile({ first_name: 'Refused draft' }), { message: 'Session refusée' });
-  assert.deepEqual(destinations, ['https://login.test.example/logout']);
+  await assert.rejects(saveProfile({ first_name: 'Refused draft' }), { message: 'Votre session a expiré. Veuillez vous reconnecter.' });
+  assert.equal(destinations.length, 1);
+  assert.equal(new URL(destinations[0]).searchParams.get('redirect'), ORIGIN + '/');
   assert.equal(mock.calls('/settings/profile', 'PATCH').length, 1);
 });
 
@@ -177,6 +175,6 @@ test('unavailable browser Login on a real 401 shows a controlled failure without
   front.cookies.accessToken = fixtures.ACCESS_TOKEN;
   setBrowserFrontUrls({ LOGIN_FRONT_URL: 'javascript:alert(1)' });
   mock.on('GET', '/settings/bootstrap', { status: 401, body: fixtures.error('Session refusée'), outOfContract: true });
-  await assert.rejects(loadSettings(), { message: 'Connexion temporairement indisponible. Veuillez contacter votre administrateur.' });
+  await assert.rejects(loadSettings(), { message: 'Votre session a expiré. Veuillez vous reconnecter.' });
   assert.deepEqual(destinations, []);
 });

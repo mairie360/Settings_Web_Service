@@ -6,6 +6,7 @@ const { ROOT, requireSrc } = require('./support/load-ts.cjs');
 const { OpenApiContract } = require('./support/openapi-contract.cjs');
 const { scanNetworkSurface } = require('./support/network-surface.cjs');
 const fixtures = require('./support/settings-fixtures.cjs');
+const policy = require('./support/source-policy.cjs');
 
 // Le contrat de référence du front est celui publié par BFF_Settings dans le paquet @mairie360/bff-settings-openapi,
 // à la version exacte épinglée dans package.json, reconstruit dans contracts/openapi.json.
@@ -26,8 +27,7 @@ const successSchema = (method, template) => contract.responseSchema(contract.mat
 
 describe('published BFF_Settings contract in src/', () => {
   test('the proxy allowlist is the snapshot rebuilt from the package', () => {
-    const source = fs.readFileSync(path.join(ROOT, 'src', 'lib', 'bff-proxy.ts'), 'utf8');
-    assert.match(source, /import contract from '\.\.\/\.\.\/contracts\/openapi\.json';/);
+    assert.ok(policy.imports(policy.parse('src/lib/bff-proxy.ts')).includes('../../contracts/openapi.json'));
     assert.equal(contract.document.info['x-source-package'].split('@').slice(0, 2).join('@'), PACKAGE);
   });
 
@@ -65,7 +65,8 @@ describe('network surface of src/', () => {
   });
 
   test('the front relays to a single BFF: only the contract proxy forwards, to configuredBffUrl()', () => {
-    assert.deepEqual(surface.forwardToBff.map(({ file, baseUrl }) => `${file} ${baseUrl}`), ['lib/bff-proxy.ts configuredBffUrl()']);
+    assert.deepEqual(surface.forwardToBff.map(({ file }) => file), ['lib/bff-proxy.ts']);
+    assert.ok(policy.calls(policy.parse('src/lib/bff-proxy.ts'), 'forwardToBff').every(node => policy.configuredUrl(node.arguments[1])));
   });
 
   test('the contract catch-all proxy is the only server route', () => {

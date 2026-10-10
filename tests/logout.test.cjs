@@ -40,3 +40,20 @@ test('invalid Login URL prevents navigation even after a confirmed receipt', asy
   await assert.rejects(logoutAndRedirect(), /retour à la connexion est indisponible/);
   assert.deepEqual(destinations, []); assert.equal(isSessionRecoveryPending(), true);
 });
+
+test('a late data refusal cannot navigate while an explicit logout receipt is pending', async () => {
+ let reply;global.fetch=()=>new Promise(resolve=>{reply=resolve;});
+ const pending=logoutAndRedirect();const held=isSessionRecoveryPending();const automatic=navigateToLogin();const navigationsBeforeReceipt=[...destinations];
+ reply(Response.json({message:'Unconfirmed',session_revoked:false}));
+ await assert.rejects(pending,/déconnexion n’a pas été confirmée/);
+ assert.equal(held,true);assert.equal(automatic,false);assert.deepEqual(navigationsBeforeReceipt,[]);
+});
+test('a confirmed owner receipt finishes the optional HTTPS realm sign-out', async () => {
+ const target='https://sso.mairie.test/realms/mairie/protocol/openid-connect/logout';
+ global.fetch=async()=>Response.json({message:'Session revoked',session_revoked:true,logout_url:target});
+ await logoutAndRedirect();assert.deepEqual(destinations,[target]);
+});
+for(const url of ['javascript:alert(1)','http://sso.mairie.test/realms/mairie/protocol/openid-connect/logout','https://sso.mairie.test/unrelated','https://user:password@sso.mairie.test/realms/mairie/protocol/openid-connect/logout','https://sso.mairie.test/realms/mairie/protocol/openid-connect/logout#unexpected'])test('unsafe owner sign-out destination stays in recovery '+url.split(':')[0],async()=>{
+ global.fetch=async()=>Response.json({message:'Session revoked',session_revoked:true,logout_url:url});
+ await assert.rejects(logoutAndRedirect(),/déconnexion n’a pas été confirmée/);assert.deepEqual(destinations,[]);assert.equal(isSessionRecoveryPending(),true);
+});

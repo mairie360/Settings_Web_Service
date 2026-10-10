@@ -65,7 +65,7 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
 
     assert.deepEqual(await loadSettings(), body);
 
-    assert.deepEqual(front.browserCalls, [{ method: 'GET', path: '/settings/bootstrap' }]);
+    assert.deepEqual(front.browserCalls, [{ method: 'GET', path: '/api/bff/settings/bootstrap' }]);
     assert.deepEqual(upstreamOrigins(), [new URL(bffSettings.url).origin]);
     const [received] = bffSettings.requests;
     assert.equal(bffSettings.requests.length, 1);
@@ -91,7 +91,7 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
 
     assert.deepEqual(await saveProfile(edited), saved);
 
-    assert.deepEqual(front.browserCalls, [{ method: 'PATCH', path: '/settings/profile' }]);
+    assert.deepEqual(front.browserCalls, [{ method: 'PATCH', path: '/api/bff/settings/profile' }]);
     const [received] = bffSettings.calls('/settings/profile', 'PATCH');
     assert.deepEqual(received.body, edited);
     assert.equal(received.headers['content-type'], 'application/json');
@@ -107,7 +107,7 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
       test(`${name} rejects with the BFF message on a ${status}`, async () => {
         bffSettings.on(method, template, bffError(status, `Refus ${status} du BFF.`));
 
-        await assert.rejects(call(), { message: `Refus ${status} du BFF.` });
+        await assert.rejects(call(), { message: status === 401 ? 'Votre session a expiré. Veuillez vous reconnecter.' : `Refus ${status} du BFF.` });
         assert.equal(bffSettings.calls(template, method).length, 1);
       });
     }
@@ -200,15 +200,13 @@ describe('same-origin proxy exposes exactly the published BFF_Settings contract'
     assert.deepEqual(bffSettings.requests.map((received) => received.method), ['HEAD']);
   });
 
-  test('the BFF OpenAPI documents stay reachable', async () => {
+  test('undeclared BFF metadata documents never reach the backend', async () => {
     for (const document of ['/openapi.json', '/swagger.json']) {
       const response = await browser(document);
-      assert.equal(response.status, 200);
-      assert.equal((await response.json()).info.title, bffContract.title);
+      assert.equal(response.status, 404);
     }
-    assert.deepEqual(bffSettings.requests.map((received) => received.template), ['/openapi.json', '/swagger.json']);
+    assert.deepEqual(bffSettings.requests, []);
   });
-
   test('the 404 of a preference not yet supported by Core is relayed', async () => {
     bffSettings.on('PATCH', '/settings/notifications', { status: 404, body: fixtures.error('Route absente du contrat') });
 
@@ -247,7 +245,7 @@ describe('the front talks to a single BFF', () => {
     await saveProfile({ ...profile, first_name: 'Anne' });
 
     assert.deepEqual(upstreamOrigins(), [new URL(bffSettings.url).origin]);
-    assert.deepEqual(front.upstreamCalls.map(({ route }) => route), ['app/[...path]/route.ts', 'app/[...path]/route.ts']);
+    assert.deepEqual(front.upstreamCalls.map(({ route }) => route), ['app/api/bff/[...path]/route.ts', 'app/api/bff/[...path]/route.ts']);
   });
 
   for (const [method, pathname] of [
@@ -263,12 +261,17 @@ describe('the front talks to a single BFF', () => {
     });
   }
 
-  test('POST /api/auth/logout is not served by Settings', async () => {
-    const response = await browser('/api/auth/logout', { method: 'POST' });
-    assert.equal(response.status, 404);
-    assert.deepEqual(front.upstreamCalls, []);
-  });
-});
+  test('explicit logout with an unavailable Login configuration never contacts Settings', async () => {
+    const previous = process.env.LOGIN_FRONT_URL;
+    delete process.env.LOGIN_FRONT_URL;
+    try {
+      const response = await browser('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      assert.equal(response.status, 503);
+      assert.deepEqual(front.upstreamCalls, []);
+    } finally {
+      if (previous === undefined) delete process.env.LOGIN_FRONT_URL; else process.env.LOGIN_FRONT_URL = previous;
+    }
+  });});
 
 describe('network guard of the test harness', () => {
   test('a browser call to another origin is reported', async () => {

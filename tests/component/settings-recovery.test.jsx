@@ -4,10 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import Home from "@/app/page";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
-import { logoutAndRedirect } from "@/lib/logout";
+import { logoutAndRedirect, navigateToLogin } from "@/lib/logout";
 
 vi.mock("@/lib/settings-api", () => ({ loadSettings: vi.fn(), saveProfile: vi.fn() }));
-vi.mock("@/lib/logout", () => ({ logoutAndRedirect: vi.fn() }));
+vi.mock("@/lib/logout", () => ({ logoutAndRedirect: vi.fn(), navigateToLogin: vi.fn() }));
 
 const initial = { first_name: "Test", last_name: "User", email: "test@example.invalid", phone: null };
 const labels = ["Prénom", "Nom", "E-mail", "Téléphone"];
@@ -29,7 +29,7 @@ function change(label, value) {
 beforeEach(() => {
   vi.mocked(loadSettings).mockReset().mockResolvedValue(dto());
   vi.mocked(saveProfile).mockReset().mockImplementation(async patch => ({ ...initial, ...patch }));
-  vi.mocked(logoutAndRedirect).mockReset().mockRejectedValue(new Error("Unavailable"));
+  vi.mocked(logoutAndRedirect).mockReset().mockRejectedValue(new Error("La déconnexion n’a pas été confirmée. Votre session reste à vérifier."));
 });
 
 it("recovers an initial refusal explicitly by keyboard, without an automatic read or save", async () => {
@@ -196,9 +196,13 @@ it("retains logout errors when editing or recovering reads", async () => {
   const user = await open();
   await user.click(screen.getByRole("button", { name: /compte|Test User/i }));
   await user.click(screen.getByText("Déconnexion", { exact: true }));
-  await screen.findByText("La déconnexion est temporairement indisponible.");
+  await screen.findByText("La déconnexion n’a pas été confirmée. Votre session reste à vérifier.");
   change("Prénom", "Draft");
   await user.click(screen.getByRole("button", { name: "Actualiser les paramètres" }));
   await waitFor(() => expect(screen.getByRole("button", { name: "Actualiser les paramètres" }).disabled).toBe(false));
-  expect(screen.getByText("La déconnexion est temporairement indisponible.")).toBeTruthy();
+  expect(screen.getByText("La déconnexion n’a pas été confirmée. Votre session reste à vérifier.")).toBeTruthy();
+  expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("Draft");
+  expect(navigateToLogin).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Retour à la connexion", exact: true }));
+  expect(navigateToLogin).toHaveBeenCalledExactlyOnceWith({ explicit: true });
 });

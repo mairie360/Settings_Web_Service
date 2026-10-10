@@ -112,9 +112,9 @@ test('an explicit retry recovers an initial upstream refusal through GET only', 
   await view.waitFor(html => html.includes('Informations personnelles'));
   assert.doesNotMatch(view.html, /Lecture refusée/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap']);
-  assert.deepEqual(front.browserCalls, [
-    { method: 'GET', path: '/settings/bootstrap' },
-    { method: 'GET', path: '/settings/bootstrap' },
+  assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role'), [
+    { method: 'GET', path: '/api/bff/settings/bootstrap' },
+    { method: 'GET', path: '/api/bff/settings/bootstrap' },
   ]);
 });
 
@@ -207,9 +207,9 @@ test('refreshing unavailable sessions keeps dirty fields and updates clean field
   await view.click('Sécurité');
   assert.doesNotMatch(view.text(), /Les sessions sont temporairement indisponibles/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap']);
-  assert.deepEqual(front.browserCalls, [
-    { method: 'GET', path: '/settings/bootstrap' },
-    { method: 'GET', path: '/settings/bootstrap' },
+  assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role'), [
+    { method: 'GET', path: '/api/bff/settings/bootstrap' },
+    { method: 'GET', path: '/api/bff/settings/bootstrap' },
   ]);
 });
 
@@ -268,7 +268,7 @@ test('the first pass renders the loading state, the next one the profile form fi
   const html = await view.waitFor((current) => !current.includes('Chargement des paramètres'));
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
-  assert.deepEqual(front.browserCalls, [{ method: 'GET', path: '/settings/bootstrap' }]);
+  assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role'), [{ method: 'GET', path: '/api/bff/settings/bootstrap' }]);
   assert.equal(view.find('AppShell').length, 1);
   assert.match(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
   assert.doesNotMatch(html, /<\/main>\s*<footer\b/);
@@ -278,7 +278,7 @@ test('the first pass renders the loading state, the next one the profile form fi
     last_name: 'Le Gall',
     email: 'anne.le-gall@mairie.test',
   });
-  assert.equal(view.props('AppShell').isAdmin, undefined);
+  assert.equal(view.props('AppShell').isAdmin, false);
   assert.equal(typeof view.props('AppShell').onLogout, 'function');
   assert.doesNotMatch(html, /aria-label="Notifications"|>Administration</);
   assert.match(html, /<nav role="tablist" aria-label="Paramètres"/);
@@ -293,17 +293,23 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.doesNotMatch(html, /role="alert"/);
 });
 
-test('the account-menu logout hands off to Login without another BFF call', async () => {
-  setBrowserFrontUrls({ LOGIN_FRONT_URL: 'https://login.test.example/' });
+test('unconfirmed account-menu logout retains the draft until explicit canonical Login return', async () => {
+  setBrowserFrontUrls({ LOGIN_FRONT_URL: 'https://login.test.example/', SETTINGS_FRONT_URL: front.ORIGIN });
   const destinations = [];
-  global.window = { location: { replace: (href) => destinations.push(href) } };
+  global.window = { location: { origin: front.ORIGIN, pathname: '/', search: '?tab=profile', href: front.ORIGIN + '/?tab=profile', assign: href => destinations.push(href) } };
   await renderLoadedPage();
+  const field = view.hostElements((props, _text, tag) => tag === 'input' && props.type === 'text')[0];
+  await view.act(() => field.props.onChange({ target: { value: 'Brouillon conservé' } }));
   await view.act(() => view.props('AppShell').onLogout());
-
-  assert.deepEqual(destinations, ['https://login.test.example/logout']);
-  assert.deepEqual(front.browserCalls, [
-    { method: 'GET', path: '/settings/bootstrap' },
-  ]);
+  await view.waitFor(() => view.text().includes('Retour à la connexion'));
+  assert.deepEqual(destinations, []);
+  assert.match(view.text(), /déconnexion n’a pas été confirmée/);
+  assert.match(view.html, /value="Brouillon conservé"/);
+  assert.deepEqual(front.browserCalls.map(call => call.method + ' ' + call.path), ['GET /api/auth/role', 'GET /api/bff/settings/bootstrap', 'POST /api/auth/logout']);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+  await view.click('Retour à la connexion');
+  assert.equal(destinations.length, 1);
+  assert.equal(new URL(destinations[0]).searchParams.get('redirect'), front.ORIGIN + '/?tab=profile');
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
 });
 

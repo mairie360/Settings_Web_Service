@@ -7,7 +7,7 @@ const { buildContentSecurityPolicy } = requireSrc('lib/content-security-policy.t
 register();
 const nextConfig = require('../next.config.ts').default;
 
-const pageRequest = () => new NextRequest('http://localhost:5000/', { headers: { cookie: 'accessToken=controlled-session' } });
+const pageRequest = () => new NextRequest('http://localhost:5000/', { headers: { cookie: 'accessToken=' + require('./support/settings-fixtures.cjs').ACCESS_TOKEN } });
 
 test('every page gets a per-request nonce CSP forwarded to Next.js', () => {
   const first = middleware(pageRequest());

@@ -8,7 +8,8 @@ import { formatSessionDate } from "@/lib/session-date";
 import SettingsAssistance from "@/components/settings-assistance";
 import SettingsTabIcon from "@/components/settings-tab-icon";
 import { getActiveFrontHrefs } from "@/lib/navigation";
-import { logoutAndRedirect } from "@/lib/logout";
+import { logoutAndRedirect, navigateToLogin } from "@/lib/logout";
+import { loadSessionRole } from "@/lib/session-role";
 import type {
   SettingsBootstrap as Bootstrap,
   SettingsProfile as Profile,
@@ -93,6 +94,22 @@ export default function Home() {
   const [error, setError] = useState("");
   const [readError, setReadError] = useState("");
   const [logoutError, setLogoutError] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadSessionRole(controller.signal).then(value => {
+      if (!controller.signal.aborted) setIsAdmin(value);
+    }).catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+  const logoutPending = useRef(false);
+  const requestLogout = async () => {
+    if (logoutPending.current) return;
+    logoutPending.current = true;
+    try { await logoutAndRedirect(); }
+    catch (error) { setLogoutError(error instanceof Error ? error.message : "La déconnexion reste à vérifier."); }
+    finally { logoutPending.current = false; }
+  };
   const [reading, setReading] = useState(true);
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
@@ -193,13 +210,14 @@ export default function Home() {
     <AppShell
       className="settings-shell"
       activeItem="settings"
+      isAdmin={isAdmin}
       hrefs={getActiveFrontHrefs()}
       user={data ? {
         first_name: data.profile.first_name,
         last_name: data.profile.last_name,
         email: data.profile.email,
       } : undefined}
-      onLogout={() => void logoutAndRedirect().catch(() => setLogoutError("La déconnexion est temporairement indisponible."))}
+      onLogout={() => void requestLogout()}
       sidebarProps={{ brandLogoSrc: "/mairie360-logo.png" }}
     >
       <section className="settings-page">
@@ -210,7 +228,10 @@ export default function Home() {
 
         {error ? <p role="alert" className="rounded border border-red-200 bg-white p-4 text-red-700">{error}</p> : null}
         {readError ? <p role="alert" className="rounded border border-red-200 bg-white p-4 text-red-700">{readError}</p> : null}
-        {logoutError ? <p role="alert" className="rounded border border-red-200 bg-white p-4 text-red-700">{logoutError}</p> : null}
+        {logoutError ? <section role="alert" className="space-y-2 rounded border border-red-200 bg-white p-4 text-red-700">
+          <p>{logoutError}</p>
+          <button type="button" className="rounded border px-4 py-2 text-sm font-medium" onClick={() => navigateToLogin({ explicit: true })}>Retour à la connexion</button>
+        </section> : null}
         {status ? <p role="status" className="rounded border border-green-200 bg-white p-4 text-green-800">{status}</p> : null}
         {!data || data.sources.sessions === "unavailable" || readError ? (
           <button

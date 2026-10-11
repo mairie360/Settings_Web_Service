@@ -82,7 +82,7 @@ describe("local Settings assistance", () => {
     await user.click(screen.getByText("Centre d’aide"));
     expect(screen.getByRole("dialog", { name: "Centre d’aide" })).toBeTruthy();
     expect(screen.getByText(/Cette page ne permet pas encore de les révoquer/)).toBeTruthy();
-    expect(screen.getByText(/préférences Notifications, Apparence et Général ne sont pas encore disponibles/)).toBeTruthy();
+    expect(screen.getByText(/Notifications, Apparence et Général, préparez vos préférences/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Vider le cache" })).toBeNull();
     expect(loadSettings).toHaveBeenCalledTimes(1);
     expect(downloadLocalFile).not.toHaveBeenCalled();

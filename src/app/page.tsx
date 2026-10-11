@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { formatSessionDate } from "@/lib/session-date";
+import SettingsPendingFeatures from "@/components/settings-pending-features";
+import SessionRevokeControl from "@/components/settings-session-revoke";
 import SettingsAssistance from "@/components/settings-assistance";
 import SettingsTabIcon from "@/components/settings-tab-icon";
 import { getActiveFrontHrefs } from "@/lib/navigation";
@@ -40,11 +42,6 @@ const profileFields: ReadonlyArray<{
   { field: "phone", label: "Téléphone", type: "tel", required: false },
 ];
 
-const unavailableSections: Record<Exclude<TabId, "profile" | "security" | "system">, string> = {
-  notifications: "Les préférences de notification ne sont pas encore disponibles. Aucun réglage ne peut être enregistré pour le moment.",
-  appearance: "Les préférences d’apparence ne sont pas encore disponibles. Aucun réglage ne peut être enregistré pour le moment.",
-  general: "Les préférences générales ne sont pas encore disponibles. Aucun réglage ne peut être enregistré pour le moment.",
-};
 
 function SessionDate({ value }: { value: string | null | undefined }) {
   const label = formatSessionDate(value);
@@ -204,7 +201,57 @@ export default function Home() {
     }
   }
 
-  const activeLabel = tabs.find(({ id }) => id === activeTab)?.label ?? "Paramètres";
+
+  const profileContent = data && profile ? (
+<form onSubmit={save} aria-busy={saving || reading} className="mt-5 space-y-4">
+                <div className="settings-profile-fields">
+                {profileFields.map(({ field, label, type, required }) => (
+                  <label className="block" key={field}>
+                    <span className="mb-1 block">{label}</span>
+                    <input
+                      className="w-full rounded border border-[#d8d2ca] px-3 py-2"
+                      type={type}
+                      name={field}
+                      required={required}
+                      disabled={saving}
+                      value={profile[field] ?? ""}
+                      onChange={(event) => updateProfile(field, event.target.value)}
+                    />
+                  </label>
+                ))}
+                </div>
+                <button
+                  className="rounded bg-[#155bb5] px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  type="submit"
+                  disabled={saving || reading || !hasChanges}
+                >
+                  {saving ? "Enregistrement…" : "Enregistrer"}
+                </button>
+                {!hasChanges ? <p className="text-sm text-[#596274]">Aucune modification à enregistrer.</p> : null}
+              </form>
+  ) : null;
+
+  const securityContent = data ? (
+              <section className="space-y-3 rounded-lg border border-[#e0dbd4] bg-white p-6">
+                <h2 className="text-xl font-semibold">Sessions</h2>
+                {data.sources.sessions === "unavailable" ? (
+                  <p>Les sessions sont temporairement indisponibles.</p>
+                ) : data.sessions.length ? (
+                  <ul>
+                    {data.sessions.map((session) => (
+                      <li className="border-b py-3 last:border-b-0" key={session.id}>
+                        <p>{session.device_info} — {session.ip_address}</p>
+                        <p className="text-sm">Création : <SessionDate value={session.created_at} /> · Expiration : <SessionDate value={session.expires_at} /></p>
+                        {session.revoked_at ? <p className="text-sm text-[#7b3f00]">Révocation : <SessionDate value={session.revoked_at} /></p> : <SessionRevokeControl sessionId={session.id} label={session.device_info} />}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>Aucune session à afficher.</p>
+                )}
+                <p className="text-sm text-[#596274]">L’identification de la session actuelle et les déconnexions individuelles restent à raccorder.</p>
+              </section>
+  ) : null;
 
   return (
     <AppShell
@@ -223,7 +270,7 @@ export default function Home() {
       <section className="settings-page">
         <header>
           <h1 className="text-3xl font-bold">Paramètres</h1>
-          <p>Gérez les informations réellement disponibles pour votre compte.</p>
+          <p>Gérez votre profil, votre sécurité et vos préférences.</p>
         </header>
 
         {error ? <p role="alert" className="rounded border border-red-200 bg-white p-4 text-red-700">{error}</p> : null}
@@ -274,62 +321,7 @@ export default function Home() {
             </nav>
 
             <div role="tabpanel" id={`settings-panel-${activeTab}`} aria-labelledby={`settings-tab-${activeTab}`} className="settings-panel">
-            {activeTab === "profile" ? (
-              <form onSubmit={save} aria-busy={saving || reading} className="space-y-4 rounded-lg border border-[#e0dbd4] bg-white p-6">
-                <h2 className="text-xl font-semibold">Informations personnelles</h2>
-                <div className="settings-profile-fields">
-                {profileFields.map(({ field, label, type, required }) => (
-                  <label className="block" key={field}>
-                    <span className="mb-1 block">{label}</span>
-                    <input
-                      className="w-full rounded border border-[#d8d2ca] px-3 py-2"
-                      type={type}
-                      required={required}
-                      disabled={saving}
-                      value={profile[field] ?? ""}
-                      onChange={(event) => updateProfile(field, event.target.value)}
-                    />
-                  </label>
-                ))}
-                </div>
-                <button
-                  className="rounded bg-[#155bb5] px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  type="submit"
-                  disabled={saving || reading || !hasChanges}
-                >
-                  {saving ? "Enregistrement…" : "Enregistrer"}
-                </button>
-                {!hasChanges ? <p className="text-sm text-[#596274]">Aucune modification à enregistrer.</p> : null}
-              </form>
-            ) : activeTab === "security" ? (
-              <section className="space-y-3 rounded-lg border border-[#e0dbd4] bg-white p-6">
-                <h2 className="text-xl font-semibold">Sessions</h2>
-                {data.sources.sessions === "unavailable" ? (
-                  <p>Les sessions sont temporairement indisponibles.</p>
-                ) : data.sessions.length ? (
-                  <ul>
-                    {data.sessions.map((session) => (
-                      <li className="border-b py-3 last:border-b-0" key={session.id}>
-                        <p>{session.device_info} — {session.ip_address}</p>
-                        <p className="text-sm">Création : <SessionDate value={session.created_at} /> · Expiration : <SessionDate value={session.expires_at} /></p>
-                        {session.revoked_at ? <p className="text-sm text-[#7b3f00]">Révocation : <SessionDate value={session.revoked_at} /></p> : null}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>Aucune session à afficher.</p>
-                )}
-                <p className="text-sm text-[#596274]">Les autres réglages de sécurité ne sont pas encore disponibles.</p>
-              </section>
-            ) : activeTab === "system" ? (
-              <SettingsAssistance />
-            ) : (
-              <section className="space-y-2 rounded-lg border border-[#e0dbd4] bg-white p-6">
-                <h2 className="text-xl font-semibold">{activeLabel}</h2>
-                <p className="font-medium">Fonctionnalité indisponible</p>
-                <p>{unavailableSections[activeTab]}</p>
-              </section>
-            )}
+            <SettingsPendingFeatures tab={activeTab} isAdmin={isAdmin} profileContent={profileContent} securityContent={securityContent} systemContent={<SettingsAssistance />} />
             </div>
           </>
         )}

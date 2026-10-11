@@ -53,7 +53,7 @@ describe('actual Settings page with the published shell and consumer styles', ()
     expect(getComputedStyle(document.body).fontFamily).toBe('system-ui, sans-serif');
     expect(getComputedStyle(document.querySelector('.settings-page')).fontSize).toBe('17px');
     expect(getComputedStyle(screen.getByRole('main')).padding).toBe('32px');
-    expect(shadow(getComputedStyle(screen.getByRole('tabpanel').firstElementChild).boxShadow)).toEqual([
+    expect(shadow(getComputedStyle(screen.getByRole('tabpanel').querySelector('.settings-feature-card')).boxShadow)).toEqual([
       { lengths: [0, 5, 15, 0], color: 'rgba(23, 32, 51, 0.14)' }, { lengths: [0, 1, 3, 0], color: 'rgba(23, 32, 51, 0.12)' },
     ]);
   });

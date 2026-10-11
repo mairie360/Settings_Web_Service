@@ -48,7 +48,7 @@ afterEach(() => {
 });
 
 const upstream = () => bffSettings.requests.map((request) => `${request.method} ${request.template}`);
-const profileInputs = () => [...view.html.matchAll(/<input\b[^>]*>/g)].map(([html]) => html);
+const profileInputs = () => [...view.html.matchAll(/<input\b[^>]*>/g)].map(([html]) => html).filter(html => /name="(?:first_name|last_name|email|phone)"/.test(html));
 
 for (const [label, reply] of [
   ['missing object', { body: {} }],
@@ -280,7 +280,8 @@ test('the first pass renders the loading state, the next one the profile form fi
   });
   assert.equal(view.props('AppShell').isAdmin, false);
   assert.equal(typeof view.props('AppShell').onLogout, 'function');
-  assert.doesNotMatch(html, /aria-label="Notifications"|>Administration</);
+  assert.doesNotMatch(html, />Administration</);
+  assert.match(html, /aria-label="Notifications"/);
   assert.match(html, /<nav role="tablist" aria-label="Paramètres"/);
   assert.match(html, /<button id="settings-tab-profile" type="button" role="tab" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg aria-hidden="true"[^]*?Profil<\/button>/);
   assert.match(html, /<div role="tabpanel" id="settings-panel-profile" aria-labelledby="settings-tab-profile"[^>]*>/);
@@ -326,7 +327,7 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
   assert.match(view.html, /<time dateTime="2026-09-15T08:00:00Z">/);
   assert.doesNotMatch(view.text(), /2026-09-15T08:00:00Z/);
   assert.match(view.text(), /Chrome sur Android — 198\.51\.100\.7/);
-  assert.doesNotMatch(view.html, /<form/);
+  assert.match(view.text(), /Mot de passe actuel/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap'], 'changing tab does not call the BFF');
 
   view.unmount();
@@ -335,9 +336,9 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
   assert.match(view.text(), /Les sessions sont temporairement indisponibles\./);
 
   await view.click('Notifications');
-  assert.match(view.html, /<h2[^>]*>Notifications<\/h2>/);
-  assert.match(view.text(), /Fonctionnalité indisponible/);
-  assert.match(view.text(), /préférences de notification ne sont pas encore disponibles/);
+  assert.match(view.html, /<h2[^>]*>Préférences de notification<\/h2>/);
+  assert.match(view.text(), /Vos choix restent un brouillon/);
+  assert.match(view.text(), /ne sont pas encore synchronisés avec votre compte/);
   assert.doesNotMatch(view.text(), /BFF/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap'], 'an unavailable tab does not call the BFF');
 });
@@ -406,7 +407,7 @@ for (const [action, name] of [['Préparer une demande de support', 'demande-supp
     t.mock.method(requireSrc('lib/local-assistance.ts'), 'downloadLocalFile', (file) => exports.push(file));
     await renderLoadedPage(); await view.click('Système'); await view.click(action);
     await view.fire((props) => props.id === 'settings-assistance-message', 'onChange', { target: { value: 'Une question <b>texte</b>' } });
-    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    await view.fire((props, text, tag) => tag === 'form' && props['aria-labelledby'] === 'settings-assistance-title', 'onSubmit');
     assert.equal(exports.length, 1); assert.equal(exports[0].name, name);
     assert.match(exports[0].content, /Une question <b>texte<\/b>/);
     assert.doesNotMatch(exports[0].content, /anne\.le-gall|192\.0\.2|Anne Marie/);
@@ -421,11 +422,11 @@ test('a failed local export retains its draft, hides raw errors and allows retry
   t.mock.method(requireSrc('lib/local-assistance.ts'), 'downloadLocalFile', () => { if (fail) throw new Error('private detail'); });
   await renderLoadedPage(); await view.click('Système'); await view.click('Signaler un problème');
   await view.fire((props) => props.id === 'settings-assistance-message', 'onChange', { target: { value: 'Mon brouillon' } });
-  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.fire((props, text, tag) => tag === 'form' && props['aria-labelledby'] === 'settings-assistance-title', 'onSubmit');
   assert.match(view.text(), /Votre message est conservé/); assert.match(view.html, /Mon brouillon/);
   assert.doesNotMatch(view.text(), /private detail|Téléchargement de la demande lancé/);
   fail = false;
-  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.fire((props, text, tag) => tag === 'form' && props['aria-labelledby'] === 'settings-assistance-title', 'onSubmit');
   assert.match(view.text(), /Téléchargement de la demande lancé/); assert.doesNotMatch(view.html, /role="alert"/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
 });
@@ -435,7 +436,7 @@ test('local assistance rejects blank and oversized text before requesting a down
   await renderLoadedPage(); await view.click('Système'); await view.click('Signaler un problème');
   for (const value of [' \n ', 'a'.repeat(5001)]) {
     await view.fire((props) => props.id === 'settings-assistance-message', 'onChange', { target: { value } });
-    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    await view.fire((props, text, tag) => tag === 'form' && props['aria-labelledby'] === 'settings-assistance-title', 'onSubmit');
     assert.match(view.text(), /1 à 5 000 caractères/);
   }
   assert.equal(download.mock.callCount(), 0);

@@ -1,0 +1,141 @@
+const assert = require('node:assert/strict');
+const { test } = require('node:test');
+const { installReactRuntime, mount } = require('./support/server-view.cjs');
+installReactRuntime();
+const React = require('react');
+const { requireSrc } = require('./support/load-ts.cjs');
+const Features = requireSrc('components/settings-pending-features.tsx').default;
+const Revoke = requireSrc('components/settings-session-revoke.tsx').default;
+
+function panel(t, tab, port = {}, extra = {}) {
+  const view = mount(React.createElement(Features, { tab, port, isAdmin: true, ...extra }));
+  t.after(() => view.unmount());
+  return view;
+}
+async function change(view, tag, index, value, more = {}) {
+  const host = view.hostElements((props, text, type) => type === tag && typeof props.onChange === 'function')[index];
+  assert.ok(host, `${tag} ${index} exists`);
+  await view.act(() => host.props.onChange({ target: { value, ...more } }));
+}
+const submit = (view, text) => view.fire((props, ownText, tag) => tag === 'form' && ownText.includes(text), 'onSubmit');
+const preferences = { messages: true, projects: true, calendar: true, theme: 'system', fontFamily: 'system', fontSize: 17, density: 'normal', homePage: 'dashboard', autoOpenNotifications: false };
+
+test('preference writes retain drafts after refusal and accept only a complete confirmation', async t => {
+  const calls = []; let reply = { messages: false };
+  const view = panel(t, 'notifications', { savePreferences: async patch => { calls.push(patch); return reply; } });
+  await change(view, 'input', 0, '', { checked: false });
+  await view.click('Enregistrer les préférences');
+  assert.match(view.text(), /n’ont pas été confirmées/);
+  assert.equal(view.hostElements((props, text, tag) => tag === 'input')[0].props.checked, false);
+  reply = { ...preferences, messages: false };
+  await view.click('Enregistrer les préférences');
+  assert.deepEqual(calls, [{ messages: false }, { messages: false }]);
+  assert.match(view.text(), /Préférences enregistrées/);
+  assert.equal(view.hostElements('Enregistrer les préférences').find(x => x.type === 'button').props.disabled, true);
+});
+
+test('professional drafts send changed fields and do not discard values on inconsistent receipts', async t => {
+  const calls = []; let reply = {};
+  const view = panel(t, 'profile', { saveExtendedProfile: async patch => { calls.push(patch); return reply; } });
+  await change(view, 'input', 1, 'Accueil');
+  await change(view, 'input', 2, 'Agent');
+  await change(view, 'textarea', 0, 'Texte personnel');
+  await submit(view, 'Informations professionnelles');
+  assert.match(view.text(), /profil complémentaire n’a pas été confirmé/);
+  reply = { service: 'Accueil', position: 'Agent', biography: 'Texte personnel' };
+  await submit(view, 'Informations professionnelles');
+  assert.deepEqual(calls, [reply, reply]);
+  assert.match(view.text(), /Informations complémentaires enregistrées/);
+});
+
+test('photo selection validates size and type, releases previews, and requires a received URL', async t => {
+  const urls = [];
+  t.mock.method(URL, 'createObjectURL', () => 'blob:preview');
+  t.mock.method(URL, 'revokeObjectURL', url => urls.push(url));
+  let reply = ''; const calls = [];
+  const view = panel(t, 'profile', { savePhoto: async file => { calls.push(file); return reply; } });
+  await change(view, 'input', 0, '', { files: [new File(['bad'], 'bad.txt', { type: 'text/plain' })] });
+  assert.match(view.text(), /Utilisez une photo JPG ou PNG/);
+  assert.equal(calls.length, 0);
+  const photo = new File(['image'], 'photo.png', { type: 'image/png' });
+  await change(view, 'input', 0, '', { files: [photo] });
+  await view.click('Enregistrer la photo');
+  assert.match(view.text(), /photo enregistrée n’a pas été confirmée/);
+  reply = 'https://example.test/photo.png';
+  await view.click('Enregistrer la photo');
+  assert.deepEqual(calls, [photo, photo]);
+  assert.match(view.text(), /Photo enregistrée/);
+  assert.ok(urls.includes('blob:preview'));
+});
+
+test('password submission validates confirmation and clears secrets only after a resolved write', async t => {
+  const calls = []; let reject = true;
+  const view = panel(t, 'security', { changePassword: async (...args) => { calls.push(args); if (reject) throw new Error('Refus de confirmation'); } });
+  for (const [index, value] of ['old', 'new', 'incorrect'].entries()) await change(view, 'input', index, value);
+  await submit(view, 'Changer le mot de passe');
+  assert.match(view.text(), /ne correspondent pas/);
+  assert.equal(calls.length, 0);
+  await change(view, 'input', 2, 'new');
+  await submit(view, 'Changer le mot de passe');
+  assert.match(view.text(), /Refus de confirmation/);
+  assert.equal(view.hostElements((props, text, tag) => tag === 'input')[0].props.value, 'old');
+  reject = false;
+  await submit(view, 'Changer le mot de passe');
+  assert.deepEqual(calls, [['old', 'new'], ['old', 'new']]);
+  assert.match(view.text(), /Mot de passe modifié/);
+  assert.ok(view.hostElements((props, text, tag) => tag === 'input').every(x => x.props.value === ''));
+});
+
+test('MFA activation requires a challenge and successful verification before recovery or disabling', async t => {
+  const calls = []; let accepted = false;
+  const view = panel(t, 'security', {
+    startMfa: async method => { calls.push(['start', method]); return { challengeId: 'received-challenge', instruction: 'Instruction reçue' }; },
+    confirmMfa: async (...args) => { calls.push(['confirm', ...args]); if (!accepted) throw new Error('Code refusé'); },
+    recoveryCodes: async () => ['fixture-recovery'],
+    disableMfa: async (...args) => { calls.push(['disable', ...args]); },
+  });
+  assert.doesNotMatch(view.text(), /Afficher les codes de récupération/);
+  await view.click('Configurer la méthode');
+  assert.match(view.text(), /Instruction reçue/);
+  await change(view, 'input', 3, '123456');
+  await submit(view, 'Vérifier et activer');
+  assert.match(view.text(), /Code refusé/);
+  assert.doesNotMatch(view.text(), /Cette méthode a été activée et confirmée/);
+  accepted = true; await submit(view, 'Vérifier et activer');
+  await view.click('Afficher les codes de récupération');
+  assert.match(view.text(), /fixture-recovery/);
+  await view.click('Masquer les codes');
+  assert.doesNotMatch(view.text(), /fixture-recovery/);
+  await view.click('Désactiver cette méthode');
+  await change(view, 'input', 3, '654321');
+  await submit(view, 'Confirmer la désactivation');
+  assert.match(view.text(), /Désactivation confirmée/);
+  assert.doesNotMatch(view.text(), /Cette méthode a été activée et confirmée/);
+  assert.deepEqual(calls, [['start', 'authenticator'], ['confirm', 'received-challenge', '123456'], ['confirm', 'received-challenge', '123456'], ['disable', 'authenticator', '654321']]);
+});
+
+test('instance policy shows received versions and preserves a refused choice until confirmation', async t => {
+  const data = { currentVersion: '1.0', policy: 'automatic', maintenanceWindow: 'Dimanche', releases: [{ version: '1.1', notes: 'Notes reçues', supported: true }] };
+  const calls = []; let accepted = false;
+  const view = panel(t, 'system', { loadUpdates: async () => data, saveUpdates: async choice => { calls.push(choice); if (!accepted) throw new Error('Choix refusé'); return { ...data, policy: choice.policy, pinnedVersion: choice.version }; } });
+  await view.waitFor(() => view.text().includes('Notes reçues'));
+  await change(view, 'select', 0, 'pinned');
+  await change(view, 'select', 1, '1.1');
+  await submit(view, 'Appliquer la politique');
+  assert.match(view.text(), /Choix refusé/);
+  accepted = true; await submit(view, 'Appliquer la politique');
+  assert.match(view.text(), /Demande confirmée pour la prochaine fenêtre/);
+  assert.deepEqual(calls, [{ policy: 'pinned', version: '1.1' }, { policy: 'pinned', version: '1.1' }]);
+});
+
+test('session revocation requires explicit confirmation and keeps refusal visible without notifying removal', async t => {
+  const calls = []; const removed = [];
+  const view = mount(React.createElement(Revoke, { sessionId: 'received-session', label: 'Firefox', port: { revokeSession: async id => { calls.push(id); throw new Error('Session refusée'); } }, onRevoked: id => removed.push(id) }));
+  t.after(() => view.unmount());
+  await view.click('Déconnecter cette session');
+  assert.deepEqual(calls, []);
+  await view.click('Confirmer la déconnexion');
+  assert.match(view.text(), /Session refusée/);
+  assert.deepEqual(calls, ['received-session']);
+  assert.deepEqual(removed, []);
+});

@@ -125,3 +125,9 @@ body {
 @media (max-width: 767px) {
   .settings-shell main { padding: 20px 14px; }
 }
+
+.settings-feature-card { min-width: 0; padding: 25px; border: 1px solid #d8d2ca; border-radius: 12px; background: white; box-shadow: 0 5px 15px rgb(23 32 51 / 14%), 0 1px 3px rgb(23 32 51 / 12%); overflow-wrap: anywhere; }
+.settings-feature-card h2 { margin-bottom: 12px; }
+.settings-feature-card :is(button, select, input, textarea) { max-width: 100%; }
+.settings-feature-card button { margin-top: 12px; }
+@media (max-width: 767px) { .settings-feature-card { padding: 20px; } }

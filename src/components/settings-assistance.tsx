@@ -99,7 +99,7 @@ export default function SettingsAssistance() {
           {kind === "help" ? <div className="space-y-2">
             <p>Dans Profil, modifiez vos coordonnées puis choisissez « Enregistrer ». La confirmation apparaît après la réponse du service.</p>
             <p>Dans Sécurité, consultez les sessions disponibles. Cette page ne permet pas encore de les révoquer ni de changer votre mot de passe.</p>
-            <p>Les préférences Notifications, Apparence et Général ne sont pas encore disponibles.</p>
+            <p>Dans Notifications, Apparence et Général, préparez vos préférences. Leur enregistrement dans le compte reste indisponible.</p>
             <p>Les fichiers ci-dessous sont préparés dans votre navigateur. Relisez-les puis transmettez-les vous-même à votre équipe par votre canal habituel.</p>
           </div> : <form onSubmit={submit} aria-labelledby="settings-assistance-title" className="space-y-3">
             <p id="settings-assistance-hint">Décrivez votre demande sans mot de passe ni donnée confidentielle. Aucun envoi automatique. Le brouillon disparaît si vous quittez cet onglet ou rechargez la page.</p>

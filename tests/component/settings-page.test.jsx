@@ -247,13 +247,13 @@ describe("Settings page", () => {
     expect(screen.queryByText("not-a-date")).toBeNull();
   });
 
-  it.each(["Notifications", "Apparence", "Général"])("keeps %s visibly unavailable without technical jargon", async (tabName) => {
+  it.each(["Notifications", "Apparence", "Général"])("prepares %s as an unsynchronized draft without technical jargon", async (tabName) => {
     const user = await openSettings();
     await user.click(screen.getByRole("tab", { name: tabName }));
 
-    expect(screen.getByRole("heading", { name: tabName })).toBeTruthy();
-    expect(screen.getByText("Fonctionnalité indisponible")).toBeTruthy();
-    expect(screen.getByText(/ne sont pas encore disponibles/)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: tabName === "Notifications" ? "Préférences de notification" : tabName === "Général" ? "Préférences générales" : tabName })).toBeTruthy();
+    expect(screen.getByText(/Vos choix restent un brouillon/)).toBeTruthy();
+    expect(screen.getByText(/ne sont pas encore synchronisés/)).toBeTruthy();
     expect(document.querySelector("main").textContent).not.toContain("BFF");
     expect(saveProfile).not.toHaveBeenCalled();
   });

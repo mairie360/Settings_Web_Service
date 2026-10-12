@@ -1,10 +1,39 @@
 {
   "components": {
     "schemas": {
-      "Error": {
+      "CheckApisResponse": {
+        "properties": {
+          "core_api": {
+            "$ref": "#/components/schemas/CheckApisResponseCoreApi"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CheckApisResponseStatus"
+          }
+        },
+        "required": [
+          "status",
+          "core_api"
+        ],
+        "type": "object"
+      },
+      "CheckApisResponseCoreApi": {
+        "enum": [
+          "Connected",
+          "Unreachable"
+        ],
+        "type": "string"
+      },
+      "CheckApisResponseStatus": {
+        "enum": [
+          "OK",
+          "Error"
+        ],
+        "type": "string"
+      },
+      "ErrorResponse": {
         "properties": {
           "error": {
-            "$ref": "#/components/schemas/ErrorError"
+            "$ref": "#/components/schemas/ErrorResponseError"
           }
         },
         "required": [
@@ -12,36 +41,56 @@
         ],
         "type": "object"
       },
-      "ErrorError": {
+      "ErrorResponseError": {
         "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorResponseErrorCode"
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorResponseErrorDetailsItem"
+            },
+            "type": "array"
+          },
           "message": {
             "type": "string"
           }
         },
         "required": [
+          "code",
+          "message",
+          "details"
+        ],
+        "type": "object"
+      },
+      "ErrorResponseErrorCode": {
+        "enum": [
+          "BAD_REQUEST",
+          "UNAUTHORIZED",
+          "FORBIDDEN",
+          "NOT_FOUND",
+          "CONFLICT",
+          "PAYLOAD_TOO_LARGE",
+          "UNPROCESSABLE_ENTITY",
+          "TOO_MANY_REQUESTS",
+          "INTERNAL_ERROR",
+          "BAD_GATEWAY",
+          "SERVICE_UNAVAILABLE",
+          "GATEWAY_TIMEOUT"
+        ],
+        "type": "string"
+      },
+      "ErrorResponseErrorDetailsItem": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
           "message"
-        ],
-        "type": "object"
-      },
-      "GetCheckApis200": {
-        "properties": {
-          "status": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "status"
-        ],
-        "type": "object"
-      },
-      "GetCheckApis502": {
-        "properties": {
-          "status": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "status"
         ],
         "type": "object"
       },
@@ -62,53 +111,134 @@
         ],
         "type": "string"
       },
-      "PatchSettingsAppearance200": {
-        "properties": {},
+      "SettingsAppearance": {
+        "properties": {
+          "density": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "font_family": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "font_size": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "theme": {
+            "$ref": "#/components/schemas/SettingsAppearanceTheme"
+          }
+        },
+        "required": [
+          "theme",
+          "font_family",
+          "font_size",
+          "density"
+        ],
+        "type": "object"
+      },
+      "SettingsAppearancePatch": {
+        "properties": {
+          "density": {
+            "$ref": "#/components/schemas/SettingsAppearancePatchDensity"
+          },
+          "font_family": {
+            "maxLength": 128,
+            "pattern": "\\S",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "font_size": {
+            "maximum": 32767,
+            "minimum": 1,
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "theme": {
+            "$ref": "#/components/schemas/SettingsAppearancePatchTheme"
+          }
+        },
         "required": [],
         "type": "object"
       },
-      "PatchSettingsAppearance404": {
-        "properties": {},
-        "required": [],
-        "type": "object"
+      "SettingsAppearancePatchDensity": {
+        "enum": [
+          "compact",
+          "normal",
+          "comfortable",
+          null
+        ],
+        "type": [
+          "string",
+          "null"
+        ]
       },
-      "PatchSettingsAppearanceBody": {
-        "properties": {},
-        "required": [],
-        "type": "object"
+      "SettingsAppearancePatchTheme": {
+        "enum": [
+          "light",
+          "dark",
+          "system",
+          null
+        ],
+        "type": [
+          "string",
+          "null"
+        ]
       },
-      "PatchSettingsGeneral200": {
-        "properties": {},
-        "required": [],
-        "type": "object"
-      },
-      "PatchSettingsGeneral404": {
-        "properties": {},
-        "required": [],
-        "type": "object"
-      },
-      "PatchSettingsGeneralBody": {
-        "properties": {},
-        "required": [],
-        "type": "object"
-      },
-      "PatchSettingsNotifications200": {
-        "properties": {},
-        "required": [],
-        "type": "object"
-      },
-      "PatchSettingsNotifications404": {
-        "properties": {},
-        "required": [],
-        "type": "object"
-      },
-      "PatchSettingsNotificationsBody": {
-        "properties": {},
-        "required": [],
-        "type": "object"
+      "SettingsAppearanceTheme": {
+        "enum": [
+          "light",
+          "dark",
+          "system",
+          null
+        ],
+        "type": [
+          "string",
+          "null"
+        ]
       },
       "SettingsBootstrap": {
         "properties": {
+          "appearance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SettingsAppearance"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "general": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SettingsGeneral"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notifications": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SettingsNotifications"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "profile": {
             "$ref": "#/components/schemas/SettingsProfile"
           },
@@ -125,6 +255,9 @@
         "required": [
           "profile",
           "sessions",
+          "appearance",
+          "general",
+          "notifications",
           "sources"
         ],
         "type": "object"
@@ -164,14 +297,36 @@
       },
       "SettingsBootstrapSources": {
         "properties": {
+          "notifications": {
+            "$ref": "#/components/schemas/SettingsBootstrapSourcesNotifications"
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/SettingsBootstrapSourcesPreferences"
+          },
           "sessions": {
             "$ref": "#/components/schemas/SettingsBootstrapSourcesSessions"
           }
         },
         "required": [
-          "sessions"
+          "sessions",
+          "preferences",
+          "notifications"
         ],
         "type": "object"
+      },
+      "SettingsBootstrapSourcesNotifications": {
+        "enum": [
+          "available",
+          "unavailable"
+        ],
+        "type": "string"
+      },
+      "SettingsBootstrapSourcesPreferences": {
+        "enum": [
+          "available",
+          "unavailable"
+        ],
+        "type": "string"
       },
       "SettingsBootstrapSourcesSessions": {
         "enum": [
@@ -179,6 +334,189 @@
           "unavailable"
         ],
         "type": "string"
+      },
+      "SettingsGeneral": {
+        "properties": {
+          "auto_open_notifications": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "date_format": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "home_page": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timezone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "language",
+          "timezone",
+          "date_format",
+          "home_page",
+          "auto_open_notifications"
+        ],
+        "type": "object"
+      },
+      "SettingsGeneralPatch": {
+        "properties": {
+          "auto_open_notifications": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "date_format": {
+            "$ref": "#/components/schemas/SettingsGeneralPatchDateFormat"
+          },
+          "home_page": {
+            "maxLength": 128,
+            "pattern": "\\S",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "language": {
+            "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timezone": {
+            "maxLength": 64,
+            "pattern": "\\S",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "SettingsGeneralPatchDateFormat": {
+        "enum": [
+          "DD/MM/YYYY",
+          "MM/DD/YYYY",
+          "YYYY-MM-DD",
+          null
+        ],
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "SettingsNotifications": {
+        "properties": {
+          "calendar": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "desktop": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "messages": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "projects": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "push": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "email",
+          "push",
+          "desktop",
+          "messages",
+          "projects",
+          "calendar"
+        ],
+        "type": "object"
+      },
+      "SettingsNotificationsPatch": {
+        "properties": {
+          "calendar": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "desktop": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "messages": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "projects": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "push": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "required": [],
+        "type": "object"
       },
       "SettingsProfile": {
         "properties": {
@@ -196,6 +534,12 @@
               "string",
               "null"
             ]
+          },
+          "phone_country": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -207,16 +551,37 @@
       },
       "SettingsProfilePatch": {
         "properties": {
+          "current_password": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
           "email": {
+            "maxLength": 320,
             "type": "string"
           },
           "first_name": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[^<>]*$",
             "type": "string"
           },
           "last_name": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[^<>]*$",
             "type": "string"
           },
           "phone": {
+            "maxLength": 32,
+            "pattern": "^(?:\\+?[\\d\\s.()-]+)?$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone_country": {
+            "pattern": "^[A-Z]{2}$",
             "type": [
               "string",
               "null"
@@ -231,7 +596,7 @@
   "info": {
     "title": "bff_settings",
     "version": "1.0.0",
-    "x-source-package": "@mairie360/bff-settings-openapi@1.1.0"
+    "x-source-package": "@mairie360/bff-settings-openapi@0.0.0-dev.eb4e17f930d957dbf5df6c58dc34b69916198d62"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -240,21 +605,11 @@
         "operationId": "getCheckApis",
         "parameters": [],
         "responses": {
-          "502": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetCheckApis502"
-                }
-              }
-            },
-            "description": "Réponse 502 (modèle orval GetCheckApis502)"
-          },
           "2XX": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GetCheckApis200"
+                  "$ref": "#/components/schemas/CheckApisResponse"
                 }
               }
             },
@@ -289,28 +644,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PatchSettingsAppearanceBody"
+                "$ref": "#/components/schemas/SettingsAppearancePatch"
               }
             }
           },
           "required": true
         },
         "responses": {
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PatchSettingsAppearance404"
-                }
-              }
-            },
-            "description": "Réponse 404 (modèle orval PatchSettingsAppearance404)"
-          },
           "2XX": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PatchSettingsAppearance200"
+                  "$ref": "#/components/schemas/SettingsAppearance"
                 }
               }
             },
@@ -345,28 +690,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PatchSettingsGeneralBody"
+                "$ref": "#/components/schemas/SettingsGeneralPatch"
               }
             }
           },
           "required": true
         },
         "responses": {
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PatchSettingsGeneral404"
-                }
-              }
-            },
-            "description": "Réponse 404 (modèle orval PatchSettingsGeneral404)"
-          },
           "2XX": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PatchSettingsGeneral200"
+                  "$ref": "#/components/schemas/SettingsGeneral"
                 }
               }
             },
@@ -383,28 +718,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PatchSettingsNotificationsBody"
+                "$ref": "#/components/schemas/SettingsNotificationsPatch"
               }
             }
           },
           "required": true
         },
         "responses": {
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PatchSettingsNotifications404"
-                }
-              }
-            },
-            "description": "Réponse 404 (modèle orval PatchSettingsNotifications404)"
-          },
           "2XX": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PatchSettingsNotifications200"
+                  "$ref": "#/components/schemas/SettingsNotifications"
                 }
               }
             },

@@ -208,12 +208,13 @@ describe('same-origin proxy exposes exactly the published BFF_Settings contract'
     assert.deepEqual(bffSettings.requests, []);
   });
   test('the 404 of a preference not yet supported by Core is relayed', async () => {
-    bffSettings.on('PATCH', '/settings/notifications', { status: 404, body: fixtures.error('Route absente du contrat') });
+    // The dev package references the shared ErrorResponse model: no error status is documented per operation.
+    bffSettings.on('PATCH', '/settings/notifications', { status: 404, body: fixtures.error('Route absente du contrat', 404), outOfContract: true });
 
-    const response = await browser('/settings/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"emailDigest":true}' });
+    const response = await browser('/settings/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"email":true}' });
 
     assert.equal(response.status, 404);
-    assert.deepEqual(await response.json(), fixtures.error('Route absente du contrat'));
+    assert.deepEqual(await response.json(), fixtures.error('Route absente du contrat', 404));
   });
 
   for (const [label, pathname, method, status] of [

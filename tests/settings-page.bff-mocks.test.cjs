@@ -128,7 +128,7 @@ const malformedBootstraps = [
   ['array session', fixtures.bootstrap({ sessions: [[]] })],
   ['null sources', fixtures.bootstrap({ sources: null })],
   ['array sources', fixtures.bootstrap({ sources: [] })],
-  ['missing source', fixtures.bootstrap({ sources: {} })],
+  ['missing source', fixtures.bootstrap({ sources: { sessions: undefined } })],
   ['unknown source', fixtures.bootstrap({ sources: { sessions: 'partial' } })],
   ...['id', 'device_info', 'ip_address', 'created_at', 'expires_at', 'revoked_at']
     .map(field => [`non-string session ${field}`, fixtures.bootstrap({ sessions: [fixtures.session('s-1', { [field]: 42 })] })]),
@@ -540,16 +540,18 @@ test('editing a field and submitting the form saves the profile with PATCH /sett
 
 test('a refused save keeps the form and shows the BFF message', async () => {
   await renderLoadedPage();
-  bffSettings.on('PATCH', '/settings/profile', { status: 400, body: fixtures.error('Numéro de téléphone invalide'), outOfContract: true });
+  bffSettings.on('PATCH', '/settings/profile', { status: 400, body: fixtures.error('Numéro de téléphone invalide', 400), outOfContract: true });
 
-  await view.fire((props) => props.type === 'tel', 'onChange', { target: { value: 'invalide' } });
+  // "12" passes the contract pattern of SettingsProfilePatch.phone (digits, spaces, dots, dashes, optional +):
+  // the refusal comes from the BFF's own validation, not from the mock's contract check.
+  await view.fire((props) => props.type === 'tel', 'onChange', { target: { value: '12' } });
   await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
   const html = await view.waitFor((current) => current.includes('role="alert"'));
 
   assert.match(html, /<p role="alert"[^>]*>Numéro de téléphone invalide<\/p>/);
   assert.match(html, /value="Anne Marie"/);
   assert.doesNotMatch(html, /role="status"/);
-  assert.deepEqual(bffSettings.requests[1].body, { phone: 'invalide' });
+  assert.deepEqual(bffSettings.requests[1].body, { phone: '12' });
 });
 
 test('submitting an unchanged profile never calls the BFF', async () => {

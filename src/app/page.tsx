@@ -28,7 +28,9 @@ const tabs = [
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
-type ProfileField = keyof ProfilePatch;
+// Champs du formulaire : ceux du profil lu ET modifiables (SettingsProfilePatch porte aussi current_password,
+// qui n'est pas un champ du profil affiché).
+type ProfileField = keyof Profile & keyof ProfilePatch;
 
 const profileFields: ReadonlyArray<{
   field: ProfileField;

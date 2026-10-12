@@ -12,7 +12,7 @@ test('Settings uses the shared frontend workflow with Semgrep enabled', () => {
   const reusableWorkflows = [...workflow.matchAll(/^\s+uses:\s+mairie360\/CICD\/\.github\/workflows\/frontend-cicd\.yml@([a-f0-9]{40})\s*$/gm)];
   assert.equal(reusableWorkflows.length, 1, 'Settings must call the shared frontend workflow once');
   const [, version] = reusableWorkflows[0];
-  assert.equal(version, 'f5ea4257ac51aa2969f9ddb84730fbebce8f42a7', 'only the integrated reviewed workflow commit is accepted');
+  assert.equal(version, '16c63d21eedbf6c6e3b58ebc30c61231e49e2536', 'only the integrated reviewed workflow commit is accepted');
   assert.equal(workflow.match(/cicd_version:\s*"([^"]+)"/)?.[1], version,
     'the reusable workflow ref and input must use the same version');
   assert.doesNotMatch(workflow, /semgrep_fail_on_findings:\s*false|semgrep_config:|continue-on-error:/);
@@ -46,7 +46,7 @@ test('the legacy required security name runs real immutable blocking scanners', 
   }
   assert.match(job, /fetch-depth: 0/);
   assert.equal([...job.matchAll(/persist-credentials: false/g)].length, 2);
-  assert.match(job, /repository: mairie360\/CICD\s*\n          ref: f5ea4257ac51aa2969f9ddb84730fbebce8f42a7/);
+  assert.match(job, /repository: mairie360\/CICD\s*\n          ref: 16c63d21eedbf6c6e3b58ebc30c61231e49e2536/);
   assert.match(job, /uses: \.\/cicd-repo\/actions\/frontend-semgrep-pypi/);
   assert.match(job, /config: p\/typescript p\/react p\/owasp-top-ten p\/secrets p\/dockerfile p\/github-actions/);
   assert.match(job, /artifact_name: semgrep-required-check-sarif/);

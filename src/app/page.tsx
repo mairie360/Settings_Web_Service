@@ -204,39 +204,44 @@ export default function Home() {
                 <div className="settings-profile-fields">
                 {PROFILE_FIELDS.map(({ field, label, type, required, maxLength, pattern, help }) => (
                   <Fragment key={field}>
-                    <label className="block">
-                      <span className="mb-1 block">{label}</span>
-                      <input
-                        className="w-full rounded border border-[#d8d2ca] px-3 py-2"
-                        type={type}
-                        name={field}
-                        required={required}
-                        disabled={saving}
-                        maxLength={maxLength}
-                        pattern={pattern}
-                        aria-describedby={help ? `settings-${field}-help` : undefined}
-                        value={profile[field] ?? ""}
-                        onChange={(event) => updateProfile(field, event.target.value)}
-                      />
-                      {help ? <span id={`settings-${field}-help`} className="mt-1 block text-sm text-[#596274]">{help}</span> : null}
-                    </label>
-                    {field === "email" && emailChanged ? (
+                    {/* The help text sits outside the label so the input's accessible name stays the label alone. */}
+                    <div>
                       <label className="block">
-                        <span className="mb-1 block">{CURRENT_PASSWORD.label}</span>
+                        <span className="mb-1 block">{label}</span>
                         <input
                           className="w-full rounded border border-[#d8d2ca] px-3 py-2"
-                          type="password"
-                          name={CURRENT_PASSWORD.field}
-                          autoComplete="current-password"
-                          required
+                          type={type}
+                          name={field}
+                          required={required}
                           disabled={saving}
-                          maxLength={CURRENT_PASSWORD.maxLength}
-                          aria-describedby="settings-current_password-help"
-                          value={currentPassword}
-                          onChange={(event) => { if (!savingRef.current) { setCurrentPassword(event.target.value); clearSaveError(); } }}
+                          maxLength={maxLength}
+                          pattern={pattern}
+                          aria-describedby={help ? `settings-${field}-help` : undefined}
+                          value={profile[field] ?? ""}
+                          onChange={(event) => updateProfile(field, event.target.value)}
                         />
-                        <span id="settings-current_password-help" className="mt-1 block text-sm text-[#596274]">{CURRENT_PASSWORD.help}</span>
                       </label>
+                      {help ? <span id={`settings-${field}-help`} className="mt-1 block text-sm text-[#596274]">{help}</span> : null}
+                    </div>
+                    {field === "email" && emailChanged ? (
+                      <div>
+                        <label className="block">
+                          <span className="mb-1 block">{CURRENT_PASSWORD.label}</span>
+                          <input
+                            className="w-full rounded border border-[#d8d2ca] px-3 py-2"
+                            type="password"
+                            name={CURRENT_PASSWORD.field}
+                            autoComplete="current-password"
+                            required
+                            disabled={saving}
+                            maxLength={CURRENT_PASSWORD.maxLength}
+                            aria-describedby="settings-current_password-help"
+                            value={currentPassword}
+                            onChange={(event) => { if (!savingRef.current) { setCurrentPassword(event.target.value); clearSaveError(); } }}
+                          />
+                        </label>
+                        <span id="settings-current_password-help" className="mt-1 block text-sm text-[#596274]">{CURRENT_PASSWORD.help}</span>
+                      </div>
                     ) : null}
                   </Fragment>
                 ))}

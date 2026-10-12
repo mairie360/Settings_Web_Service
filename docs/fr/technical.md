@@ -49,7 +49,7 @@ flowchart LR
   Next --> BFF["BFF_Settings"]
 ```
 
-La page conserve le profil éditable et les données du bootstrap dans l’état React. `save` transmet `/settings/profile`, puis remplace le formulaire avec la réponse sauvegardée. Les autres onglets affichent leur état disponible ou indisponible sans simuler de sauvegarde.
+La page conserve le profil éditable et les données du bootstrap dans l’état React. `save` transmet `/settings/profile`, puis remplace le formulaire avec la réponse sauvegardée. `src/lib/profile-form.ts` porte les règles du formulaire reprises du schéma `SettingsProfilePatch` (`maxLength`, `pattern` HTML, textes d’aide, épinglés à `contracts/openapi.json` par un test), la comparaison d’e-mail du BFF, le `current_password` conditionnel et la formulation française d’un refus de sauvegarde (`saveErrorMessage` : `error.details[]` libellés par champ, 403, 409). `requestBff` lève une `BffRequestError` qui expose `status`, `error.code` et `error.details[]` à côté du `message` inchangé. Les autres onglets affichent leur état disponible ou indisponible sans simuler de sauvegarde.
 
 Le proxy générique lit le contrat OpenAPI versionné pour autoriser chemins et méthodes. Il conserve paramètres de requête, corps binaire, statuts et en-têtes utiles, filtre les en-têtes de transport, désactive le cache et n’effectue pas de suivi automatique des redirections. Son délai est de 15 secondes.
 
@@ -57,7 +57,7 @@ Le proxy générique lit le contrat OpenAPI versionné pour autoriser chemins et
 
 Les sources et limites suivantes concernent le BFF associé, dont dépend la sauvegarde des données affichées.
 
-Le profil vient de Core `/api/v1/user/me/`; les sessions viennent de `/api/v1/sessions/`. Les champs sont `first_name`, `last_name`, `email` et `phone`. Le schéma des sessions ne conserve que les informations affichables et retire les champs internes. Aucune préférence n’est stockée localement par le BFF.
+Le profil vient de Core `/api/v1/user/me/`; les sessions viennent de `/api/v1/sessions/`. Les champs sont `first_name`, `last_name`, `email` et `phone` (`phone_country` est lu mais non modifié ; un changement d’e-mail envoie aussi `current_password`). Le schéma des sessions ne conserve que les informations affichables et retire les champs internes. Aucune préférence n’est stockée localement par le BFF.
 
 Notifications, apparence et général restent indisponibles. Système propose uniquement une assistance locale. La sécurité affiche les sessions, sans gérer les autres réglages. Les routes de préférences ont actuellement des schémas de requête/réponse vides et le bootstrap ne fournit aucune préférence : leur présence ne constitue pas à elle seule un contrat utilisable.
 
@@ -133,7 +133,7 @@ Ces chemins de données sont exposés à la même origine par le proxy; les page
 | GET | `/health` | — | 200 |
 | GET | `/check_apis` | — | 200, 502 |
 | GET | `/settings/bootstrap` | — | 200, 401, 502 |
-| PATCH | `/settings/profile` | application/json | 200, 400 |
+| PATCH | `/settings/profile` | application/json | 200, 400 (`details[]`), 403 (`current_password` incorrect), 409 (e-mail déjà utilisé) |
 | PATCH | `/settings/notifications` | application/json | 200, 404 |
 | PATCH | `/settings/appearance` | application/json | 200, 404 |
 | PATCH | `/settings/general` | application/json | 200, 404 |

@@ -98,6 +98,35 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
     assert.equal(received.headers.authorization, `Bearer ${fixtures.ACCESS_TOKEN}`);
   });
 
+  test('saveProfile forwards current_password with the new e-mail (MAIR-511)', async () => {
+    const saved = fixtures.profile({ email: 'anne.nouvelle@mairie.test' });
+    bffSettings.on('PATCH', '/settings/profile', { body: saved });
+
+    assert.deepEqual(await saveProfile({ email: 'anne.nouvelle@mairie.test', current_password: 'current-secret' }), saved);
+
+    const [received] = bffSettings.calls('/settings/profile', 'PATCH');
+    assert.deepEqual(received.body, { email: 'anne.nouvelle@mairie.test', current_password: 'current-secret' });
+  });
+
+  test('a refusal exposes the status, code and details of the ErrorResponse envelope without changing the message', async () => {
+    const { BffRequestError } = requireSrc('lib/bff-client.ts');
+    const details = [{ path: 'body.current_password', message: 'Required when email is changed' }, { message: 'Context only' }, { path: 'ignored' }, 'junk'];
+    bffSettings.on('PATCH', '/settings/profile', { status: 400, body: { error: { code: 'BAD_REQUEST', message: 'Validation failed', details } }, outOfContract: true });
+
+    const error = await saveProfile({ email: 'anne.nouvelle@mairie.test' }).catch((reason) => reason);
+    assert.ok(error instanceof BffRequestError);
+    assert.equal(error.name, 'BffRequestError');
+    assert.equal(error.message, 'Validation failed');
+    assert.equal(error.status, 400);
+    assert.equal(error.code, 'BAD_REQUEST');
+    assert.deepEqual(error.details, [{ path: 'body.current_password', message: 'Required when email is changed' }, { path: undefined, message: 'Context only' }]);
+
+    bffSettings.on('PATCH', '/settings/profile', { status: 503, raw: 'down', contentType: 'text/plain', outOfContract: true });
+    const unreadable = await saveProfile({ first_name: 'Anne' }).catch((reason) => reason);
+    assert.ok(unreadable instanceof BffRequestError);
+    assert.deepEqual([unreadable.status, unreadable.code, unreadable.details], [503, undefined, []]);
+  });
+
   // Statuts d'erreur renvoyés par BFF_Settings (session invalide, corps refusé, Core indisponible ou non configuré).
   for (const [name, call, method, template, statuses] of [
     ['loadSettings', () => loadSettings(), 'GET', '/settings/bootstrap', [401, 502, 503]],

@@ -48,7 +48,7 @@ flowchart LR
   Next --> BFF["BFF_Settings"]
 ```
 
-The page keeps the editable profile and bootstrap data in React state. `save` submits `/settings/profile`, then replaces the form with the saved response. Other tabs display their available or unavailable state without simulating a save.
+The page keeps the editable profile and bootstrap data in React state. `save` submits `/settings/profile`, then replaces the form with the saved response. `src/lib/profile-form.ts` holds the form rules mirrored from the `SettingsProfilePatch` schema (`maxLength`, HTML `pattern`, help text, pinned to `contracts/openapi.json` by a test), the e-mail comparison of the BFF, the conditional `current_password` and the French wording of a refused save (`saveErrorMessage`: `error.details[]` labelled per field, 403, 409). `requestBff` throws a `BffRequestError` carrying `status`, `error.code` and `error.details[]` next to the unchanged `message`. Other tabs display their available or unavailable state without simulating a save.
 
 The generic proxy reads the versioned OpenAPI contract to allow paths and methods. It preserves query parameters, binary bodies, statuses and useful headers, filters transport headers, disables caching and does not automatically follow redirects. Its timeout is 15 seconds.
 
@@ -56,7 +56,7 @@ The generic proxy reads the versioned OpenAPI contract to allow paths and method
 
 The following sources and limitations describe the associated BFF, which determines persistence for the displayed data.
 
-The profile comes from Core `/api/v1/user/me/`; sessions come from `/api/v1/sessions/`. Fields are `first_name`, `last_name`, `email` and `phone`. The session schema retains displayable information and removes internal fields. The BFF stores no preferences locally.
+The profile comes from Core `/api/v1/user/me/`; sessions come from `/api/v1/sessions/`. Fields are `first_name`, `last_name`, `email` and `phone` (`phone_country` is read but not edited; an e-mail change also sends `current_password`). The session schema retains displayable information and removes internal fields. The BFF stores no preferences locally.
 
 Notifications, appearance and general remain unavailable. System hosts local assistance only. Security displays sessions without managing other settings. The preference paths currently have empty request/response schemas and bootstrap provides no preference values; route existence alone does not establish a usable contract.
 
@@ -131,7 +131,7 @@ These data paths are exposed at the same origin through the proxy; Next.js pages
 | GET | `/health` | — | 200 |
 | GET | `/check_apis` | — | 200, 502 |
 | GET | `/settings/bootstrap` | — | 200, 401, 502 |
-| PATCH | `/settings/profile` | application/json | 200, 400 |
+| PATCH | `/settings/profile` | application/json | 200, 400 (`details[]`), 403 (wrong `current_password`), 409 (e-mail in use) |
 | PATCH | `/settings/notifications` | application/json | 200, 404 |
 | PATCH | `/settings/appearance` | application/json | 200, 404 |
 | PATCH | `/settings/general` | application/json | 200, 404 |

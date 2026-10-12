@@ -126,9 +126,13 @@ describe("Settings page", () => {
     for (const [label, field] of fields) {
       fireEvent.change(screen.getByRole("textbox", { name: label }), { target: { value: draft[field] } });
     }
+    // MAIR-511: a changed e-mail asks for the current password, sent once as current_password.
+    fireEvent.change(screen.getByLabelText("Mot de passe actuel"), { target: { value: "secret" } });
+    const payload = { ...draft, current_password: "secret" };
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
     expect((await screen.findByRole("alert")).textContent).toBe("L’enregistrement du profil n’a pas été confirmé. Réessayez.");
-    expect(saveProfile).toHaveBeenCalledExactlyOnceWith(draft);
+    expect(saveProfile).toHaveBeenCalledExactlyOnceWith(payload);
+    expect(screen.getByLabelText("Mot de passe actuel").value).toBe("secret");
     expect(screen.queryByText("Votre profil a été enregistré.")).toBeNull();
     for (const [label, field] of fields) {
       expect(screen.getByRole("textbox", { name: label }).value).toBe(draft[field]);
@@ -139,7 +143,8 @@ describe("Settings page", () => {
     for (const [label, field] of fields) expect(screen.getByRole("textbox", { name: label }).value).toBe(draft[field]);
     vi.mocked(saveProfile).mockResolvedValueOnce({ ...draft, first_name: "Official", phone: null });
     await user.click(screen.getByRole("button", { name: "Enregistrer" }));
-    expect(saveProfile.mock.calls).toEqual([[draft], [draft]]);
+    expect(saveProfile.mock.calls).toEqual([[payload], [payload]]);
+    expect(screen.queryByLabelText("Mot de passe actuel")).toBeNull();
     expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("Official");
     expect(screen.getByRole("textbox", { name: "Téléphone" }).value).toBe("");
     expect(screen.getByRole("button", { name: "Enregistrer" }).disabled).toBe(true);

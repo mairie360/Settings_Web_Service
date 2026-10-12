@@ -548,7 +548,7 @@ test('a refused save keeps the form and shows the BFF message', async () => {
   await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
   const html = await view.waitFor((current) => current.includes('role="alert"'));
 
-  assert.match(html, /<p role="alert"[^>]*>Numéro de téléphone invalide<\/p>/);
+  assert.match(html, /<div role="alert"[^>]*><p>Numéro de téléphone invalide<\/p><\/div>/);
   assert.match(html, /value="Anne Marie"/);
   assert.doesNotMatch(html, /role="status"/);
   assert.deepEqual(bffSettings.requests[1].body, { phone: '12' });
@@ -574,4 +574,170 @@ test('a bootstrap failure renders an alert instead of the form', async () => {
   assert.match(html, /<p role="status">Le profil est indisponible\.<\/p>/);
   assert.doesNotMatch(html, /<form/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+});
+
+// MAIR-511: the BFF only changes the e-mail with the current password, and refuses fields outside the
+// contract constraints with `error.details[]`.
+const PROFILE_PATCH_SCHEMA = OpenApiContract.load(path.join(ROOT, 'contracts', 'openapi.json')).schema('SettingsProfilePatch');
+const { PROFILE_FIELDS, CURRENT_PASSWORD, describeDetail } = requireSrc('lib/profile-form.ts');
+const passwordInputs = () => [...view.html.matchAll(/<input\b[^>]*>/g)].map(([html]) => html).filter(html => /name="current_password"/.test(html));
+const isEmailInput = (props) => props.type === 'email';
+const htmlPattern = (pattern) => new RegExp(`^(?:${pattern})$`, 'v');
+
+test('the input constraints mirror the SettingsProfilePatch schema of the published contract', () => {
+  assert.deepEqual(PROFILE_FIELDS.map(({ field }) => field), ['first_name', 'last_name', 'email', 'phone']);
+  for (const { field, maxLength, pattern, required } of PROFILE_FIELDS) {
+    const schema = PROFILE_PATCH_SCHEMA.properties[field];
+    assert.equal(maxLength, schema.maxLength, field);
+    assert.equal(required, (schema.minLength ?? 0) > 0 || !Array.isArray(schema.type), `${field} required`);
+    if (schema.pattern) {
+      // The HTML pattern (anchored, `v` flag) accepts exactly what the contract's regex accepts.
+      const contract = new RegExp(schema.pattern);
+      const browser = htmlPattern(pattern);
+      for (const sample of ['', 'Anne Marie', 'Le Gall-Martin', '<b>x</b>', 'a>b', '+33 1 23 45 67 89', '06.12.34.56.78', '(01) 23-45', '12+3', '+', 'abc', ' 0612']) {
+        assert.equal(browser.test(sample), contract.test(sample), `${field} ${JSON.stringify(sample)}`);
+      }
+    } else {
+      assert.equal(pattern, undefined, field);
+    }
+  }
+  assert.equal(CURRENT_PASSWORD.maxLength, PROFILE_PATCH_SCHEMA.properties.current_password.maxLength);
+});
+
+test('the rendered inputs carry the contract constraints and their help text', async () => {
+  const html = await renderLoadedPage();
+  // react-dom/server writes `maxLength` as such and escapes `<` / `>` in attribute values.
+  assert.match(html, /<input[^>]*maxLength="64"[^>]*pattern="\[\^&lt;&gt;\]\*"[^>]*aria-describedby="settings-first_name-help"[^>]*name="first_name"/);
+  assert.match(html, /<input[^>]*maxLength="64"[^>]*pattern="\[\^&lt;&gt;\]\*"[^>]*name="last_name"/);
+  assert.match(html, /<input[^>]*type="email"[^>]*maxLength="320"[^>]*name="email"/);
+  assert.doesNotMatch(html, /<input[^>]*type="email"[^>]*pattern=/);
+  assert.match(html, /<input[^>]*type="tel"[^>]*maxLength="32"[^>]*pattern="\(\\\+\?\[\\d\\s\.\\\(\\\)\\-\]\+\)\?"[^>]*aria-describedby="settings-phone-help"[^>]*name="phone"/);
+  assert.match(html, /<span id="settings-phone-help"[^>]*>Chiffres, espaces, points, tirets et parenthèses, avec un \+ initial facultatif \(32 caractères maximum\)\.<\/span>/);
+  assert.match(html, /<span id="settings-first_name-help"[^>]*>64 caractères maximum, sans &lt; ni &gt;\.<\/span>/);
+  assert.equal(passwordInputs().length, 0);
+});
+
+test('a changed e-mail shows the current-password field, which disappears once the address is restored or only recased', async () => {
+  await renderLoadedPage();
+  await view.fire(isEmailInput, 'onChange', { target: { value: 'anne.nouvelle@mairie.test' } });
+  assert.equal(passwordInputs().length, 1);
+  assert.match(passwordInputs()[0], /type="password"[^>]*autoComplete="current-password"[^>]*required=""[^>]*maxLength="255"[^>]*aria-describedby="settings-current_password-help"[^>]*name="current_password"/);
+  assert.match(view.html, /<span id="settings-current_password-help"[^>]*>Requis pour confirmer le changement d’adresse e-mail\. Il n’est pas conservé\.<\/span>/);
+  assert.match(view.html, /type="email"[^]*?type="password"[^]*?type="tel"/, 'the password field follows the e-mail field');
+
+  await view.fire((props) => props.type === 'password', 'onChange', { target: { value: 'secret' } });
+  assert.match(passwordInputs()[0], /value="secret"/);
+
+  // The BFF compares trimmed, case-insensitive addresses: a recased address is not a change.
+  await view.fire(isEmailInput, 'onChange', { target: { value: ' Anne.Le-Gall@Mairie.test ' } });
+  assert.equal(passwordInputs().length, 0);
+  await view.fire(isEmailInput, 'onChange', { target: { value: 'anne.nouvelle@mairie.test' } });
+  assert.equal(passwordInputs().length, 1);
+  assert.match(passwordInputs()[0], /value=""/, 'the typed password is dropped when the field disappears');
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+});
+
+test('an e-mail change without the current password is refused locally, then sent with it and the password is dropped', async () => {
+  await renderLoadedPage();
+  await view.fire(isEmailInput, 'onChange', { target: { value: 'anne.nouvelle@mairie.test' } });
+  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  assert.match(view.html, /<div role="alert"[^>]*><p>Saisissez votre mot de passe actuel pour changer votre adresse e-mail\.<\/p><\/div>/);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+  assert.match(passwordInputs()[0], /required=""/);
+
+  await view.fire((props) => props.type === 'password', 'onChange', { target: { value: 'current-secret' } });
+  assert.doesNotMatch(view.html, /role="alert"/);
+  const saved = fixtures.profile({ email: 'anne.nouvelle@mairie.test' });
+  bffSettings.on('PATCH', '/settings/profile', { body: saved });
+  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.waitFor((html) => html.includes('Votre profil a été enregistré.'));
+
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
+  assert.deepEqual(bffSettings.requests[1].body, { email: 'anne.nouvelle@mairie.test', current_password: 'current-secret' });
+  assert.equal(passwordInputs().length, 0, 'the saved address is the confirmed one');
+  assert.doesNotMatch(view.html, /current-secret/);
+  assert.match(view.html, /<input[^>]*type="email"[^>]*value="anne\.nouvelle@mairie\.test"/);
+
+  // A later e-mail change asks for the password again, from an empty field.
+  await view.fire(isEmailInput, 'onChange', { target: { value: 'anne.autre@mairie.test' } });
+  assert.match(passwordInputs()[0], /value=""/);
+});
+
+test('a save without an e-mail change never sends current_password', async () => {
+  await renderLoadedPage();
+  await view.fire((props) => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Anne' } });
+  bffSettings.on('PATCH', '/settings/profile', { body: fixtures.profile({ first_name: 'Anne' }) });
+  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.waitFor((html) => html.includes('Votre profil a été enregistré.'));
+  assert.deepEqual(bffSettings.requests[1].body, { first_name: 'Anne' });
+  assert.equal(passwordInputs().length, 0);
+});
+
+for (const [label, reply, expected] of [
+  ['400 with validation details', {
+    status: 400,
+    body: { error: { code: 'BAD_REQUEST', message: 'Validation failed', details: [
+      { path: 'body.current_password', message: 'Required when email is changed' },
+      { path: 'body.first_name', message: 'Must not contain < or >' },
+      { path: 'body.phone', message: 'Expected a phone number: digits, spaces, `.`, `-`, `(`, `)` and a leading `+`' },
+      { path: 'body.phone_country', message: 'Expected an ISO 3166-1 alpha-2 code' },
+      { path: 'body.last_name', message: 'String must contain at most 64 character(s)' },
+      { path: 'body.email', message: 'Invalid email' },
+      { path: 'body', message: 'Unrecognized key(s) in object: \'nickname\'' },
+      { message: 'Something unexpected' },
+    ] } },
+  }, {
+    message: 'Le profil n’a pas pu être enregistré : vérifiez les champs signalés.',
+    details: [
+      'Mot de passe actuel : requis pour changer l’adresse e-mail',
+      'Prénom : ne doit pas contenir &lt; ni &gt;',
+      'Téléphone : chiffres, espaces, points, tirets, parenthèses et un + initial seulement',
+      'Pays du téléphone : code pays à deux lettres attendu',
+      'Nom : 64 caractères maximum',
+      'E-mail : adresse e-mail invalide',
+      'champ non pris en charge',
+      'Something unexpected',
+    ],
+  }],
+  ['400 without details', { status: 400, body: fixtures.error('Validation failed', 400) }, { message: 'Validation failed', details: [] }],
+  ['403 wrong password', { status: 403, body: fixtures.error('Invalid credentials', 403) }, { message: 'Le mot de passe actuel est incorrect, ou ce compte n’a pas de mot de passe.', details: [] }],
+  ['409 address in use', { status: 409, body: fixtures.error('Email already used', 409) }, { message: 'Cette adresse e-mail est déjà utilisée par un autre compte.', details: [] }],
+  ['503 upstream', { status: 503, body: fixtures.error('Core API indisponible', 503) }, { message: 'Core API indisponible', details: [] }],
+]) {
+  test(`a refused e-mail change (${label}) is explained in French and keeps the draft and the password field`, async () => {
+    await renderLoadedPage();
+    await view.fire(isEmailInput, 'onChange', { target: { value: 'anne.nouvelle@mairie.test' } });
+    await view.fire((props) => props.type === 'password', 'onChange', { target: { value: 'current-secret' } });
+    bffSettings.on('PATCH', '/settings/profile', { ...reply, outOfContract: true });
+    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    const html = await view.waitFor((current) => current.includes('role="alert"'));
+
+    assert.match(html, new RegExp(`<div role="alert"[^>]*><p>${expected.message.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</p>`));
+    const items = [...html.matchAll(/<li>([^<]*)<\/li>/g)].map(([, text]) => text);
+    assert.deepEqual(items, expected.details);
+    assert.deepEqual(bffSettings.requests[1].body, { email: 'anne.nouvelle@mairie.test', current_password: 'current-secret' });
+    assert.match(html, /<input[^>]*type="email"[^>]*value="anne\.nouvelle@mairie\.test"/);
+    assert.equal(passwordInputs().length, 1);
+    assert.match(passwordInputs()[0], /value="current-secret"/, 'the password stays for a retry');
+    assert.doesNotMatch(html, /Votre profil a été enregistré/);
+  });
+}
+
+test('a 403 on a save without password keeps the BFF message', async () => {
+  await renderLoadedPage();
+  await view.fire((props) => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Anne' } });
+  bffSettings.on('PATCH', '/settings/profile', { status: 403, body: fixtures.error('Accès refusé', 403), outOfContract: true });
+  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  const html = await view.waitFor((current) => current.includes('role="alert"'));
+  assert.match(html, /<div role="alert"[^>]*><p>Accès refusé<\/p><\/div>/);
+});
+
+test('describeDetail labels known fields and keeps unknown paths and messages', () => {
+  assert.equal(describeDetail({ path: 'body.current_password', message: 'Required when email is changed' }), 'Mot de passe actuel : requis pour changer l’adresse e-mail');
+  assert.equal(describeDetail({ path: 'current_password', message: 'Required' }), 'Mot de passe actuel : requis');
+  assert.equal(describeDetail({ path: 'body.nickname', message: 'Unknown' }), 'nickname : Unknown');
+  assert.equal(describeDetail({ path: 'body.first_name', message: 'String must contain at least 1 character(s)' }), 'Prénom : ne doit pas être vide');
+  assert.equal(describeDetail({ path: 'body.first_name', message: 'String must contain at least 2 character(s)' }), 'Prénom : 2 caractères minimum');
+  assert.equal(describeDetail({ path: 'body.first_name', message: 'Too big: expected string to have <=64 characters' }), 'Prénom : 64 caractères maximum');
+  assert.equal(describeDetail({ message: 'Expected at least one of first_name, last_name, email, phone, phone_country' }), 'Expected at least one of first_name, last_name, email, phone, phone_country');
 });

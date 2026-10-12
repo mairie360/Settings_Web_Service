@@ -60,6 +60,8 @@ it("recovers an initial refusal explicitly by keyboard, without an automatic rea
 it("preserves all four dirty fields, including pending edits, and blocks competing saves", async () => {
   const user = await open();
   labels.forEach((label, i) => change(label, ["Draft", "Draft surname", "draft@example.invalid", "+33123456789"][i]));
+  // MAIR-511: the changed e-mail asks for the current password, kept with the draft until confirmed.
+  fireEvent.change(screen.getByLabelText("Mot de passe actuel"), { target: { value: "secret" } });
   const pending = deferred();
   vi.mocked(loadSettings).mockReturnValueOnce(pending.promise);
   const refresh = screen.getByRole("button", { name: "Actualiser les paramètres" });
@@ -79,19 +81,21 @@ it("preserves all four dirty fields, including pending edits, and blocks competi
   const values = ["Latest draft", "Draft surname", "draft@example.invalid", "+33123456789"];
   labels.forEach((label, i) => expect(screen.getByRole("textbox", { name: label }).value).toBe(values[i]));
   await user.click(screen.getByRole("button", { name: "Enregistrer" }));
-  expect(saveProfile).toHaveBeenCalledExactlyOnceWith(Object.fromEntries(fields.map((field, i) => [field, values[i]])));
+  expect(saveProfile).toHaveBeenCalledExactlyOnceWith({ ...Object.fromEntries(fields.map((field, i) => [field, values[i]])), current_password: "secret" });
 });
 
 it("keeps an unusable save out of the read baseline and recovers only through explicit actions", async () => {
   const user = await open();
   const draft = { first_name: "Draft", last_name: "Draft surname", email: "draft@example.invalid", phone: "+33123456789" };
   labels.forEach((label, i) => change(label, draft[fields[i]]));
+  fireEvent.change(screen.getByLabelText("Mot de passe actuel"), { target: { value: "secret" } });
+  const sent = { ...draft, current_password: "secret" };
   const pendingSave = deferred();
   vi.mocked(saveProfile).mockReturnValueOnce(pendingSave.promise);
   const refresh = screen.getByRole("button", { name: "Actualiser les paramètres" });
   const form = screen.getByRole("textbox", { name: "Prénom" }).closest("form");
   act(() => { fireEvent.submit(form); fireEvent.submit(form); fireEvent.click(refresh); });
-  expect(saveProfile).toHaveBeenCalledExactlyOnceWith(draft);
+  expect(saveProfile).toHaveBeenCalledExactlyOnceWith(sent);
   expect(loadSettings).toHaveBeenCalledTimes(1);
   await act(async () => pendingSave.resolve({}));
   expect((await screen.findByRole("alert")).textContent).toBe("L’enregistrement du profil n’a pas été confirmé. Réessayez.");
@@ -115,8 +119,9 @@ it("keeps an unusable save out of the read baseline and recovers only through ex
   vi.mocked(saveProfile).mockResolvedValueOnce(official);
   await user.click(screen.getByRole("button", { name: "Enregistrer" }));
   await screen.findByText("Votre profil a été enregistré.");
-  expect(vi.mocked(saveProfile).mock.calls.map(([patch]) => patch)).toEqual([draft, latest]);
+  expect(vi.mocked(saveProfile).mock.calls.map(([patch]) => patch)).toEqual([sent, { ...latest, current_password: "secret" }]);
   expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.queryByLabelText("Mot de passe actuel")).toBeNull();
   change("Prénom", "Next draft");
   vi.mocked(loadSettings).mockResolvedValueOnce(dto({ ...official, last_name: "After confirmation", phone: null }, "available"));
   await user.click(screen.getByRole("button", { name: "Actualiser les paramètres" }));

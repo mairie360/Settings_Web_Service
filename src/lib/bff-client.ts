@@ -15,6 +15,35 @@ function errorMessage(body: unknown, status: number): string {
     : 'La demande n’a pas pu aboutir. Veuillez réessayer.';
 }
 
+export type BffErrorDetail = { path?: string; message: string };
+
+/**
+ * Refusal of BFF_Settings: `message` is the BFF `error.message` (French fallback otherwise), with the HTTP status
+ * and the `error.code` / `error.details[]` of the shared ErrorResponse envelope, so a form can point at the
+ * refused fields (MAIR-511).
+ */
+export class BffRequestError extends Error {
+  readonly status: number;
+  readonly code: string | undefined;
+  readonly details: readonly BffErrorDetail[];
+
+  constructor(message: string, status: number, body: unknown) {
+    super(message);
+    this.name = 'BffRequestError';
+    this.status = status;
+    const error = (body as { error?: { code?: unknown; details?: unknown } } | null)?.error;
+    this.code = typeof error?.code === 'string' ? error.code : undefined;
+    this.details = Array.isArray(error?.details)
+      ? error.details.flatMap((detail: unknown) => {
+        const item = detail as { path?: unknown; message?: unknown } | null;
+        return typeof item?.message === 'string'
+          ? [{ path: typeof item.path === 'string' ? item.path : undefined, message: item.message }]
+          : [];
+      })
+      : [];
+  }
+}
+
 export async function requestBff<T>(path: BffPath, init: RequestInit = {}): Promise<T> {
   init.signal?.throwIfAborted();
   const headers = new Headers(init.headers);
@@ -30,7 +59,7 @@ export async function requestBff<T>(path: BffPath, init: RequestInit = {}): Prom
   if (!response.ok) {
     if (response.status === 401 && !isSessionRecoveryPending()) navigateToLogin();
     const body = await response.json().catch(() => null);
-    throw new Error(errorMessage(body, response.status));
+    throw new BffRequestError(errorMessage(body, response.status), response.status, body);
   }
   return response.status === 204 ? undefined as T : response.json() as Promise<T>;
 }

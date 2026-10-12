@@ -1,9 +1,11 @@
 "use client";
 
 import { AppShell } from "@mairie360/lib-components";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
+import { CURRENT_PASSWORD, PASSWORD_REQUIRED_MESSAGE, PROFILE_FIELDS, isEmailChanged, profilePatch, saveErrorMessage } from "@/lib/profile-form";
+import type { ProfileField } from "@/lib/profile-form";
 import { formatSessionDate } from "@/lib/session-date";
 import SettingsPendingFeatures from "@/components/settings-pending-features";
 import SessionRevokeControl from "@/components/settings-session-revoke";
@@ -15,7 +17,6 @@ import { loadSessionRole } from "@/lib/session-role";
 import type {
   SettingsBootstrap as Bootstrap,
   SettingsProfile as Profile,
-  SettingsProfilePatch as ProfilePatch,
 } from "@/lib/settings-api";
 
 const tabs = [
@@ -28,37 +29,10 @@ const tabs = [
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
-// Champs du formulaire : ceux du profil lu ET modifiables (SettingsProfilePatch porte aussi current_password,
-// qui n'est pas un champ du profil affiché).
-type ProfileField = keyof Profile & keyof ProfilePatch;
-
-const profileFields: ReadonlyArray<{
-  field: ProfileField;
-  label: string;
-  type: "email" | "tel" | "text";
-  required: boolean;
-}> = [
-  { field: "first_name", label: "Prénom", type: "text", required: true },
-  { field: "last_name", label: "Nom", type: "text", required: true },
-  { field: "email", label: "E-mail", type: "email", required: true },
-  { field: "phone", label: "Téléphone", type: "tel", required: false },
-];
-
 
 function SessionDate({ value }: { value: string | null | undefined }) {
   const label = formatSessionDate(value);
   return label && value ? <time dateTime={value}>{label}</time> : <span>Date indisponible</span>;
-}
-
-function profilePatch(initial: Profile, current: Profile): ProfilePatch {
-  const patch: ProfilePatch = {};
-
-  if (current.first_name !== initial.first_name) patch.first_name = current.first_name;
-  if (current.last_name !== initial.last_name) patch.last_name = current.last_name;
-  if (current.email !== initial.email) patch.email = current.email;
-  if (current.phone !== initial.phone) patch.phone = current.phone ?? null;
-
-  return patch;
 }
 
 function isConfirmedProfile(value: unknown): value is Profile {
@@ -91,6 +65,9 @@ export default function Home() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("profile");
   const [error, setError] = useState("");
+  const [errorDetails, setErrorDetails] = useState<string[]>([]);
+  // Confirms an e-mail change (MAIR-511); never part of the profile state, cleared once used or no longer needed.
+  const [currentPassword, setCurrentPassword] = useState("");
   const [readError, setReadError] = useState("");
   const [logoutError, setLogoutError] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
@@ -157,12 +134,19 @@ export default function Home() {
 
   const patch = data && profile ? profilePatch(data.profile, profile) : {};
   const hasChanges = Object.keys(patch).length > 0;
+  const emailChanged = data && profile ? isEmailChanged(data.profile, profile) : false;
 
   function updateProfile(field: ProfileField, value: string) {
     if (savingRef.current) return;
     setProfile((current) => current ? { ...current, [field]: value || (field === "phone" ? null : value) } : current);
-    setError("");
+    if (field === "email" && data && !isEmailChanged(data.profile, { ...data.profile, email: value })) setCurrentPassword("");
+    clearSaveError();
     setStatus("");
+  }
+
+  function clearSaveError() {
+    setError("");
+    setErrorDetails([]);
   }
 
   function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, currentTab: TabId) {
@@ -180,23 +164,34 @@ export default function Home() {
   async function save(event: FormEvent) {
     event.preventDefault();
     if (savingRef.current || readRef.current || !profile || !data || !hasChanges) return;
+    // The BFF only changes the e-mail with the current password: refuse locally instead of a round trip.
+    const password = emailChanged ? currentPassword : "";
+    if (emailChanged && !password) {
+      setErrorDetails([]);
+      setError(PASSWORD_REQUIRED_MESSAGE);
+      setStatus("");
+      return;
+    }
 
     savingRef.current = true;
     setSaving(true);
-    setError("");
+    clearSaveError();
     setStatus("");
 
     try {
-      const saved = await saveProfile(patch);
+      const saved = await saveProfile(password ? { ...patch, current_password: password } : patch);
       if (!isConfirmedProfile(saved)) {
         throw new Error("L’enregistrement du profil n’a pas été confirmé. Réessayez.");
       }
       confirmedProfileRef.current = saved;
       setProfile(saved);
       setData((current) => current ? { ...current, profile: saved } : current);
+      setCurrentPassword("");
       setStatus("Votre profil a été enregistré.");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Le profil n’a pas pu être enregistré.");
+      const { message, details } = saveErrorMessage(reason, Boolean(password));
+      setError(message);
+      setErrorDetails(details);
     } finally {
       savingRef.current = false;
       setSaving(false);
@@ -207,19 +202,48 @@ export default function Home() {
   const profileContent = data && profile ? (
 <form onSubmit={save} aria-busy={saving || reading} className="mt-5 space-y-4">
                 <div className="settings-profile-fields">
-                {profileFields.map(({ field, label, type, required }) => (
-                  <label className="block" key={field}>
-                    <span className="mb-1 block">{label}</span>
-                    <input
-                      className="w-full rounded border border-[#d8d2ca] px-3 py-2"
-                      type={type}
-                      name={field}
-                      required={required}
-                      disabled={saving}
-                      value={profile[field] ?? ""}
-                      onChange={(event) => updateProfile(field, event.target.value)}
-                    />
-                  </label>
+                {PROFILE_FIELDS.map(({ field, label, type, required, maxLength, pattern, help }) => (
+                  <Fragment key={field}>
+                    {/* The help text sits outside the label so the input's accessible name stays the label alone. */}
+                    <div>
+                      <label className="block">
+                        <span className="mb-1 block">{label}</span>
+                        <input
+                          className="w-full rounded border border-[#d8d2ca] px-3 py-2"
+                          type={type}
+                          name={field}
+                          required={required}
+                          disabled={saving}
+                          maxLength={maxLength}
+                          pattern={pattern}
+                          aria-describedby={help ? `settings-${field}-help` : undefined}
+                          value={profile[field] ?? ""}
+                          onChange={(event) => updateProfile(field, event.target.value)}
+                        />
+                      </label>
+                      {help ? <span id={`settings-${field}-help`} className="mt-1 block text-sm text-[#596274]">{help}</span> : null}
+                    </div>
+                    {field === "email" && emailChanged ? (
+                      <div>
+                        <label className="block">
+                          <span className="mb-1 block">{CURRENT_PASSWORD.label}</span>
+                          <input
+                            className="w-full rounded border border-[#d8d2ca] px-3 py-2"
+                            type="password"
+                            name={CURRENT_PASSWORD.field}
+                            autoComplete="current-password"
+                            required
+                            disabled={saving}
+                            maxLength={CURRENT_PASSWORD.maxLength}
+                            aria-describedby="settings-current_password-help"
+                            value={currentPassword}
+                            onChange={(event) => { if (!savingRef.current) { setCurrentPassword(event.target.value); clearSaveError(); } }}
+                          />
+                        </label>
+                        <span id="settings-current_password-help" className="mt-1 block text-sm text-[#596274]">{CURRENT_PASSWORD.help}</span>
+                      </div>
+                    ) : null}
+                  </Fragment>
                 ))}
                 </div>
                 <button
@@ -275,7 +299,12 @@ export default function Home() {
           <p>Gérez votre profil, votre sécurité et vos préférences.</p>
         </header>
 
-        {error ? <p role="alert" className="rounded border border-red-200 bg-white p-4 text-red-700">{error}</p> : null}
+        {error ? (
+          <div role="alert" className="rounded border border-red-200 bg-white p-4 text-red-700">
+            <p>{error}</p>
+            {errorDetails.length ? <ul className="mt-2 list-disc pl-5 text-sm">{errorDetails.map((detail) => <li key={detail}>{detail}</li>)}</ul> : null}
+          </div>
+        ) : null}
         {readError ? <p role="alert" className="rounded border border-red-200 bg-white p-4 text-red-700">{readError}</p> : null}
         {logoutError ? <section role="alert" className="space-y-2 rounded border border-red-200 bg-white p-4 text-red-700">
           <p>{logoutError}</p>

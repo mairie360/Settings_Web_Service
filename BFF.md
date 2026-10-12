@@ -11,14 +11,14 @@ Les chemins métier sont relatifs au BFF. Les proxies web conservent méthode, p
 | GET | `/health` | 200 OK |
 | GET | `/check_apis` | 200 Services disponibles |
 | GET | `/settings/bootstrap` | 200 SettingsBootstrap |
-| PATCH | `/settings/profile` | 200 SettingsProfile |
-| PATCH | `/settings/notifications` | 200 Préférences enregistrées par Core |
-| PATCH | `/settings/appearance` | 200 Préférences enregistrées par Core |
-| PATCH | `/settings/general` | 200 Préférences enregistrées par Core |
+| PATCH | `/settings/profile` | 200 SettingsProfile (corps SettingsProfilePatch : `current_password` requis par le BFF quand l’e-mail change) |
+| PATCH | `/settings/notifications` | 200 SettingsNotifications |
+| PATCH | `/settings/appearance` | 200 SettingsAppearance |
+| PATCH | `/settings/general` | 200 SettingsGeneral |
 
 ## Mise à jour et validation
 
-Après une nouvelle version publiée de BFF_Settings, exécuter `npm install --save-exact @mairie360/bff-settings-openapi@X.Y.Z`, puis `npm run contracts:sync`, `npm run contracts:check` et `npm run test:contracts`. La CI vérifie que `contracts/openapi.json` est exactement la reconstruction du paquet épinglé, sans checkout du BFF.
+Le paquet est épinglé à une version exacte : une release `X.Y.Z` de BFF_Settings, ou, tant qu’aucune release n’est coupée, le paquet `0.0.0-dev.<sha>` publié par la CICD pour le commit courant de son `main` (MAIR-509 ; jamais une pré-version `staging`). Après une nouvelle version, exécuter `npm install --save-exact @mairie360/bff-settings-openapi@<version>`, puis `npm run contracts:sync`, `npm run contracts:check` et `npm run test:contracts`. Le tag de l’image `bff-settings` des `docker-compose*.yml` doit être construit depuis le même commit (`X.Y.Z`, ou `dev-<sha7>` pour un paquet dev, `scripts/contract-version.mjs`). La CI vérifie que `contracts/openapi.json` est exactement la reconstruction du paquet épinglé, sans checkout du BFF.
 
 La reconstruction (`scripts/orval-contract.mjs`) s’exécute hors ligne ; aucun jeton privé ne figure dans les contrats.
 

@@ -158,10 +158,10 @@ Toutes les réponses portent `X-Frame-Options: DENY`, `X-Content-Type-Options: n
 
 ## Synchronisation et vérifications
 
-Le front utilise un seul contrat : celui que **BFF_Settings publie** dans le paquet `@mairie360/bff-settings-openapi`, épinglé à une version exacte `X.Y.Z` dans `package.json`. Il n’est jamais copié depuis un checkout du BFF, qui peut être en avance sur la dernière version publiée. Après une nouvelle version de BFF_Settings, exécuter dans ce dépôt:
+Le front utilise un seul contrat : celui que **BFF_Settings publie** dans le paquet `@mairie360/bff-settings-openapi`, épinglé à une version exacte dans `package.json` : une release `X.Y.Z`, ou, tant qu’aucune release n’est coupée, le paquet `0.0.0-dev.<sha>` publié par la CICD pour le commit courant de son `main` (MAIR-509 ; jamais une pré-version `staging`). Il n’est jamais copié depuis un checkout du BFF, qui peut être en avance sur ce qui est publié. Après une nouvelle release ou un nouveau paquet dev de BFF_Settings, exécuter dans ce dépôt:
 
 ```bash
-npm install --save-exact @mairie360/bff-settings-openapi@X.Y.Z
+npm install --save-exact @mairie360/bff-settings-openapi@<version>
 npm run contracts:sync
 npm run contracts:check
 npm run test:contracts
@@ -169,7 +169,7 @@ npm run lint
 npm run build
 ```
 
-Le paquet ne contient que la sortie orval (modèles et endpoints TypeScript). `contracts:sync` (alias `contracts:generate`) reconstruit `contracts/openapi.json` depuis le paquet installé avec `scripts/orval-contract.mjs` ; le proxy lit ce fichier et le code importe ses types depuis `@mairie360/bff-settings-openapi/model`. `contracts:check` échoue si la version n’est pas exacte, si le paquet installé diffère de `package.json`, si un second paquet `bff-*-openapi` existe ou si `contracts/openapi.json` n’est plus à jour. Ces commandes fonctionnent hors ligne. Après une montée de version, aligner aussi le tag d’image `bff-settings` des stacks de test. `test:contracts` exécute les tests Node sans couverture ; `npm test` les exécute avec un seuil de 60 % (lignes, branches, fonctions) sur tous les modules `src/**/*.ts`.
+Le paquet ne contient que la sortie orval (modèles et endpoints TypeScript). `contracts:sync` (alias `contracts:generate`) reconstruit `contracts/openapi.json` depuis le paquet installé avec `scripts/orval-contract.mjs` ; le proxy lit ce fichier et le code importe ses types depuis `@mairie360/bff-settings-openapi/model`. `contracts:check` échoue si la version n’est pas une version exacte acceptée (`scripts/contract-version.mjs`), si le paquet installé diffère de `package.json`, si un second paquet `bff-*-openapi` existe ou si `contracts/openapi.json` n’est plus à jour. Ces commandes fonctionnent hors ligne. Après une montée de version, aligner aussi le tag d’image `bff-settings` des stacks sur l’image construite depuis le même commit (`X.Y.Z` pour une release, `dev-<sha7>` pour un paquet dev). Les erreurs du BFF utilisent l’enveloppe commune `ErrorResponse` (`{ error: { code, message, details } }`). `test:contracts` exécute les tests Node sans couverture ; `npm test` les exécute avec un seuil de 60 % (lignes, branches, fonctions) sur tous les modules `src/**/*.ts`.
 
 Les tests vérifient que le front n’accède au réseau qu’à travers son contrat BFF publié. `tests/network-contract.test.cjs` analyse l’AST TypeScript de `src/` : seuls `src/lib/bff-client.ts` et `src/lib/bff-proxy.ts` appellent `fetch`, chaque appel `requestBff` (tous dans `src/lib/settings-api.ts`) vise une opération littérale de `contracts/openapi.json`, et le seul relais serveur est le proxy vers `configuredBffUrl()` (la seule URL de BFF lue dans l’environnement est `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL`). `tests/settings.bff-mocks.test.cjs` exerce la chaîne BFF contre un mock piloté par le contrat. `tests/logout.test.cjs` vérifie la redirection validée vers Login et les refus sûrs sans deuxième BFF. `tests/package-contract.test.cjs` vérifie l’épinglage du paquet et la reconstruction du contrat.
 

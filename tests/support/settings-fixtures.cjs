@@ -21,14 +21,42 @@ function session(id, overrides = {}) {
   };
 }
 
-/** SettingsBootstrap (BFF_Settings). */
-function bootstrap(overrides = {}) {
-  return { profile: profile(), sessions: [session('s-1')], sources: { sessions: 'available' }, ...overrides };
+/** SettingsAppearance (BFF_Settings). */
+function appearance(overrides = {}) {
+  return { theme: 'system', density: 'normal', font_family: 'Marianne', font_size: 16, ...overrides };
 }
 
-/** Error (BFF_Settings). */
-function error(message) {
-  return { error: { message } };
+/** SettingsGeneral (BFF_Settings). */
+function general(overrides = {}) {
+  return { language: 'fr', timezone: 'Europe/Paris', date_format: 'DD/MM/YYYY', home_page: 'dashboard', auto_open_notifications: false, ...overrides };
+}
+
+/** SettingsNotifications (BFF_Settings). */
+function notifications(overrides = {}) {
+  return { email: true, push: false, desktop: true, messages: true, projects: true, calendar: false, ...overrides };
+}
+
+/** SettingsBootstrap (BFF_Settings). `sources` is merged key by key so a test can override one source only. */
+function bootstrap(overrides = {}) {
+  const { sources, ...rest } = overrides;
+  return {
+    profile: profile(),
+    sessions: [session('s-1')],
+    appearance: appearance(),
+    general: general(),
+    notifications: notifications(),
+    sources: sources && typeof sources === 'object' && !Array.isArray(sources)
+      ? { sessions: 'available', preferences: 'available', notifications: 'available', ...sources }
+      : sources === undefined ? { sessions: 'available', preferences: 'available', notifications: 'available' } : sources,
+    ...rest,
+  };
+}
+
+const ERROR_CODES = { 400: 'BAD_REQUEST', 401: 'UNAUTHORIZED', 403: 'FORBIDDEN', 404: 'NOT_FOUND', 409: 'CONFLICT', 429: 'TOO_MANY_REQUESTS', 500: 'INTERNAL_ERROR', 502: 'BAD_GATEWAY', 503: 'SERVICE_UNAVAILABLE', 504: 'GATEWAY_TIMEOUT' };
+
+/** ErrorResponse (BFF_Settings) : enveloppe d'erreur commune aux BFFs, { error: { code, message, details } }. */
+function error(message, status = 500) {
+  return { error: { code: ERROR_CODES[status] ?? 'INTERNAL_ERROR', message, details: [] } };
 }
 
 /**
@@ -40,9 +68,9 @@ const SETTINGS_OPERATIONS = {
   'GET /check_apis': { reply: { body: { status: 'OK', core_api: 'Connected' } } },
   'GET /settings/bootstrap': { reply: { body: bootstrap() } },
   'PATCH /settings/profile': { send: { first_name: 'Anne' }, reply: { body: profile({ first_name: 'Anne' }) } },
-  'PATCH /settings/notifications': { send: { emailDigest: false }, reply: { body: { emailDigest: false } } },
-  'PATCH /settings/appearance': { send: { theme: 'dark' }, reply: { body: { theme: 'dark' } } },
-  'PATCH /settings/general': { send: { language: 'fr' }, reply: { body: { language: 'fr' } } },
+  'PATCH /settings/notifications': { send: { email: false }, reply: { body: notifications({ email: false }) } },
+  'PATCH /settings/appearance': { send: { theme: 'dark' }, reply: { body: appearance({ theme: 'dark' }) } },
+  'PATCH /settings/general': { send: { language: 'fr' }, reply: { body: general() } },
 };
 
-module.exports = { ACCESS_TOKEN, profile, session, bootstrap, error, SETTINGS_OPERATIONS };
+module.exports = { ACCESS_TOKEN, profile, session, appearance, general, notifications, bootstrap, error, SETTINGS_OPERATIONS };

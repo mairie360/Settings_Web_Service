@@ -108,12 +108,13 @@ describe('fixtures conform to the published contract', () => {
   test('bootstrap, profile and error fixtures', () => {
     assert.deepEqual(contract.validate(contract.schema('SettingsBootstrap'), fixtures.bootstrap({ sessions: [fixtures.session('s-2', { revoked_at: '2026-09-16T08:00:00Z' })], sources: { sessions: 'unavailable' } })), []);
     assert.deepEqual(contract.validate(contract.schema('SettingsProfilePatch'), fixtures.profile({ phone: null })), []);
-    // Error n'est rattaché à aucune opération par orval, mais le modèle est publié : c'est le corps des erreurs du BFF.
-    assert.deepEqual(contract.validate(contract.schema('Error'), fixtures.error('Refus')), []);
+    // ErrorResponse n'est rattaché à aucune opération par orval, mais le modèle est publié : c'est le corps des erreurs du BFF.
+    assert.deepEqual(contract.validate(contract.schema('ErrorResponse'), fixtures.error('Refus')), []);
+    assert.deepEqual(contract.validate(contract.schema('ErrorResponse'), fixtures.error('Refus', 404)), []);
   });
 
   test('the validator reports contract violations', () => {
-    assert.deepEqual(contract.validate(contract.schema('SettingsBootstrap'), { profile: { first_name: 42, email: 'anne@mairie.test' }, sessions: {}, sources: { sessions: 'maybe' } }), [
+    assert.deepEqual(contract.validate(contract.schema('SettingsBootstrap'), { profile: { first_name: 42, email: 'anne@mairie.test' }, sessions: {}, appearance: null, general: null, notifications: null, sources: { sessions: 'maybe', preferences: 'available', notifications: 'available' } }), [
       '$.profile.last_name: propriété requise manquante',
       '$.profile.first_name: type string attendu, reçu number',
       '$.sessions: type array attendu, reçu object',

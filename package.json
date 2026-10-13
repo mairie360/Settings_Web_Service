@@ -16,13 +16,13 @@
     "test": "npm run test:node && npm run test:components"
   },
   "dependencies": {
-    "@mairie360/bff-settings-openapi": "0.0.0-dev.eb4e17f930d957dbf5df6c58dc34b69916198d62",
+    "@mairie360/bff-settings-openapi": "0.0.0-dev.6d726190fa0a1d5d4db5a7e0c500b46bd832ca41",
     "@mairie360/lib-components": "0.8.0",
     "axios": "1.20.0",
+    "lucide-react": "1.0.0",
     "next": "16.3.8",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "lucide-react": "1.0.0"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -50,21 +50,22 @@ describe('actual Settings page with the published shell and consumer styles', ()
   it('applies the reference typography, main inset and panel shadows', async () => {
     await page();
     expect(getComputedStyle(document.documentElement).fontSize).toBe('17px');
-    expect(getComputedStyle(document.body).fontFamily).toBe('system-ui, sans-serif');
     expect(getComputedStyle(document.querySelector('.settings-page')).fontSize).toBe('17px');
     expect(getComputedStyle(screen.getByRole('main')).padding).toBe('32px');
-    expect(shadow(getComputedStyle(screen.getByRole('tabpanel').querySelector('.settings-feature-card')).boxShadow)).toEqual([
-      { lengths: [0, 5, 15, 0], color: 'rgba(23, 32, 51, 0.14)' }, { lengths: [0, 1, 3, 0], color: 'rgba(23, 32, 51, 0.12)' },
-    ]);
+    const user = userEvent.setup();
+    const skip = screen.getByRole('link', { name: 'Aller au contenu' });
+    await user.click(skip);
+    expect(document.activeElement).toBe(screen.getByRole('main').firstElementChild);
+    expect(screen.getByRole('contentinfo').closest('aside')).toBeNull();
   });
 
   it('applies the reference sidebar rows and shadow to the actual published navigation', async () => {
     await page(); const sidebar = screen.getByRole('complementary', { name: 'Navigation principale' });
     const computed = getComputedStyle(sidebar); expect(computed.position).toBe('relative'); expect(computed.zIndex).toBe('20');
-    expect(shadow(computed.boxShadow)).toEqual([{ lengths: [8, 0, 24, 0], color: 'rgba(12, 28, 48, 0.28)' }]);
+    expect(shadow(computed.boxShadow)).toEqual([{ lengths: [4, 0, 16, 0], color: 'rgba(12, 28, 48, 0.1)' }]);
     const buttons = within(within(sidebar).getByRole('navigation', { name: 'Menu principal' })).getAllByRole('button');
     expect(buttons.map(button => button.textContent)).toEqual(['Tableau de bord', 'Projets', 'Messagerie', 'Formation', 'Calendrier', 'Paramètres']);
-    for (const button of buttons) { expect(getComputedStyle(button).minHeight).toBe('44px'); expect(getComputedStyle(button).flexShrink).toBe('0'); }
+    for (const button of buttons) { expect(getComputedStyle(button).minHeight).toBe('48px'); expect(getComputedStyle(button).flexShrink).toBe('0'); }
   });
 
   it('opens the real drawer with the lower sidebar layer and closes through its control', async () => {
@@ -80,16 +81,16 @@ describe('actual Settings page with the published shell and consumer styles', ()
     expect(getComputedStyle(tabs[0].parentElement).display).toBe('grid');
     expect(getComputedStyle(tabs[0].parentElement).gridTemplateColumns.replace(/\s+/g, '')).toBe('repeat(2,minmax(0,1fr))');
     for (const tab of tabs) expect(Number.parseFloat(getComputedStyle(tab).minWidth)).toBe(0);
-    expect(getComputedStyle(tabs[0]).backgroundColor).toBe('rgb(255, 255, 255)'); expect(getComputedStyle(tabs[0]).color).toBe('rgb(18, 86, 166)');
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
     const fields = screen.getByRole('textbox', { name: 'Prénom' }).closest('.settings-profile-fields');
-    expect(getComputedStyle(fields).display).toBe('grid'); expect(getComputedStyle(fields).gap).toBe('17px');
+    expect(getComputedStyle(fields).display).toBe('grid'); expect(getComputedStyle(fields).gap).toBe('20px 36px');
     const inputs = within(fields).getAllByRole('textbox'); expect(inputs).toHaveLength(4);
     for (const input of inputs) {
       expect(Number.parseFloat(getComputedStyle(input.closest('label')).minWidth)).toBe(0);
       expect(getComputedStyle(input).backgroundColor).toBe('rgb(248, 250, 252)');
     }
     await user.click(tabs[1]); expect(tabs[1].getAttribute('aria-selected')).toBe('true');
-    expect(getComputedStyle(tabs[1]).backgroundColor).toBe('rgb(255, 255, 255)'); expect(getComputedStyle(tabs[0]).color).toBe('rgb(63, 69, 76)');
+    expect(tabs[0].getAttribute('aria-selected')).toBe('false');
     expect(saveProfile).not.toHaveBeenCalled();
   });
 

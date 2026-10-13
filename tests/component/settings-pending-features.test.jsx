@@ -9,11 +9,13 @@ it('preserves preference and professional drafts across tabs without calling a p
   fireEvent.click(screen.getByRole('button', { name: 'Enregistrer les préférences' }));
   expect((await screen.findByRole('alert')).textContent).toContain('aucune modification du compte');
   rerender(<SettingsPendingFeatures tab="profile" isAdmin={false} />);
+  fireEvent.click(screen.getByText('Informations professionnelles', { exact: true }).closest('summary'));
   fireEvent.change(screen.getByLabelText('Service'), { target: { value: 'Service saisi' } });
   rerender(<SettingsPendingFeatures tab="appearance" isAdmin={false} />);
   fireEvent.click(screen.getByLabelText('Sombre')); expect(screen.getByLabelText('Aperçu de l’apparence').style.background).toBe('rgb(23, 32, 51)');
   rerender(<SettingsPendingFeatures tab="notifications" isAdmin={false} />); expect(screen.getByLabelText('Messages').checked).toBe(false);
-  rerender(<SettingsPendingFeatures tab="profile" isAdmin={false} />); expect(screen.getByLabelText('Service').value).toBe('Service saisi');
+  rerender(<SettingsPendingFeatures tab="profile" isAdmin={false} />);
+  fireEvent.click(screen.getByText('Informations professionnelles', { exact: true }).closest('summary')); expect(screen.getByLabelText('Service').value).toBe('Service saisi');
 });
 it('submits only changed preferences to a provided future bridge and prevents a second write', async () => {
   let resolve; const savePreferences = vi.fn().mockImplementation(patch => new Promise(ok => { resolve = () => ok({ messages:false,projects:true,calendar:true,theme:'system',fontFamily:'system',fontSize:17,density:'normal',homePage:'dashboard',autoOpenNotifications:false }); }));
@@ -25,6 +27,7 @@ it('submits only changed preferences to a provided future bridge and prevents a 
 it('keeps a failed professional draft and rejects inconsistent saved values', async () => {
   const saveExtendedProfile = vi.fn().mockResolvedValue({ service: 'Incomplete' });
   render(<SettingsPendingFeatures tab="profile" isAdmin={false} port={{ saveExtendedProfile }} />);
+  fireEvent.click(screen.getByText('Informations professionnelles', { exact: true }).closest('summary'));
   fireEvent.change(screen.getByLabelText('Poste'), { target: { value: 'Poste saisi' } });
   fireEvent.click(screen.getByRole('button', { name: 'Enregistrer les informations professionnelles' }));
   await screen.findByText('Le profil complémentaire n’a pas été confirmé.'); expect(screen.getByLabelText('Poste').value).toBe('Poste saisi'); expect(saveExtendedProfile).toHaveBeenCalledExactlyOnceWith({ position: 'Poste saisi' });

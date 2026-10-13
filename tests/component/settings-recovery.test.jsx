@@ -69,7 +69,7 @@ it("preserves all four dirty fields, including pending edits, and blocks competi
   expect(loadSettings).toHaveBeenCalledTimes(2);
   const form = screen.getByRole("textbox", { name: "Prénom" }).closest("form");
   expect(form.getAttribute("aria-busy")).toBe("true");
-  expect(screen.getByRole("button", { name: "Enregistrer" }).disabled).toBe(true);
+  expect(screen.getByRole("button", { name: "Enregistrer le profil" }).disabled).toBe(true);
   fireEvent.submit(form);
   expect(saveProfile).not.toHaveBeenCalled();
   change("Prénom", "Latest draft");
@@ -80,7 +80,7 @@ it("preserves all four dirty fields, including pending edits, and blocks competi
   await user.click(screen.getByRole("tab", { name: "Profil" }));
   const values = ["Latest draft", "Draft surname", "draft@example.invalid", "+33123456789"];
   labels.forEach((label, i) => expect(screen.getByRole("textbox", { name: label }).value).toBe(values[i]));
-  await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+  await user.click(screen.getByRole("button", { name: "Enregistrer le profil" }));
   expect(saveProfile).toHaveBeenCalledExactlyOnceWith({ ...Object.fromEntries(fields.map((field, i) => [field, values[i]])), current_password: "secret" });
 });
 
@@ -106,7 +106,7 @@ it("keeps an unusable save out of the read baseline and recovers only through ex
   act(() => { fireEvent.click(refresh); fireEvent.click(refresh); fireEvent.submit(form); });
   expect(loadSettings).toHaveBeenCalledTimes(2);
   expect(saveProfile).toHaveBeenCalledTimes(1);
-  expect(screen.getByRole("button", { name: "Enregistrer" }).disabled).toBe(true);
+  expect(screen.getByRole("button", { name: "Enregistrer le profil" }).disabled).toBe(true);
   await user.click(screen.getByRole("tab", { name: "Sécurité" }));
   await act(async () => pendingRead.resolve(dto({ first_name: "Read", last_name: "Read surname", email: "read@example.invalid", phone: "+33987654321" })));
   await user.click(screen.getByRole("tab", { name: "Profil" }));
@@ -117,7 +117,7 @@ it("keeps an unusable save out of the read baseline and recovers only through ex
 
   const official = { ...latest, first_name: "Confirmed", last_name: "Confirmed surname" };
   vi.mocked(saveProfile).mockResolvedValueOnce(official);
-  await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+  await user.click(screen.getByRole("button", { name: "Enregistrer le profil" }));
   await screen.findByText("Votre profil a été enregistré.");
   expect(vi.mocked(saveProfile).mock.calls.map(([patch]) => patch)).toEqual([sent, { ...latest, current_password: "secret" }]);
   expect(screen.queryByRole("alert")).toBeNull();
@@ -140,14 +140,14 @@ it("updates clean fields from the response but retains dirty fields against the 
   await userEvent.setup().click(screen.getByRole("button", { name: "Actualiser les paramètres" }));
   await waitFor(() => expect(screen.getByRole("textbox", { name: "Nom" }).value).toBe("Server"));
   expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("Draft");
-  await userEvent.setup().click(screen.getByRole("button", { name: "Enregistrer" }));
+  await userEvent.setup().click(screen.getByRole("button", { name: "Enregistrer le profil" }));
   expect(saveProfile).toHaveBeenCalledExactlyOnceWith({ first_name: "Draft" });
 });
 
 it("retains confirmed fields and drafts after read refusal and does not clear save errors on recovery", async () => {
   await open(); change("Prénom", "Draft");
   vi.mocked(saveProfile).mockRejectedValueOnce(new Error("Sauvegarde refusée"));
-  await userEvent.setup().click(screen.getByRole("button", { name: "Enregistrer" }));
+  await userEvent.setup().click(screen.getByRole("button", { name: "Enregistrer le profil" }));
   await screen.findByText("Sauvegarde refusée");
   vi.mocked(loadSettings).mockRejectedValueOnce(new Error("Lecture refusée"));
   await userEvent.setup().click(screen.getByRole("button", { name: "Actualiser les paramètres" }));

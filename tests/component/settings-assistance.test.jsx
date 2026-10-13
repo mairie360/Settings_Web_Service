@@ -98,7 +98,7 @@ describe("local Settings assistance", () => {
     expect(file.name).toBe(filename); expect(file.type).toBe("text/plain;charset=utf-8");
     expect(file.content).toContain("Une question <b>en texte</b>");
     expect(file.content).not.toMatch(/Private|private-session|private@example|192\.0\.2/);
-    expect(screen.getByRole("status").textContent).toContain("Aucun message n’a été envoyé");
+    expect(within(screen.getByRole("tabpanel")).getByRole("status").textContent).toContain("Aucun message n’a été envoyé");
     expect(screen.queryByRole("dialog")).toBeNull();
     const trigger = screen.getByRole("button", { name: action });
     expect(document.activeElement).toBe(trigger);
@@ -126,9 +126,9 @@ describe("local Settings assistance", () => {
     expect(screen.getByRole("textbox", { name: "Votre message" }).value).toBe("My draft");
     expect(screen.getByRole("dialog", { name: "Signalement" }).contains(screen.getByRole("alert"))).toBe(true);
     expect(screen.getByRole("alert").textContent).not.toContain("private error");
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(within(screen.getByRole("tabpanel")).getByRole("status").textContent).toBe("");
     await user.click(screen.getByRole("button", { name: "Télécharger la demande" }));
-    expect(screen.queryByRole("alert")).toBeNull(); expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull(); expect(within(screen.getByRole("tabpanel")).getByRole("status")).toBeTruthy();
   });
 
   it("exports only the allowlisted diagnostic fields, never the draft or profile", async () => {
@@ -145,7 +145,7 @@ describe("local Settings assistance", () => {
     const user = await openSystem();
     await user.click(screen.getByRole("button", { name: "Télécharger le diagnostic local" }));
     expect(screen.getByRole("alert").textContent).toMatch(/diagnostic local n’a pas pu/);
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(within(screen.getByRole("tabpanel")).getByRole("status").textContent).toBe("");
   });
 
   it("supports keyboard entry and has no serious accessibility violations", async () => {

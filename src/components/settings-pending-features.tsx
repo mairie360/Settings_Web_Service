@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { BriefcaseBusiness } from "lucide-react";
+import { Avatar } from '@mairie360/lib-components';
 type SettingsTabId = 'profile' | 'security' | 'notifications' | 'appearance' | 'general' | 'system';
 import { changedFields, pendingFeatureMessage, pendingSettingsPort, validatePassword, validatePhoto } from '@/lib/settings-features';
 import type { ExtendedProfile, InstanceUpdates, SettingsFeaturePort, SettingsPreferences } from '@/lib/settings-features';
@@ -13,8 +15,9 @@ const emptyProfile: ExtendedProfile = { service: '', position: '', biography: ''
 const fieldClass = 'mt-1 w-full rounded border border-[#cbd5e1] bg-white px-3 py-2 text-[#172033]';
 const buttonClass = 'rounded border border-[#cbd5e1] bg-white px-4 py-2 text-[#172033] disabled:opacity-50';
 
-export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSettingsPort, initial, extendedProfile, profileContent, securityContent, systemContent }: {
+export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSettingsPort, initial, extendedProfile, profileContent, securityContent, systemContent, profileInitials = '?' }: {
   tab: SettingsTabId; isAdmin: boolean; port?: SettingsFeaturePort;
+  profileInitials?: string;
   profileContent?: ReactNode; securityContent?: ReactNode; systemContent?: ReactNode;
   initial?: SettingsPreferences; extendedProfile?: ExtendedProfile;
 }) {
@@ -61,7 +64,10 @@ export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSe
       if (current()) setFeedback(current => ({ ...current, [name]: { message: reason instanceof Error ? reason.message : 'La modification n’a pas été confirmée. Votre saisie est conservée.', failed: true } }));
     } finally { writing.current = false; if (alive.current) setBusy(''); }
   }
-  function notice(name: string) { const value = feedback[name]; return value?.message ? <p role={value.failed ? 'alert' : 'status'} className="mt-3 text-sm">{value.message}</p> : null; }
+  function notice(name: string) {
+    const value = feedback[name];
+    return <><p role="status" aria-live="polite" aria-atomic="true" data-feedback={name} className={value?.message && !value.failed ? 'mt-3 text-sm' : 'sr-only'}>{value && !value.failed ? value.message : ''}</p>{value?.failed && value.message ? <p role="alert" className="mt-3 text-sm">{value.message}</p> : null}</>;
+  }
   function update<K extends keyof SettingsPreferences>(key: K, value: SettingsPreferences[K]) { if (!writing.current) setPreferences(current => ({ ...current, [key]: value })); }
   function savePreferences() {
     const patch = changedFields(confirmedPreferences, preferences);
@@ -73,32 +79,35 @@ export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSe
   }
 
   return <div className="settings-feature-panels mt-5 space-y-5">
-    {tab === 'profile' ? <section className="settings-feature-card"><h2>Informations personnelles</h2>
-      <section><h3>Photo du profil</h3>
-        {photoPreview ? <img src={photoPreview} alt="Aperçu de la photo sélectionnée" className="my-3 size-20 rounded-full object-cover" /> : null}
-        <label className="block">Changer la photo<input type="file" accept="image/jpeg,image/png" disabled={Boolean(busy)} className={fieldClass} onChange={event => {
+    {tab === 'profile' ? <section className="settings-feature-card settings-account-card"><h2>Informations personnelles</h2><p className="settings-section-description">Ces informations sont utilisées pour votre compte Mairie360.</p>
+      <section className="settings-photo-row" aria-labelledby="settings-photo-title">
+        <Avatar className="settings-photo-avatar" src={photoPreview || undefined} alt="Aperçu de la photo sélectionnée" fallback={profileInitials} />
+        <div className="settings-photo-controls"><h3 id="settings-photo-title">Photo du profil</h3>
+        <div className="settings-file-selection"><label className="settings-file-picker">Changer la photo<input type="file" accept="image/jpeg,image/png" disabled={Boolean(busy)} className="sr-only" aria-describedby="settings-photo-help" onChange={event => {
           const file = event.target.files?.[0]; if (!file) return;
           const error = validatePhoto(file);
           if (error) { setFeedback(current => ({ ...current, photo: { message: error, failed: true } })); event.target.value = ''; return; }
           setPhoto(file); setFeedback(current => ({ ...current, photo: { message: 'Aperçu local uniquement. La photo du compte reste inchangée.', failed: false } }));
-        }} /></label><p className="text-sm">JPG ou PNG, 2 Mo maximum.</p>
-        <button type="button" className={buttonClass} disabled={!photo || Boolean(busy)} onClick={() => void perform('photo', port.savePhoto && photo ? async () => {
+        }} /></label><span className="settings-file-name">{photo?.name ?? 'Aucun fichier choisi'}</span></div><p id="settings-photo-help" className="text-sm">JPG ou PNG, 2 Mo maximum.</p>
+        {photo ? <button type="button" className={buttonClass} disabled={!photo || Boolean(busy)} onClick={() => void perform('photo', port.savePhoto && photo ? async () => {
           const url = await port.savePhoto!(photo); if (!url || !/^https?:\/\//.test(url)) throw new Error('La photo enregistrée n’a pas été confirmée.');
           if (alive.current) { setConfirmedPhoto(url); setPhoto(null); }
-        } : undefined, 'Photo enregistrée.')}>Enregistrer la photo</button>
-        {photo ? <button type="button" className={`${buttonClass} ml-2`} disabled={Boolean(busy)} onClick={() => setPhoto(null)}>Retirer l’aperçu</button> : null}{notice('photo')}
+        } : undefined, 'Photo enregistrée.')}>Enregistrer la photo</button> : null}
+        {photo ? <button type="button" className={`${buttonClass} ml-2`} disabled={Boolean(busy)} onClick={() => setPhoto(null)}>Retirer l’aperçu</button> : null}{notice('photo')}</div>
       </section>
       {profileContent}
-      <form className="mt-5 border-t pt-5" onSubmit={event => { event.preventDefault(); void perform('extendedProfile', port.saveExtendedProfile ? async () => {
+    </section> : null}
+    {tab === 'profile' ? <section className="settings-feature-card settings-professional-card"><details><summary><h2 className="settings-professional-heading"><BriefcaseBusiness aria-hidden="true" size={24} />Informations professionnelles<span className="settings-draft-badge">Brouillon local</span></h2><span className="settings-section-description">Ces informations ne sont pas encore enregistrables dans votre compte.</span></summary>
+      <form className="mt-5" onSubmit={event => { event.preventDefault(); void perform('extendedProfile', port.saveExtendedProfile ? async () => {
         const next = await port.saveExtendedProfile!(changedFields(confirmedProfile, profile));
         if (!next || ['service', 'position', 'biography'].some(key => typeof next[key as keyof ExtendedProfile] !== 'string')) throw new Error('Le profil complémentaire n’a pas été confirmé.');
         if (alive.current) { setProfile(next); setConfirmedProfile(next); }
       } : undefined, 'Informations complémentaires enregistrées.'); }}>
-        <h3>Informations professionnelles</h3><p className="text-sm">Brouillon conservé pendant cette visite. Ces informations ne sont pas encore enregistrables dans votre compte.</p>
+        <p className="text-sm">Brouillon conservé uniquement pendant cette visite.</p>
         <div className="settings-profile-fields">{[['service','Service'],['position','Poste']].map(([key,label]) => <label key={key}>{label}<input className={fieldClass} value={profile[key as keyof ExtendedProfile]} disabled={Boolean(busy)} maxLength={200} onChange={event => setProfile(current => ({ ...current, [key]: event.target.value }))} /></label>)}</div>
         <label className="mt-4 block">Biographie<textarea className={fieldClass} rows={4} maxLength={5000} disabled={Boolean(busy)} value={profile.biography} onChange={event => setProfile(current => ({ ...current, biography: event.target.value }))} /></label>
         <button type="submit" className={buttonClass} disabled={Boolean(busy) || !Object.keys(changedFields(confirmedProfile,profile)).length}>Enregistrer les informations professionnelles</button>{notice('extendedProfile')}
-      </form>
+      </form></details>
     </section> : null}
     {tab === 'security' ? <>
       <form className="settings-feature-card" onSubmit={event => {

@@ -43,6 +43,27 @@ beforeEach(() => {
 });
 
 describe("Settings page", () => {
+  it("keeps the empty live region mounted until a confirmed save, then clears it on editing", async () => {
+    let confirm;
+    vi.mocked(saveProfile).mockImplementation(() => new Promise(resolve => { confirm = resolve; }));
+    const user = await openSettings();
+    const announcement = screen.getAllByRole("status")[0];
+    expect(announcement.textContent).toBe("");
+    expect(announcement.getAttribute("aria-live")).toBe("polite");
+    expect(announcement.getAttribute("aria-atomic")).toBe("true");
+    await user.clear(screen.getByRole("textbox", { name: "Prénom" }));
+    await user.type(screen.getByRole("textbox", { name: "Prénom" }), "Updated");
+    await user.click(screen.getByRole("button", { name: "Enregistrer le profil" }));
+    expect(screen.getAllByRole("status")[0]).toBe(announcement);
+    expect(announcement.textContent).toBe("");
+    await act(async () => confirm({ ...bootstrap().profile, first_name: "Updated" }));
+    expect(screen.getAllByRole("status")[0]).toBe(announcement);
+    expect(announcement.textContent).toBe("Votre profil a été enregistré.");
+    await user.type(screen.getByRole("textbox", { name: "Prénom" }), " draft");
+    expect(screen.getAllByRole("status")[0]).toBe(announcement);
+    expect(announcement.textContent).toBe("");
+  });
+
   it("renders six recognizable tabs with hidden icons and a responsive four-field grid", async () => {
     await openSettings();
     const navigation = screen.getByRole("tablist", { name: "Paramètres" });
@@ -80,21 +101,22 @@ describe("Settings page", () => {
     expect(loadSettings).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("Test");
     expect(screen.getByRole("textbox", { name: "E-mail" }).value).toBe("test@example.invalid");
-    expect(screen.getByRole("button", { name: "Enregistrer" }).disabled).toBe(true);
+    expect(screen.getByRole("button", { name: "Enregistrer le profil" }).disabled).toBe(true);
   });
 
   it("sends only changed profile fields and confirms the persisted result", async () => {
     const user = await openSettings();
     await user.clear(screen.getByRole("textbox", { name: "Prénom" }));
     await user.type(screen.getByRole("textbox", { name: "Prénom" }), "Updated");
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer le profil" }));
 
     expect(saveProfile).toHaveBeenCalledExactlyOnceWith({ first_name: "Updated" });
-    expect(await screen.findByRole("status", { name: "" })).toHaveProperty(
+    await screen.findByText("Votre profil a été enregistré.");
+    expect(screen.getAllByRole("status")[0]).toHaveProperty(
       "textContent",
       "Votre profil a été enregistré.",
     );
-    expect(screen.getByRole("button", { name: "Enregistrer" }).disabled).toBe(true);
+    expect(screen.getByRole("button", { name: "Enregistrer le profil" }).disabled).toBe(true);
   });
 
   it("retains an unsaved edit and shows an error when the BFF rejects it", async () => {
@@ -102,7 +124,7 @@ describe("Settings page", () => {
     const user = await openSettings();
     await user.clear(screen.getByRole("textbox", { name: "Prénom" }));
     await user.type(screen.getByRole("textbox", { name: "Prénom" }), "Updated");
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer le profil" }));
 
     expect((await screen.findByRole("alert")).textContent).toBe("Service indisponible");
     expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("Updated");
@@ -129,7 +151,7 @@ describe("Settings page", () => {
     // MAIR-511: a changed e-mail asks for the current password, sent once as current_password.
     fireEvent.change(screen.getByLabelText("Mot de passe actuel"), { target: { value: "secret" } });
     const payload = { ...draft, current_password: "secret" };
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer le profil" }));
     expect((await screen.findByRole("alert")).textContent).toBe("L’enregistrement du profil n’a pas été confirmé. Réessayez.");
     expect(saveProfile).toHaveBeenCalledExactlyOnceWith(payload);
     expect(screen.getByLabelText("Mot de passe actuel").value).toBe("secret");
@@ -142,12 +164,12 @@ describe("Settings page", () => {
     await user.click(screen.getByRole("tab", { name: "Profil", exact: true }));
     for (const [label, field] of fields) expect(screen.getByRole("textbox", { name: label }).value).toBe(draft[field]);
     vi.mocked(saveProfile).mockResolvedValueOnce({ ...draft, first_name: "Official", phone: null });
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer le profil" }));
     expect(saveProfile.mock.calls).toEqual([[payload], [payload]]);
     expect(screen.queryByLabelText("Mot de passe actuel")).toBeNull();
     expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("Official");
     expect(screen.getByRole("textbox", { name: "Téléphone" }).value).toBe("");
-    expect(screen.getByRole("button", { name: "Enregistrer" }).disabled).toBe(true);
+    expect(screen.getByRole("button", { name: "Enregistrer le profil" }).disabled).toBe(true);
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByText("Votre profil a été enregistré.")).toBeTruthy();
   });
@@ -176,17 +198,17 @@ describe("Settings page", () => {
     await act(async () => { rejectSave(new Error("Service indisponible")); });
     expect(screen.getByRole("alert").textContent).toBe("Service indisponible");
     expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("Updated");
-    expect(screen.getByRole("button", { name: "Enregistrer" }).disabled).toBe(false);
+    expect(screen.getByRole("button", { name: "Enregistrer le profil" }).disabled).toBe(false);
 
     let resolveSave;
     vi.mocked(saveProfile).mockImplementationOnce(() => new Promise((resolve) => { resolveSave = resolve; }));
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer le profil" }));
     expect(saveProfile).toHaveBeenCalledTimes(2);
     expect(saveProfile).toHaveBeenLastCalledWith({ first_name: "Updated" });
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByText("Votre profil a été enregistré.")).toBeNull();
     await act(async () => { resolveSave({ ...bootstrap().profile, first_name: "UPDATED", last_name: "USER" }); });
-    expect(screen.getByRole("status").textContent).toBe("Votre profil a été enregistré.");
+    expect(screen.getAllByRole("status")[0].textContent).toBe("Votre profil a été enregistré.");
     expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("UPDATED");
     expect(screen.getByRole("textbox", { name: "Nom" }).value).toBe("USER");
     for (const label of ["Prénom", "Nom", "E-mail", "Téléphone"]) {
@@ -195,7 +217,7 @@ describe("Settings page", () => {
     await user.type(screen.getByRole("textbox", { name: "Prénom" }), " again");
     expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("UPDATED again");
     expect(screen.queryByText("Votre profil a été enregistré.")).toBeNull();
-    expect(screen.getByRole("button", { name: "Enregistrer" }).disabled).toBe(false);
+    expect(screen.getByRole("button", { name: "Enregistrer le profil" }).disabled).toBe(false);
   });
 
   it.each([

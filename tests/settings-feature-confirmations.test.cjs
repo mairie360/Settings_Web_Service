@@ -40,10 +40,10 @@ test('professional drafts send changed fields and do not discard values on incon
   await change(view, 'input', 1, 'Accueil');
   await change(view, 'input', 2, 'Agent');
   await change(view, 'textarea', 0, 'Texte personnel');
-  await submit(view, 'Informations professionnelles');
+  await submit(view, 'Enregistrer les informations professionnelles');
   assert.match(view.text(), /profil complémentaire n’a pas été confirmé/);
   reply = { service: 'Accueil', position: 'Agent', biography: 'Texte personnel' };
-  await submit(view, 'Informations professionnelles');
+  await submit(view, 'Enregistrer les informations professionnelles');
   assert.deepEqual(calls, [reply, reply]);
   assert.match(view.text(), /Informations complémentaires enregistrées/);
 });

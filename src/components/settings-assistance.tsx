@@ -123,7 +123,7 @@ export default function SettingsAssistance() {
         <button type="button" className={buttonClass} onClick={downloadDiagnostic}>Télécharger le diagnostic local</button>
       </section>
       {!kind && error ? <p role="alert" className="text-red-700">{error}</p> : null}
-      {status ? <p role="status" className="text-green-800">{status}</p> : null}
+      <p role="status" aria-live="polite" aria-atomic="true" className={status ? "text-green-800" : "sr-only"}>{status}</p>
     </section>
   );
 }

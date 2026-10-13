@@ -64,6 +64,6 @@ it('keeps the confirmed profile and pending draft through an unusable refresh, t
   expect(screen.getByRole('textbox', { name: 'Téléphone' }).value).toBe('+33999999999');
   expect(loadSettings).toHaveBeenCalledTimes(3);
   expect(saveProfile).not.toHaveBeenCalled();
-  await user.click(screen.getByRole('button', { name: 'Enregistrer', exact: true }));
+  await user.click(screen.getByRole('button', { name: 'Enregistrer le profil', exact: true }));
   expect(saveProfile).toHaveBeenCalledExactlyOnceWith({ first_name: 'Dernière saisie', phone: '+33999999999' });
 });

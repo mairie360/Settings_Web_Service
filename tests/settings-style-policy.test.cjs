@@ -36,13 +36,13 @@ test('parsed media policies retain two/three/six tabs, desktop profile columns a
   // Parsed configuration does not evaluate media queries or native geometry.
 });
 
-test('parsed typography policy retains the system font token without global small-text/header overrides', () => {
+test('parsed typography policy retains the approved Geist font token without global small-text/header overrides', () => {
   const { parsed, rows } = policy(); let font;
   parsed.walkDecls(declaration => {
     assert.equal(['--text-xs', '--text-sm'].includes(declaration.prop), false);
     if (declaration.prop === '--font-sans' && declaration.parent.type === 'atrule' && declaration.parent.name === 'theme') font = declaration.value.split(',').map(name => name.trim());
   });
-  assert.deepEqual(font, ['system-ui', 'sans-serif']);
+  assert.deepEqual(font, ['var(--font-geist-sans)', 'system-ui', 'sans-serif']);
   for (const { rule, selectors } of rows) rule.walkDecls(declaration => {
     if (['height', 'min-height', 'max-height'].includes(declaration.prop)) assert.equal(selectors.some(selector => ['header', '.h-16'].includes(selector)), false);
   });

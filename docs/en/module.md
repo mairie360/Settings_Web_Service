@@ -79,3 +79,13 @@ persistence. 150 Node and41 component tests, types/contract/lint/build pass loca
 actual required CI, integration and exact current-local delivery remain separate.
 
 The [technical guide](technical.md) covers architecture, configuration, routes, session handling, persistence, tests and CI/CD. It describes sources of truth and contract synchronization with associated repositories.
+
+
+Accessibility (MAIR-482)
+
+Status regions remain mounted empty before announcements; saving is confirmed only after the server response. Visible loading text is retained and a persistent region announces reads.
+
+
+## Shared visual direction — MAIR-547
+
+Approved light option 1: shared tokens and font, accessible navigation, and preserved business layouts. See the [visual QA](../qa/design-qa.md) for evidence, checks, and RGAA limitations.

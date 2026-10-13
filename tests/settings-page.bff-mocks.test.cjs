@@ -262,7 +262,7 @@ test('the first pass renders the loading state, the next one the profile form fi
 
   assert.equal(view.passes, 1);
   assert.match(view.html, /<h1[^>]*>Paramètres<\/h1>/);
-  assert.match(view.html, /<p role="status">Chargement des paramètres…<\/p>/);
+  assert.match(view.html, /<p>Chargement des paramètres…<\/p>/);
   assert.doesNotMatch(view.html, /<form/);
 
   const html = await view.waitFor((current) => !current.includes('Chargement des paramètres'));
@@ -270,8 +270,8 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
   assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role'), [{ method: 'GET', path: '/settings/bootstrap' }]);
   assert.equal(view.find('AppShell').length, 1);
-  assert.match(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
-  assert.doesNotMatch(html, /<\/main>\s*<footer\b/);
+  assert.doesNotMatch(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
+  assert.match(html, /<\/main>\s*<footer\b/);
   assert.equal(view.props('AppShell').activeItem, 'settings');
   assert.deepEqual(view.props('AppShell').user, {
     first_name: 'Anne Marie',
@@ -283,13 +283,13 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.doesNotMatch(html, />Administration</);
   assert.match(html, /aria-label="Notifications"/);
   assert.match(html, /<nav role="tablist" aria-label="Paramètres"/);
-  assert.match(html, /<button id="settings-tab-profile" type="button" role="tab" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg aria-hidden="true"[^]*?Profil<\/button>/);
+  assert.match(html, /<button id="settings-tab-profile" type="button" role="tab" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg[^>]*aria-hidden="true"[^]*?Profil<\/button>/);
   assert.match(html, /<div role="tabpanel" id="settings-panel-profile" aria-labelledby="settings-tab-profile"[^>]*>/);
   assert.match(html, /<h2[^>]*>Informations personnelles<\/h2>/);
   assert.match(html, /<input[^>]*type="text"[^>]*required=""[^>]*value="Anne Marie"/);
   assert.match(html, /<input[^>]*type="email"[^>]*value="anne\.le-gall@mairie\.test"/);
   assert.match(html, /<input[^>]*type="tel"[^>]*value="\+33123456789"/);
-  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Enregistrer<\/button>/);
+  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Enregistrer le profil<\/button>/);
   assert.match(html, /Aucune modification à enregistrer\./);
   assert.doesNotMatch(html, /role="alert"/);
 });
@@ -319,7 +319,7 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
 
   await view.click('Sécurité');
 
-  assert.match(view.html, /<button id="settings-tab-security" type="button" role="tab" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg aria-hidden="true"[^]*?Sécurité<\/button>/);
+  assert.match(view.html, /<button id="settings-tab-security" type="button" role="tab" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg[^>]*aria-hidden="true"[^]*?Sécurité<\/button>/);
   assert.match(view.html, /<h2[^>]*>Sessions<\/h2>/);
   const createdAt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })
     .format(new Date('2026-09-15T08:00:00Z'));
@@ -528,13 +528,13 @@ test('editing a field and submitting the form saves the profile with PATCH /sett
   assert.deepEqual(upstream(), ['GET /settings/bootstrap'], 'typing does not call the BFF');
 
   await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
-  const html = await view.waitFor((current) => current.includes('role="status"'));
+  const html = await view.waitFor((current) => current.includes('Votre profil a été enregistré.'));
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
   assert.deepEqual(bffSettings.requests[1].body, { first_name: 'Anne' });
   assert.match(html, /<p role="status"[^>]*>Votre profil a été enregistré\.<\/p>/);
   assert.match(html, /<input[^>]*type="text"[^>]*value="LE GALL"/);
-  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Enregistrer<\/button>/, 'the button is disabled again');
+  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Enregistrer le profil<\/button>/, 'the button is disabled again');
   assert.match(html, /Aucune modification à enregistrer\./);
 });
 
@@ -550,7 +550,7 @@ test('a refused save keeps the form and shows the BFF message', async () => {
 
   assert.match(html, /<div role="alert"[^>]*><p>Numéro de téléphone invalide<\/p><\/div>/);
   assert.match(html, /value="Anne Marie"/);
-  assert.doesNotMatch(html, /role="status"/);
+  assert.match(html, /<p role="status"[^>]*><\/p>/, 'the empty success live region stays mounted after refusal');
   assert.deepEqual(bffSettings.requests[1].body, { phone: '12' });
 });
 
@@ -571,7 +571,7 @@ test('a bootstrap failure renders an alert instead of the form', async () => {
   const html = await view.waitFor((current) => current.includes('role="alert"'));
 
   assert.match(html, /<p role="alert"[^>]*>Core API indisponible<\/p>/);
-  assert.match(html, /<p role="status">Le profil est indisponible\.<\/p>/);
+  assert.match(html, /<p>Le profil est indisponible\.<\/p>/);
   assert.doesNotMatch(html, /<form/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
 });

@@ -15,7 +15,7 @@ html {
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: system-ui, sans-serif;
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
@@ -29,7 +29,7 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
 /* Prototype presentation; business fields and unavailable states stay contract-backed. */
@@ -51,7 +51,7 @@ body {
 .settings-page {
   min-width: 0;
   color: #172033;
-  font-family: system-ui, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   font-size: 17px;
   line-height: 1.5;
 }
@@ -131,3 +131,95 @@ body {
 .settings-feature-card :is(button, select, input, textarea) { max-width: 100%; }
 .settings-feature-card button { margin-top: 12px; }
 @media (max-width: 767px) { .settings-feature-card { padding: 20px; } }
+
+/* Selected direction: Profil en sections (MAIR-544/545). */
+.settings-shell {
+  --settings-background: var(--mairie-background);
+  --settings-surface: var(--mairie-surface);
+  --settings-text: var(--mairie-text);
+  --settings-muted: var(--mairie-muted);
+  --settings-accent: var(--mairie-accent);
+  --settings-field-border: var(--mairie-control-border);
+  --settings-soft-border: var(--mairie-border);
+  --settings-shadow: var(--mairie-shadow);
+}
+.settings-shell main { background: var(--settings-background); }
+.settings-page { color: var(--settings-text); font-size: 17px; }
+.settings-page > header h1 { font-size: 36px; font-weight: 750; letter-spacing: -0.02em; }
+.settings-page > header p { color: var(--settings-muted); font-size: 18px; }
+.settings-tabs { background: #e5eef7; margin-block: 28px 24px; gap: 6px; padding: 5px; }
+.settings-tab { height: 40px; font-size: 17px; color: #334155; }
+.settings-tab[aria-selected="true"] { color: var(--settings-accent); background: var(--settings-surface); box-shadow: inset 0 0 0 1px #a5bedb, 0 1px 3px rgb(23 32 51 / 8%); }
+.settings-tab svg { width: 20px; height: 20px; }
+.settings-feature-card, .settings-panel > :is(form, section) {
+  border-color: var(--settings-soft-border); border-radius: 16px;
+  background: var(--settings-surface); color: var(--settings-text); box-shadow: var(--settings-shadow); padding: 28px;
+}
+.settings-feature-card h2, .settings-panel h2 { font-size: 25px; font-weight: 700; line-height: 1.3; margin-bottom: 4px; letter-spacing: -0.01em; }
+.settings-section-description { color: var(--settings-muted); font-size: 16px; line-height: 1.5; }
+.settings-photo-row { display: flex; align-items: center; gap: 36px; margin-top: 22px; padding-bottom: 26px; border-bottom: 1px solid var(--settings-soft-border); }
+.settings-photo-avatar { width: 112px; height: 112px; border: 5px solid #d8e7f7; color: white; font-size: 36px; font-weight: 700; }
+.settings-photo-controls { min-width: 0; flex: 1; }
+.settings-photo-controls h3 { font-size: 18px; font-weight: 650; margin-bottom: 10px; }
+.settings-file-selection { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.settings-file-picker { position: relative; display: inline-flex; align-items: center; min-height: 42px; padding: 8px 16px; border: 1px solid var(--settings-field-border); border-radius: 8px; background: #f8fafc; color: var(--settings-accent); cursor: pointer; font-weight: 600; }
+.settings-file-picker:focus-within { outline: 3px solid var(--settings-accent); outline-offset: 3px; }
+.settings-file-name { min-width: 0; overflow-wrap: anywhere; color: var(--settings-muted); }
+.settings-photo-controls > p { margin-top: 8px; color: var(--settings-muted); }
+.settings-photo-controls button { min-height: 42px; }
+.settings-profile-fields { gap: 24px 36px; margin-top: 24px; }
+.settings-profile-fields label { font-size: 17px; font-weight: 650; }
+.settings-profile-fields input { height: 44px; border-color: var(--settings-field-border); border-radius: 8px; background: #f8fafc; color: var(--settings-text); font-size: 17px; }
+.settings-profile-fields input:focus-visible { outline: 3px solid var(--settings-accent); outline-offset: 3px; }
+.settings-primary-action { margin-top: 20px; min-height: 46px; padding: 11px 22px; border-radius: 8px; background: var(--settings-accent); font-weight: 650; }
+.settings-page :is(input, select, textarea) { max-width: 100%; }
+.settings-feature-card :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) { border-color: var(--settings-field-border); }
+.settings-professional-card summary { cursor: pointer; border-radius: 8px; }
+.settings-professional-heading { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.settings-draft-badge { font-size: 14px; line-height: 1.5; font-weight: 500; background: #d8f0f0; color: #11666a; padding: 4px 10px; border-radius: 999px; }
+.settings-professional-card summary > .settings-section-description { display: block; margin-top: 8px; }
+.settings-page .sr-only { margin: 0; }
+.settings-feature-card :is(button, input, textarea, select) { transition: background-color 120ms, border-color 120ms; }
+@media (max-width: 767px) {
+  .settings-page > header h1 { font-size: 30px; }
+  .settings-page > header p { font-size: 16px; }
+  .settings-feature-card, .settings-panel > :is(form, section) { padding: 20px; }
+  .settings-feature-card h2, .settings-panel h2 { font-size: 22px; }
+  .settings-photo-row { gap: 18px; flex-wrap: wrap; }
+  .settings-photo-avatar { width: 80px; height: 80px; font-size: 28px; }
+  .settings-photo-controls { flex-basis: 150px; }
+  .settings-profile-fields { gap: 22px; }
+  .settings-tab { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .settings-feature-card :is(button, input, textarea, select) { transition: none; }
+}
+
+/* Semantic frame compatibility with the published 0.8.0 shell. */
+.app-skip-link { position: fixed; top: 8px; left: 8px; z-index: 100; transform: translateY(-180%); padding: 12px 18px; border-radius: 8px; background: white; color: #1256a6; font-weight: 650; }
+.app-skip-link:focus { transform: none; outline: 3px solid #1256a6; outline-offset: 3px; }
+.app-main-content { min-width: 0; }
+.app-main-content:focus-visible { outline: 3px solid #1256a6; outline-offset: -3px; }
+.app-accessible-footer { position: fixed; left: 0; bottom: 0; z-index: 20; width: 260px; min-height: 76px; justify-content: center; border-color: #405154; background: #292929; color: #dff9ff; padding: 16px; box-shadow: none; }
+.app-accessible-footer > div { font-size: 12px; justify-content: center; }
+@media (max-width: 1023px) { .app-accessible-footer { position: static; width: 100%; min-height: 48px; padding: 12px; background: #fff; color: #475569; border-color: #dce6f1; } }
+
+.page-title-row { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px 20px; }
+.page-title-row > div { min-width: 0; }
+.page-title-row > div > h1 { font-size: 36px; line-height: 1.2; font-weight: 750; letter-spacing: -0.02em; }
+.page-title-row > div > p { margin-top: 8px; color: #475569; font-size: 18px; line-height: 1.5; }
+.page-current-date { min-height: 24px; max-width: 100%; margin-top: 8px; font-size: 14px; color: #475569; }
+@media (max-width: 767px) { .page-title-row > div > h1 { font-size: 30px; } .page-title-row > div > p { font-size: 16px; } .page-current-date { margin-top: 0; } }
+
+/* Match the approved profile rhythm without hiding any fields. */
+.settings-feature-panels { margin-top: 0; }
+.settings-photo-row { margin-top: 20px; padding-bottom: 22px; }
+.settings-photo-controls > p { font-size: 14px; }
+.settings-profile-fields { gap: 20px 36px; margin-top: 20px; }
+.settings-account-card > form { margin-top: 16px; }
+.settings-profile-fields { margin-top: 16px; }
+.settings-profile-fields label > span:last-child:not(:first-child) { font-size: 14px; line-height: 20px; }
+.settings-photo-row { margin-top: 16px; }
+.settings-page > .page-title-row > div > p { margin-top: 5px; }
+.settings-tabs { margin-block: 24px 20px; }
+@media (min-width: 768px) { .settings-shell main { padding: 24px 40px; } }

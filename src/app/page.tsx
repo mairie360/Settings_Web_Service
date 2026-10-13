@@ -1,6 +1,7 @@
 "use client";
 
-import { AppShell } from "@mairie360/lib-components";
+import CurrentDate from "@/components/current-date";
+import AccessibleShell from "@/components/accessible-shell";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
@@ -88,6 +89,7 @@ export default function Home() {
   };
   const [reading, setReading] = useState(true);
   const [status, setStatus] = useState("");
+  const [readAnnouncement, setReadAnnouncement] = useState("");
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
   const readRef = useRef<AbortController | null>(null);
@@ -98,6 +100,7 @@ export default function Home() {
     const controller = new AbortController();
     const baseline = confirmedProfileRef.current;
     readRef.current = controller;
+    setReadAnnouncement("Chargement des paramètres…");
 
     try {
       const result = await loadSettings(controller.signal);
@@ -120,6 +123,7 @@ export default function Home() {
       if (readRef.current === controller) {
         readRef.current = null;
         setReading(false);
+        setReadAnnouncement("");
       }
     }
   }, []);
@@ -247,11 +251,11 @@ export default function Home() {
                 ))}
                 </div>
                 <button
-                  className="rounded bg-[#155bb5] px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="settings-primary-action rounded bg-[#155bb5] px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
                   type="submit"
                   disabled={saving || reading || !hasChanges}
                 >
-                  {saving ? "Enregistrement…" : "Enregistrer"}
+                  {saving ? "Enregistrement…" : "Enregistrer le profil"}
                 </button>
                 {!hasChanges ? <p className="text-sm text-[#596274]">Aucune modification à enregistrer.</p> : null}
               </form>
@@ -280,7 +284,7 @@ export default function Home() {
   ) : null;
 
   return (
-    <AppShell
+    <AccessibleShell
       className="settings-shell"
       activeItem="settings"
       isAdmin={isAdmin}
@@ -294,9 +298,9 @@ export default function Home() {
       sidebarProps={{ brandLogoSrc: "/mairie360-logo.png" }}
     >
       <section className="settings-page">
-        <header>
+        <header className="page-title-row"><div>
           <h1 className="text-3xl font-bold">Paramètres</h1>
-          <p>Gérez votre profil, votre sécurité et vos préférences.</p>
+          <p>Gérez votre profil, votre sécurité et vos préférences.</p></div><CurrentDate />
         </header>
 
         {error ? (
@@ -310,7 +314,8 @@ export default function Home() {
           <p>{logoutError}</p>
           <button type="button" className="rounded border px-4 py-2 text-sm font-medium" onClick={() => navigateToLogin({ explicit: true })}>Retour à la connexion</button>
         </section> : null}
-        {status ? <p role="status" className="rounded border border-green-200 bg-white p-4 text-green-800">{status}</p> : null}
+        <p role="status" aria-live="polite" aria-atomic="true" className={status ? "rounded border border-green-200 bg-white p-4 text-green-800" : "sr-only"}>{status}</p>
+        <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{readAnnouncement}</p>
         {!data || data.sources.sessions === "unavailable" || readError ? (
           <button
             type="button"
@@ -328,7 +333,7 @@ export default function Home() {
         ) : null}
 
         {!data || !profile ? (
-          <p role="status">{!reading && readError ? "Le profil est indisponible." : "Chargement des paramètres…"}</p>
+          <p>{!reading && readError ? "Le profil est indisponible." : "Chargement des paramètres…"}</p>
         ) : (
           <>
             <nav role="tablist" aria-label="Paramètres" className="settings-tabs">
@@ -352,11 +357,11 @@ export default function Home() {
             </nav>
 
             <div role="tabpanel" id={`settings-panel-${activeTab}`} aria-labelledby={`settings-tab-${activeTab}`} className="settings-panel">
-            <SettingsPendingFeatures tab={activeTab} isAdmin={isAdmin} profileContent={profileContent} securityContent={securityContent} systemContent={<SettingsAssistance />} />
+            <SettingsPendingFeatures tab={activeTab} isAdmin={isAdmin} profileInitials={`${data.profile.first_name.trim().charAt(0)}${data.profile.last_name.trim().charAt(0)}`.toLocaleUpperCase('fr') || '?'} profileContent={profileContent} securityContent={securityContent} systemContent={<SettingsAssistance />} />
             </div>
           </>
         )}
       </section>
-    </AppShell>
+    </AccessibleShell>
   );
 }

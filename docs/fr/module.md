@@ -81,3 +81,13 @@ déployée. 150tests Node et41composants, types/contrat/lint/build passent local
 vraie CI requise, intégration et livraison locale exacte restent distinctes.
 
 Le [guide technique](technical.md) détaille architecture, configuration, routes, session, persistance, tests et CI/CD. Il décrit les sources de vérité et les étapes de synchronisation des contrats avec les dépôts associés.
+
+
+Accessibilité (MAIR-482)
+
+Les régions de statut restent montées vides avant les annonces ; la confirmation de sauvegarde ne suit que la réponse serveur. Le chargement visible conserve son texte et une région persistante annonce la lecture.
+
+
+## Direction visuelle commune — MAIR-547
+
+DA claire option 1 : tokens et police communs, navigation accessible et contenu métier conservé. Voir la [recette visuelle](../qa/design-qa.md) pour les preuves, vérifications et limites RGAA.

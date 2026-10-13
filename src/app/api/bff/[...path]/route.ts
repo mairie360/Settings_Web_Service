@@ -1,1 +1,0 @@
-export { proxyBffRequest as GET, proxyBffRequest as HEAD, proxyBffRequest as POST, proxyBffRequest as PUT, proxyBffRequest as PATCH, proxyBffRequest as DELETE, proxyBffRequest as OPTIONS } from '../../../../lib/bff-proxy';

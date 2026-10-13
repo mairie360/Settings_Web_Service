@@ -1,16 +1,22 @@
 import type { SettingsBootstrap, SettingsProfile, SettingsProfilePatch } from '@mairie360/bff-settings-openapi/model';
-import { requestBff } from './bff-client';
+import { bffSettings } from './bff-client';
 
-// Types du contrat publié de BFF_Settings (@mairie360/bff-settings-openapi, version exacte épinglée dans package.json).
+// Types of the published BFF_Settings contract (@mairie360/bff-settings-openapi, exact version pinned in package.json).
 export type { SettingsBootstrap, SettingsProfile, SettingsProfilePatch };
 
-// Appels de la page vers BFF_Settings, seul BFF de ce front. Chaque chemin et méthode est une opération du paquet
-// publié (tests/network-contract.test.cjs et tests/settings.bff-mocks.test.cjs le vérifient).
+// Page calls to BFF_Settings, the only BFF of this front. Every call is a generated operation of the published
+// package: no path string lives here (tests/network-contract.test.cjs and tests/settings.bff-mocks.test.cjs check it).
 
-export function loadSettings(signal?: AbortSignal) {
-  return requestBff<SettingsBootstrap>('/settings/bootstrap', { signal });
+export async function loadSettings(signal?: AbortSignal) {
+  try {
+    return (await bffSettings.getSettingsBootstrap({ signal })).data;
+  } catch (error) {
+    // Axios reports a cancelled read as CanceledError; callers rely on the signal's own AbortError.
+    signal?.throwIfAborted();
+    throw error;
+  }
 }
 
-export function saveProfile(patch: SettingsProfilePatch) {
-  return requestBff<SettingsProfile>('/settings/profile', { method: 'PATCH', body: JSON.stringify(patch) });
+export async function saveProfile(patch: SettingsProfilePatch) {
+  return (await bffSettings.patchSettingsProfile(patch)).data;
 }

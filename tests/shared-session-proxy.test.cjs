@@ -30,7 +30,7 @@ before(async () => {
   const handlers = { '/api/auth/refresh': createSessionRefreshHandler(config), '/api/auth/logout': createSessionLogoutHandler(config) };
   owner.handle = request => {
     if (owner.override) return owner.override(request);
-    if (request.nextUrl.pathname === '/api/bff/me') return proxyPublishedBffRequest(request, ['me'], { baseUrl: () => user.url, paths: userContract.document.paths, frontUrl: () => owner.origin, loginUrl: () => owner.origin });
+    if (request.nextUrl.pathname === '/me') return proxyPublishedBffRequest(request, ['me'], { baseUrl: () => user.url, paths: userContract.document.paths, frontUrl: () => owner.origin, loginUrl: () => owner.origin });
     const handler = handlers[request.nextUrl.pathname];
     if (!handler) throw new Error('Undeclared Login operation');
     return handler(request);
@@ -61,7 +61,7 @@ const business = () => settings.on('GET', '/settings/bootstrap', req => req.head
 test('Settings renews once at Login and retries the actual bootstrap without browser-visible tokens', async () => {
   renewed(); business();
   assert.deepEqual(await client.requestBff('/settings/bootstrap'), fixtures.bootstrap());
-  assert.deepEqual(front.browserCalls, [{ method: 'GET', path: '/api/bff/settings/bootstrap' }]);
+  assert.deepEqual(front.browserCalls, [{ method: 'GET', path: '/settings/bootstrap' }]);
   assert.equal(user.calls('/auth/refresh').length, 1);
   assert.deepEqual(user.calls('/auth/refresh')[0].body, { refresh_token: refresh });
   assert.equal(user.calls('/auth/refresh')[0].headers.authorization, undefined);
@@ -87,7 +87,7 @@ for (const [name, expected] of [['Admin', true], ['administrateur', true], ['Res
 });
 
 test('foreign role, data and logout requests never reach a service or mutate cookies', async () => {
-  for (const [url, init] of [['/api/auth/role', {}], ['/api/bff/health', {}], ['/api/auth/logout', { method: 'POST', body: '{}' }]]) {
+  for (const [url, init] of [['/api/auth/role', {}], ['/health', {}], ['/api/auth/logout', { method: 'POST', body: '{}' }]]) {
     const response = await fetch(url, { ...init, headers: { Origin: 'https://foreign.test', 'Content-Type': 'application/json' } });
     assert.equal(response.status, 403); assert.equal(response.headers.get('set-cookie'), null);
   }
@@ -131,7 +131,7 @@ test('the role relay never accepts a browser bearer or leaks unrelated cookies t
   try {
     const response = await fetch('/api/auth/role', { headers: { Authorization: 'Bearer browser-forgery' } });
     assert.deepEqual(await response.json(), { isAdmin: true });
-    assert.equal(ownerRequest.nextUrl.pathname, '/api/bff/me');
+    assert.equal(ownerRequest.nextUrl.pathname, '/me');
     assert.equal(ownerRequest.headers.get('authorization'), null);
     assert.doesNotMatch(ownerRequest.headers.get('cookie'), /unrelated/);
     assert.equal(user.requests[0].headers.authorization, `Bearer ${access}`);

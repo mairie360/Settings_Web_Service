@@ -113,8 +113,8 @@ test('an explicit retry recovers an initial upstream refusal through GET only', 
   assert.doesNotMatch(view.html, /Lecture refusée/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap']);
   assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role'), [
-    { method: 'GET', path: '/api/bff/settings/bootstrap' },
-    { method: 'GET', path: '/api/bff/settings/bootstrap' },
+    { method: 'GET', path: '/settings/bootstrap' },
+    { method: 'GET', path: '/settings/bootstrap' },
   ]);
 });
 
@@ -208,8 +208,8 @@ test('refreshing unavailable sessions keeps dirty fields and updates clean field
   assert.doesNotMatch(view.text(), /Les sessions sont temporairement indisponibles/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap']);
   assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role'), [
-    { method: 'GET', path: '/api/bff/settings/bootstrap' },
-    { method: 'GET', path: '/api/bff/settings/bootstrap' },
+    { method: 'GET', path: '/settings/bootstrap' },
+    { method: 'GET', path: '/settings/bootstrap' },
   ]);
 });
 
@@ -268,7 +268,7 @@ test('the first pass renders the loading state, the next one the profile form fi
   const html = await view.waitFor((current) => !current.includes('Chargement des paramètres'));
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
-  assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role'), [{ method: 'GET', path: '/api/bff/settings/bootstrap' }]);
+  assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role'), [{ method: 'GET', path: '/settings/bootstrap' }]);
   assert.equal(view.find('AppShell').length, 1);
   assert.match(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
   assert.doesNotMatch(html, /<\/main>\s*<footer\b/);
@@ -306,7 +306,7 @@ test('unconfirmed account-menu logout retains the draft until explicit canonical
   assert.deepEqual(destinations, []);
   assert.match(view.text(), /déconnexion n’a pas été confirmée/);
   assert.match(view.html, /value="Brouillon conservé"/);
-  assert.deepEqual(front.browserCalls.map(call => call.method + ' ' + call.path), ['GET /api/auth/role', 'GET /api/bff/settings/bootstrap', 'POST /api/auth/logout']);
+  assert.deepEqual(front.browserCalls.map(call => call.method + ' ' + call.path), ['GET /api/auth/role', 'GET /settings/bootstrap', 'POST /api/auth/logout']);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
   await view.click('Retour à la connexion');
   assert.equal(destinations.length, 1);

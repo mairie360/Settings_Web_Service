@@ -15,7 +15,7 @@ export async function sessionRole(request: NextRequest) {
   const origin = new URL(front).origin;
   if (request.headers.get('sec-fetch-site') === 'cross-site' ||
     (request.headers.get('origin') && request.headers.get('origin') !== origin)) return unavailable(403);
-  const target = new URL('/api/bff/me', login);
+  const target = new URL('/me', login);
   if (process.env.NODE_ENV === 'production' && target.protocol !== 'https:') return unavailable(503);
   const cookies = ['accessToken', 'refreshToken'].flatMap(name => {
     const value = request.cookies.get(name)?.value;

@@ -596,7 +596,7 @@
   "info": {
     "title": "bff_settings",
     "version": "1.0.0",
-    "x-source-package": "@mairie360/bff-settings-openapi@0.0.0-dev.eb4e17f930d957dbf5df6c58dc34b69916198d62"
+    "x-source-package": "@mairie360/bff-settings-openapi@0.0.0-dev.6d726190fa0a1d5d4db5a7e0c500b46bd832ca41"
   },
   "openapi": "3.1.0",
   "paths": {

@@ -28,10 +28,11 @@ describe('published BFF_Settings contract in src/', () => {
     assert.equal(contract.document.info['x-source-package'].split('@').slice(0, 2).join('@'), PACKAGE);
   });
 
-  test('the package is the only OpenAPI package imported, for its types only (never its axios client)', () => {
+  test('the package is the only OpenAPI package imported: types from /model, the generated client only in src/lib/bff-client.ts', () => {
     assert.ok(surface.openapiPackages.length > 0);
     for (const entry of surface.openapiPackages) {
-      assert.ok(entry.typeOnly && entry.specifier === `${PACKAGE}/model`, `${entry.at} : importer uniquement \`import type … from '${PACKAGE}/model'\``);
+      const client = entry.file === 'lib/bff-client.ts' && entry.specifier === `${PACKAGE}/endpoints/bffSettings`;
+      assert.ok(client || (entry.typeOnly && entry.specifier === `${PACKAGE}/model`), `${entry.at} : import only types from '${PACKAGE}/model' (the generated client belongs to src/lib/bff-client.ts)`);
     }
   });
 });
@@ -50,17 +51,24 @@ describe('network surface of src/', () => {
     assert.deepEqual(surface.absoluteUrls.map(({ file, url }) => `${file} ${url}`), []);
   });
 
-  test('every business request uses requestBff from src/lib/settings-api.ts', () => {
-    assert.ok(surface.requestBff.length > 0);
-    assert.deepEqual([...new Set(surface.requestBff.map(({ file }) => file))], ['lib/settings-api.ts']);
+  test('every business request is a generated operation called from src/lib/settings-api.ts', () => {
+    assert.ok(surface.bffOperations.length > 0);
+    assert.deepEqual([...new Set(surface.bffOperations.map(({ file }) => file))], ['lib/settings-api.ts']);
+    // requestBff is only the transport of the axios adapter: no caller, no hand-written path.
+    assert.deepEqual(surface.requestBff.map(({ file }) => file), ['lib/bff-client.ts']);
+    assert.doesNotMatch(fs.readFileSync(path.join(ROOT, 'src/lib/settings-api.ts'), 'utf8'), /requestBff|["'`]\/(?:settings|api|bff)\b/);
   });
 
-  test('every requestBff call targets a literal operation of the published contract', () => {
-    for (const call of surface.requestBff) {
-      assert.ok(call.path && call.method, `${call.at} : chemin et méthode doivent être littéraux pour être vérifiables`);
-      assert.ok(contract.match(call.method, call.path), `${call.at} : ${call.method} ${call.path} absent de ${PACKAGE}`);
-    }
-    assert.deepEqual(surface.requestBff.map(({ method, path: pathname }) => `${method} ${pathname}`), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
+  test('every called operation exists in the generated client and in the published contract', () => {
+    const generated = fs.readFileSync(path.join(ROOT, 'node_modules', PACKAGE, 'endpoints', 'bffSettings.ts'), 'utf8');
+    const called = surface.bffOperations.map(({ operation }) => operation);
+    for (const name of called) assert.match(generated, new RegExp(`const ${name} = \\(`), `${name} is not a generated operation`);
+    const routes = called.map((name) => {
+      const [, method, template] = generated.match(new RegExp('const ' + name + ' = \\([^]*?axiosInstance\\.(\\w+)\\(\\s*\\x60([^\\x60]+)\\x60'));
+      assert.ok(contract.match(method.toUpperCase(), template), `${name}: ${method} ${template} absent de ${PACKAGE}`);
+      return `${method.toUpperCase()} ${template}`;
+    });
+    assert.deepEqual(routes, ['GET /settings/bootstrap', 'PATCH /settings/profile']);
   });
 
   test('business requests use the Settings contract proxy and configured BFF URL', () => {
@@ -69,7 +77,7 @@ describe('network surface of src/', () => {
   });
 
   test('only the business relay and explicit Login owner adapters are server routes', () => {
-    assert.deepEqual(surface.routes, ['app/[...path]/route.ts', 'app/api/auth/logout/route.ts', 'app/api/auth/role/route.ts', 'app/api/bff/[...path]/route.ts']);
+    assert.deepEqual(surface.routes, ['app/[...path]/route.ts', 'app/api/auth/logout/route.ts', 'app/api/auth/role/route.ts']);
   });
 
   test('environment reads are limited to the BFF and explicit active-front navigation URLs', () => {

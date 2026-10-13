@@ -6,10 +6,10 @@ import encoding from 'k6/encoding';
 // ---------------------------------------------------------------------------
 // k6 load test of the Settings front (Settings_Web_Service).
 // Two scenarios run side by side against the routes the Next.js server really serves:
-//   * `reads`: the page (Next.js render), /health, then the /api/bff/settings/bootstrap aggregation
+//   * `reads`: the page (Next.js render), /health, then the /settings/bootstrap aggregation
 //     the page fetches, relayed by the same-origin proxy to BFF Settings;
 //   * `writes` (MAIR-516): the general preferences update a user saves from the page,
-//     PATCH /api/bff/settings/general (-> BFF Settings -> Core API), idempotent on purpose.
+//     PATCH /settings/general (-> BFF Settings -> Core API), idempotent on purpose.
 // Authentication goes through the accessToken cookie, like in the browser: the proxy turns it
 // into Authorization: Bearer for the BFF.
 // ---------------------------------------------------------------------------
@@ -78,9 +78,9 @@ export function reads(data) {
   });
 
   group('settings reads', () => {
-    // Browser path of the page (src/lib/bff-client.ts prefixes /api/bff), not the root catch-all.
-    const settingsBootstrap = http.get(`${BASE_URL}/api/bff/settings/bootstrap`, dataParams);
-    check(settingsBootstrap, { '/api/bff/settings/bootstrap 200': (r) => r.status === 200 });
+    // Browser path of the page (src/lib/bff-client.ts calls the BFF path as is), not the root catch-all.
+    const settingsBootstrap = http.get(`${BASE_URL}/settings/bootstrap`, dataParams);
+    check(settingsBootstrap, { '/settings/bootstrap 200': (r) => r.status === 200 });
   });
 
   sleep(1);
@@ -92,14 +92,14 @@ export function writes(data) {
   group('settings write', () => {
     // Alternate between two valid values so every iteration really changes the stored preference.
     const timezone = __ITER % 2 === 0 ? 'Europe/Paris' : 'Europe/Brussels';
-    const updated = http.patch(`${BASE_URL}/api/bff/settings/general`, JSON.stringify({ timezone }), {
+    const updated = http.patch(`${BASE_URL}/settings/general`, JSON.stringify({ timezone }), {
       headers,
       redirects: 0,
       tags: { endpoint: 'settings-write' },
     });
     check(updated, {
-      'PATCH /api/bff/settings/general 200': (r) => r.status === 200,
-      'PATCH /api/bff/settings/general echoes the timezone': (r) => {
+      'PATCH /settings/general 200': (r) => r.status === 200,
+      'PATCH /settings/general echoes the timezone': (r) => {
         try {
           return r.json().timezone === timezone;
         } catch {

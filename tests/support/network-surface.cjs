@@ -36,7 +36,7 @@ function envName(node) {
 }
 
 function scanNetworkSurface() {
-  const surface = { raw: [], requestBff: [], forwardToBff: [], env: [], routes: [], openapiPackages: [], absoluteUrls: [] };
+  const surface = { raw: [], requestBff: [], bffOperations: [], forwardToBff: [], env: [], routes: [], openapiPackages: [], absoluteUrls: [] };
   for (const file of sourceFiles()) {
     const relative = path.relative(SRC, file).split(path.sep).join('/');
     const source = ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
@@ -48,7 +48,8 @@ function scanNetworkSurface() {
       if (specifier && /^@mairie360\/[^/]+-openapi(\/|$)/.test(specifier)) {
         surface.openapiPackages.push({ file: relative, specifier, typeOnly: Boolean(node.importClause?.isTypeOnly ?? node.isTypeOnly), at: at(node) });
       }
-      if (ts.isImportDeclaration(node) && HTTP_MODULES.has(literalText(node.moduleSpecifier))) {
+      // axios only carries the generated operations through the fetch of the BFF client.
+      if (ts.isImportDeclaration(node) && HTTP_MODULES.has(literalText(node.moduleSpecifier)) && !(relative === 'lib/bff-client.ts' && literalText(node.moduleSpecifier) === 'axios')) {
         surface.raw.push({ file: relative, api: `import ${literalText(node.moduleSpecifier)}`, at: at(node) });
       }
       if (ts.isNewExpression(node) && RAW_CONSTRUCTORS.has(calleeName(node.expression))) {
@@ -60,6 +61,7 @@ function scanNetworkSurface() {
         if (name === 'require' && HTTP_MODULES.has(literalText(first))) surface.raw.push({ file: relative, api: `require ${literalText(first)}`, at: at(node) });
         if (RAW_CALLS.has(name)) surface.raw.push({ file: relative, api: name, at: at(node) });
         if (name === 'requestBff') surface.requestBff.push({ file: relative, at: at(node), method: requestMethod(second), path: literalText(first) });
+        if (ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression) && node.expression.expression.text === 'bffSettings') surface.bffOperations.push({ file: relative, at: at(node), operation: name });
         if (name === 'forwardToBff') surface.forwardToBff.push({ file: relative, at: at(node), baseUrl: node.arguments[1]?.getText() });
       }
       const opaqueEnv = isProcessEnv(node) && envName(node.parent) === undefined;

@@ -65,7 +65,7 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
 
     assert.deepEqual(await loadSettings(), body);
 
-    assert.deepEqual(front.browserCalls, [{ method: 'GET', path: '/api/bff/settings/bootstrap' }]);
+    assert.deepEqual(front.browserCalls, [{ method: 'GET', path: '/settings/bootstrap' }]);
     assert.deepEqual(upstreamOrigins(), [new URL(bffSettings.url).origin]);
     const [received] = bffSettings.requests;
     assert.equal(bffSettings.requests.length, 1);
@@ -91,7 +91,7 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
 
     assert.deepEqual(await saveProfile(edited), saved);
 
-    assert.deepEqual(front.browserCalls, [{ method: 'PATCH', path: '/api/bff/settings/profile' }]);
+    assert.deepEqual(front.browserCalls, [{ method: 'PATCH', path: '/settings/profile' }]);
     const [received] = bffSettings.calls('/settings/profile', 'PATCH');
     assert.deepEqual(received.body, edited);
     assert.equal(received.headers['content-type'], 'application/json');
@@ -275,7 +275,7 @@ describe('the front talks to a single BFF', () => {
     await saveProfile({ ...profile, first_name: 'Anne' });
 
     assert.deepEqual(upstreamOrigins(), [new URL(bffSettings.url).origin]);
-    assert.deepEqual(front.upstreamCalls.map(({ route }) => route), ['app/api/bff/[...path]/route.ts', 'app/api/bff/[...path]/route.ts']);
+    assert.deepEqual(front.upstreamCalls.map(({ route }) => route), ['app/[...path]/route.ts', 'app/[...path]/route.ts']);
   });
 
   for (const [method, pathname] of [

@@ -27,3 +27,5 @@ SDK imports retain their generated entry points. UI 0.8.0 exposes no supported p
 The shared component and theme are prepared in the existing library PR. Frontends retain compatibility wrappers until an exact new release can pass the existing security gates. No audit, coverage threshold or branch protection is weakened. No BFF/API production source or manual Stage/Production deployment is changed.
 
 Laboratory screenshots do not certify global RGAA compliance. Screen-reader and deployed business acceptance still require validation; no usable development account is available. Proposed budgets do not establish an activation date.
+
+The notification preference section writes `tab=notification-preferences`; historical `tab=notifications` links remain readable. This distinguishes preferences from the shared notification center without changing input validation or ZAP rules.

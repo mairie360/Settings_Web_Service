@@ -39,3 +39,5 @@ Les imports des SDK conservent leurs points d’entrée générés. La biblioth�
 Le composant partagé et le thème sont préparés dans la PR bibliothèque existante. Les fronts conservent le wrapper compatible avec la version publiée tant que la nouvelle version ne peut être livrée. La publication reste conditionnée aux contrôles de sécurité existants ; aucun audit/couverture/protection n’est abaissé.
 
 Les tests locaux et captures utilisent des données fictives. Ils ne certifient pas le RGAA complet ni une instance déployée : lecteur d’écran et recette métier en dev restent à vérifier faute de compte utilisable. Les budgets ne constituent pas une date d’activation. Aucune source BFF/API ni déploiement Stage/Prod manuel n’est modifié.
+
+La section des notifications écrit `tab=notification-preferences` ; les anciens liens `tab=notifications` restent lisibles. Ce nom distingue les préférences du centre de notifications commun sans changer le filtrage des valeurs ou les règles ZAP.

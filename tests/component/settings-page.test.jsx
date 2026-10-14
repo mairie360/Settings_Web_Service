@@ -43,6 +43,26 @@ beforeEach(() => {
 });
 
 describe("Settings page", () => {
+  it.each([
+    ["notifications", "Notifications"],
+    ["notification-preferences", "Notifications"],
+    ['notifications\" onfocus=\"alert(1)', "Profil"],
+  ])("reads bounded section links (%s) and writes the explicit preference URL", async (value, selected) => {
+    window.history.replaceState(null, "", "/?tab=" + encodeURIComponent(value));
+    try {
+      const user = userEvent.setup();
+      render(<Home />);
+      const notificationTab = await screen.findByRole("tab", { name: "Notifications", exact: true });
+      expect(screen.getByRole("tab", { name: selected, exact: true }).getAttribute("aria-selected")).toBe("true");
+      expect(screen.getByRole("tabpanel").getAttribute("aria-labelledby")).toBe(screen.getByRole("tab", { name: selected, exact: true }).id);
+      expect(document.querySelector('[onfocus]')).toBeNull();
+      await user.click(screen.getByRole("tab", { name: "Profil", exact: true }));
+      await user.click(notificationTab);
+      expect(new URLSearchParams(window.location.search).get("tab")).toBe("notification-preferences");
+      expect(notificationTab.getAttribute("aria-selected")).toBe("true");
+    } finally { window.history.replaceState(null, "", "/"); }
+  });
+
   it("keeps the empty live region mounted until a confirmed save, then clears it on editing", async () => {
     let confirm;
     vi.mocked(saveProfile).mockImplementation(() => new Promise(resolve => { confirm = resolve; }));

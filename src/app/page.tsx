@@ -1,4 +1,5 @@
 "use client";
+import { subscribePageReturn } from "@/lib/page-return";
 
 import CurrentDate from "@/components/current-date";
 import AccessibleShell from "@/components/accessible-shell";
@@ -15,6 +16,8 @@ import SettingsTabIcon from "@/components/settings-tab-icon";
 import { getActiveFrontHrefs } from "@/lib/navigation";
 import { logoutAndRedirect, navigateToLogin } from "@/lib/logout";
 import { loadSessionRole } from "@/lib/session-role";
+import { usePageUrlState } from '@/lib/use-page-url-state';
+import { urlChoice } from '@/lib/page-url-state';
 import type {
   SettingsBootstrap as Bootstrap,
   SettingsProfile as Profile,
@@ -30,6 +33,7 @@ const tabs = [
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
+const settingsUrlSchema = { tab: urlChoice([...tabs.map(tab => tab.id), 'notification-preferences'], 'profile') };
 
 function SessionDate({ value }: { value: string | null | undefined }) {
   const label = formatSessionDate(value);
@@ -64,7 +68,10 @@ function isConfirmedBootstrap(value: unknown): value is Bootstrap {
 export default function Home() {
   const [data, setData] = useState<Bootstrap | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [activeTab, setActiveTab] = useState<TabId>("profile");
+  const pageUrl = usePageUrlState(settingsUrlSchema);
+  // Keep historical links readable; new links name the preference section explicitly.
+  const activeTab = (pageUrl.state.tab === 'notification-preferences' ? 'notifications' : pageUrl.state.tab) as TabId;
+  const setActiveTab = (tab: TabId) => pageUrl.update({ tab: tab === 'notifications' ? 'notification-preferences' : tab });
   const [error, setError] = useState("");
   const [errorDetails, setErrorDetails] = useState<string[]>([]);
   // Confirms an e-mail change (MAIR-511); never part of the profile state, cleared once used or no longer needed.
@@ -95,7 +102,7 @@ export default function Home() {
   const readRef = useRef<AbortController | null>(null);
   const confirmedProfileRef = useRef<Profile | null>(null);
 
-  const readSettings = useCallback(async () => {
+  const readSettings = useCallback(async (fromForeground = false) => {
     if (readRef.current || savingRef.current) return;
     const controller = new AbortController();
     const baseline = confirmedProfileRef.current;
@@ -108,10 +115,14 @@ export default function Home() {
       if (!isConfirmedBootstrap(result)) {
         throw new Error("Les paramètres reçus sont incohérents. Réessayez.");
       }
+      const profileScopeChanged = fromForeground && baseline && baseline.email !== result.profile.email;
+      if (profileScopeChanged) {
+        setCurrentPassword(""); setError(""); setErrorDetails([]); setStatus("");
+      }
       confirmedProfileRef.current = result.profile;
       setData(result);
       // Merge against the previous confirmed profile, including edits made during the read.
-      setProfile((current) => baseline && current
+      setProfile((current) => baseline && current && !profileScopeChanged
         ? { ...result.profile, ...profilePatch(baseline, current) }
         : result.profile);
       setReadError("");
@@ -134,6 +145,14 @@ export default function Home() {
       readRef.current?.abort();
       readRef.current = null;
     };
+  }, [readSettings]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const page = document;
+    const refresh = () => { if (!page.hidden) void readSettings(true); };
+    const unsubscribe = subscribePageReturn(refresh);
+    return () => unsubscribe();
   }, [readSettings]);
 
   const patch = data && profile ? profilePatch(data.profile, profile) : {};

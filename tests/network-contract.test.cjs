@@ -83,6 +83,7 @@ describe('network surface of src/', () => {
   test('environment reads are limited to the BFF and explicit active-front navigation URLs', () => {
     const expected = {
       'app/api/auth/logout/route.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL'],
+      'app/layout.tsx': ['COOKIE_DOMAIN'],
       'lib/bff-proxy.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL', 'SETTINGS_BFF_URL', 'BFF_SETTINGS_BASE_URL'],
       'lib/front-urls.ts': ['SETTINGS_FRONT_URL', 'LOGIN_FRONT_URL', 'DASHBOARD_FRONT_URL', 'PROJECT_FRONT_URL', 'CALENDAR_FRONT_URL', 'MESSAGE_FRONT_URL', 'ELEARNING_FRONT_URL', 'ADMINISTRATION_FRONT_URL'],
       'lib/session-role-proxy.ts': ['SETTINGS_FRONT_URL', 'LOGIN_FRONT_URL', 'NODE_ENV'],

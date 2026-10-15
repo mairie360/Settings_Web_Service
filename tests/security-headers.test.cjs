@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const { NextRequest } = require('next/server');
 const { register, requireSrc } = require('./support/load-ts.cjs');
 const { middleware } = requireSrc('middleware.ts');
-const { buildContentSecurityPolicy } = requireSrc('lib/content-security-policy.ts');
+const { buildContentSecurityPolicy } = require('@mairie360/front-kit/shared');
 register();
 const nextConfig = require('../next.config.ts').default;
 

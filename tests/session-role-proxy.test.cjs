@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test, beforeEach, afterEach } = require('node:test');
 const { NextRequest } = require('next/server');
 const { requireSrc } = require('./support/load-ts.cjs');
-const { sessionRole } = requireSrc('lib/session-role-proxy.ts');
+const { GET: sessionRole } = requireSrc('app/api/auth/role/route.ts');
 const { ACCESS_TOKEN } = require('./support/settings-fixtures.cjs');
 const variables = ['SETTINGS_FRONT_URL', 'LOGIN_FRONT_URL', 'NODE_ENV'];
 let previous;

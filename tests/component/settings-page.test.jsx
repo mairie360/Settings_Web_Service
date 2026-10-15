@@ -64,6 +64,34 @@ describe("Settings page", () => {
     } finally { window.history.replaceState(null, "", "/"); }
   });
 
+  it.each([
+    ["system", "Système"],
+    ["system-assistance", "Système"],
+    ['system" onfocus="alert(1)', "Profil"],
+  ])("reads bounded system links (%s) and writes the assistance URL on keyboard selection", async (value, selected) => {
+    window.history.replaceState(null, "", "/?event=12&tab=" + encodeURIComponent(value) + "#detail");
+    try {
+      const user = userEvent.setup();
+      render(<Home />);
+      const selectedTab = await screen.findByRole("tab", { name: selected, exact: true });
+      expect(selectedTab.getAttribute("aria-selected")).toBe("true");
+      expect(screen.getByRole("tabpanel").getAttribute("aria-labelledby")).toBe(selectedTab.id);
+      expect(document.querySelector('[onfocus]')).toBeNull();
+      if (selected === "Système") expect(screen.getByRole("heading", { name: "Système et assistance" })).toBeTruthy();
+      const profileTab = screen.getByRole("tab", { name: "Profil", exact: true });
+      await user.click(profileTab);
+      await user.keyboard("{End}");
+      const systemTab = screen.getByRole("tab", { name: "Système", exact: true });
+      expect(document.activeElement).toBe(systemTab);
+      expect(systemTab.getAttribute("aria-selected")).toBe("true");
+      expect(window.location.search).toBe("?event=12&tab=system-assistance");
+      expect(window.location.hash).toBe("#detail");
+      await user.click(profileTab);
+      await user.click(systemTab);
+      expect(new URLSearchParams(window.location.search).get("tab")).toBe("system-assistance");
+    } finally { window.history.replaceState(null, "", "/"); }
+  });
+
   it("keeps the empty live region mounted until a confirmed save, then clears it on editing", async () => {
     let confirm;
     vi.mocked(saveProfile).mockImplementation(() => new Promise(resolve => { confirm = resolve; }));

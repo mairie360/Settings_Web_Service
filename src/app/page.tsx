@@ -34,7 +34,7 @@ const tabs = [
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
-const settingsUrlSchema = { tab: urlChoice([...tabs.map(tab => tab.id), 'notification-preferences'], 'profile') };
+const settingsUrlSchema = { tab: urlChoice([...tabs.map(tab => tab.id), 'notification-preferences', 'system-assistance'], 'profile') };
 
 function SessionDate({ value }: { value: string | null | undefined }) {
   const label = formatSessionDate(value);
@@ -70,9 +70,12 @@ export default function Home() {
   const [data, setData] = useState<Bootstrap | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const pageUrl = usePageUrlState(settingsUrlSchema);
-  // Keep historical links readable; new links name the preference section explicitly.
-  const activeTab = (pageUrl.state.tab === 'notification-preferences' ? 'notifications' : pageUrl.state.tab) as TabId;
-  const setActiveTab = (tab: TabId) => pageUrl.update({ tab: tab === 'notifications' ? 'notification-preferences' : tab });
+  // Keep historical links readable; new links name each section explicitly.
+  const activeTab = (pageUrl.state.tab === 'notification-preferences' ? 'notifications'
+    : pageUrl.state.tab === 'system-assistance' ? 'system' : pageUrl.state.tab) as TabId;
+  const setActiveTab = (tab: TabId) => pageUrl.update({
+    tab: tab === 'notifications' ? 'notification-preferences' : tab === 'system' ? 'system-assistance' : tab,
+  });
   const [error, setError] = useState("");
   const [errorDetails, setErrorDetails] = useState<string[]>([]);
   // Confirms an e-mail change (MAIR-511); never part of the profile state, cleared once used or no longer needed.

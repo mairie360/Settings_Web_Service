@@ -28,4 +28,4 @@ The shared component and theme are prepared in the existing library PR. Frontend
 
 Laboratory screenshots do not certify global RGAA compliance. Screen-reader and deployed business acceptance still require validation; no usable development account is available. Proposed budgets do not establish an activation date.
 
-The notification preference section writes `tab=notification-preferences`; historical `tab=notifications` links remain readable. This distinguishes preferences from the shared notification center without changing input validation or ZAP rules.
+The notification preference section writes `tab=notification-preferences`; historical `tab=notifications` links remain readable. This distinguishes preferences from the shared notification center without changing input validation or ZAP rules. The System and assistance section writes `tab=system-assistance`; historical `tab=system` links remain readable. Theme selection remains independent of this section identifier.

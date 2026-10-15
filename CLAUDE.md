@@ -68,8 +68,8 @@ assistance/download allowlist and modal behavior must remain unchanged.
 
 ## CI/CD
 
-- `.github/workflows/cicd.yml` calls `mairie360/CICD/.github/workflows/frontend-cicd.yml@v2.3.1` (`package_name: settings-front`, `node_version: "23"`, `cicd_version: v2.3.1`, `secrets: inherit`; Renovate bumps the `@v` pin and `cicd_version` together). Up to the dev release it runs: `npm ci` → `npm run lint` + `npm audit --audit-level=high` (high/critical advisories block) → `npm run build` → `npm test --if-present` (uploads `coverage/lcov.info` to Codecov) → on `main`, builds `Dockerfile` with `NODE_AUTH_TOKEN` as build-arg and pushes `ghcr.io/mairie360/settings-front:dev-<sha>` / `dev-latest`. Some jobs set up Node without a registry, so the committed `.npmrc` must keep the `@mairie360` registry + `${NODE_AUTH_TOKEN}` lines.
-- `.github/workflows/contracts.yml` (Node 22) runs `contracts:check` and `test:contracts` on every push/PR.
+- `.github/workflows/cicd.yml` calls `mairie360/CICD/.github/workflows/frontend-cicd.yml@<sha>` pinned to a CICD commit (`package_name: settings-front`, `node_version: "24.21.0"`, `cicd_version` = the same sha; keep both identical when bumping) and passes only the `CODECOV_TOKEN` and `N8N_WEBHOOK_SECRET` secrets. It runs on `pull_request`, `workflow_dispatch` and on `push` to `main` only, so a PR branch no longer runs the pipeline twice (MAIR-436). The workflow token is read-only by default (`permissions: contents: read`); only the `CICD` job gets `contents`/`packages`/`id-token: write`, the cap the reusable workflow needs for its release jobs (dev image push + cosign signature, prod tag). `tests/workflow-permissions.test.cjs` (identical in the eight fronts) pins both rules. A separate read-only `required_security_scan` job runs Semgrep and Gitleaks under the legacy required check name. The reusable pipeline runs `npm ci` → `npm run lint` + `npm audit --omit=dev --audit-level=high` (blocking; the full audit is report-only) + Semgrep/Gitleaks → `npm run build` + `npm test` (Codecov) → on `main`, builds `Dockerfile` with the token as the BuildKit secret `node_auth_token` (never a build arg), scans it with Trivy, signs it with cosign and pushes `ghcr.io/mairie360/settings-front:dev-<sha>`. Some jobs set up Node without a registry, so the committed `.npmrc` must keep the `@mairie360` registry + `${NODE_AUTH_TOKEN}` lines.
+- `.github/workflows/contracts.yml` (exact Node 24.21.0) runs `contracts:check` and `test:contracts` on every PR and on pushes to `main`.
 - `Dockerfile`: two-stage `node:<ver>-bookworm-slim` build, standalone output, non-root `nextjs` user, `PORT=5000`, `CMD node server.js`.
 
 ## Isolated security & performance tests
@@ -82,7 +82,7 @@ Same pattern as the APIs/BFFs, adapted to a web front. Not part of `npm test`; t
 
 ## Gotchas
 
-- `docker-compose.yml` and `development.Dockerfile` are still the unmodified template (a `projects` service behind an nginx that mounts a non-existent `nginx.conf`, `npm ci` without the GitHub Packages token) and do not start this module; rely on `docker-compose-security.yml` / `docker-compose-performance.yml` for a working stack definition.
+- `docker-compose.yml` is the local dev stack (Postgres + Liquibase + seed, Redis, Core API, BFF_Settings, this front built from the production `Dockerfile` on :5000). Export `NODE_AUTH_TOKEN` first: it reaches the build as the BuildKit secret `node_auth_token`, never as a build arg nor in the running container (MAIR-436, `tests/dev-image-secret.test.cjs`). `development.Dockerfile` (`npm run dev`, same pinned Node 24.21.0 and secret mount) is not used by any compose file.
 
 ## Pull request reviewers
 

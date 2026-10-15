@@ -1,6 +1,6 @@
 # Local dev stack for the Settings front (Settings_Web_Service).
 #
-#   docker compose up --build
+#   NODE_AUTH_TOKEN=<token read:packages> docker compose up --build
 #
 # Same backing stack as docker-compose-security.yml / docker-compose-performance.yml
 # (Postgres + Liquibase + seed data, Redis, Core API, BFF_Settings), minus their
@@ -12,6 +12,10 @@ volumes:
 
 networks:
   backend:
+
+secrets:
+  node_auth_token:
+    environment: NODE_AUTH_TOKEN
 
 x-db-env: &db-env
   DB_TYPE: postgres
@@ -175,8 +179,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        NODE_AUTH_TOKEN: ${NODE_AUTH_TOKEN:-}
+      # MAIR-436: the Dockerfile requires this BuildKit secret; a build arg would
+      # leave the token in the image history.
+      secrets:
+        - node_auth_token
     depends_on:
       bff-settings-ready:
         condition: service_completed_successfully

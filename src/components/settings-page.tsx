@@ -203,7 +203,7 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
 
 
   const profileContent = data && profile ? (
-<form onSubmit={save} aria-busy={saving || reading} className="mt-5 space-y-4">
+<form method="post" onSubmit={save} aria-busy={saving || reading} className="mt-5 space-y-4">
                 <div className="settings-profile-fields">
                 {PROFILE_FIELDS.map(({ field, label, type, required, maxLength, pattern, help }) => (
                   <Fragment key={field}>

@@ -7,3 +7,5 @@ The client displays this confirmed data in its first HTML and does not repeat th
 Missing/expired access, invalid configuration, an incoherent response, HTTP refusal or an outage leave initial data absent. The established same-origin client transport then performs recovery; rendering never refreshes or sets cookies. Server page/loading code remains measured by Node/c8, client interactions by Vitest/V8, with the existing 60% gates and no new threshold exemption.
 
 Tests exercise real server HTML, generated SDK/proxy transport, concurrent request isolation, invalid/refused data, hydration without duplicate reads, and foreground refresh. Laboratory tests do not certify deployed backend availability or full RGAA compliance.
+
+Native Settings forms explicitly use POST. Before hydration, a browser submission cannot serialize personal fields or a credential into a GET query; the hydrated submit handlers retain their existing same-origin JSON transport. A server-HTML regression checks the native form method, and rendered component coverage checks profile and preference sections. No scanner rule or security gate is relaxed.

@@ -27,3 +27,15 @@ it('keeps the same-origin recovery path when there is no confirmed server seed',
   await screen.findByRole('textbox', { name: 'Prénom' });
   expect(loadSettings).toHaveBeenCalledOnce();
 });
+
+
+it('keeps personal data and preferences out of native GET submissions in every settings section', () => {
+  render(<Home initialData={fixtures.bootstrap()} />);
+  expect(document.querySelector('input[name="email"]').form.method).toBe('post');
+  for (const name of ['Apparence', 'Général', 'Notifications']) {
+    fireEvent.click(screen.getByRole('tab', { name, exact: true }));
+    const forms = [...document.querySelectorAll('form')];
+    expect(forms.length).toBeGreaterThan(0);
+    expect(forms.every(form => form.method === 'post')).toBe(true);
+  }
+});

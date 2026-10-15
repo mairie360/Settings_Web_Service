@@ -126,7 +126,7 @@ export default function SettingsPreferencesPanel({ tab, bootstrap, reading, onWr
     <h2>{section === 'appearance' ? 'Apparence' : section === 'general' ? 'Préférences générales' : 'Préférences de notification'}</h2>
     <p className="text-sm">« Par défaut » conserve le comportement défini par votre compte. Vos modifications sont enregistrées uniquement après confirmation.</p>
     {!enabled ? <><p role="alert">Ces préférences sont temporairement indisponibles. Votre saisie est conservée ; actualisez les paramètres pour réessayer.</p><button type="button" className="mt-3 rounded border px-4 py-2 disabled:opacity-50" disabled={reading || busy} onClick={onRefresh}>Actualiser les préférences</button></> : null}
-    <form onSubmit={event => { event.preventDefault(); void save(section); }}>
+    <form method="post" onSubmit={event => { event.preventDefault(); void save(section); }}>
       {section === 'appearance' ? <>
         {select('Thème', appearance.theme, choices.theme, value => update('appearance', 'theme', (value || null) as SettingsAppearance['theme']))}
         <label className="block mt-4">Police de caractères<input className={fieldClass} disabled={disabled} maxLength={128} pattern=".*\S.*" placeholder="Par défaut" value={appearance.font_family ?? ''} onChange={event => update('appearance', 'font_family', event.target.value || null)} /></label>

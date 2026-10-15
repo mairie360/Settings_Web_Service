@@ -101,7 +101,7 @@ export default function SettingsAssistance() {
             <p>Dans Sécurité, consultez les sessions disponibles. Cette page ne permet pas encore de les révoquer ni de changer votre mot de passe.</p>
             <p>Dans Notifications, Apparence et Général, préparez vos préférences. Leur enregistrement dans le compte reste indisponible.</p>
             <p>Les fichiers ci-dessous sont préparés dans votre navigateur. Relisez-les puis transmettez-les vous-même à votre équipe par votre canal habituel.</p>
-          </div> : <form onSubmit={submit} aria-labelledby="settings-assistance-title" className="space-y-3">
+          </div> : <form method="post" onSubmit={submit} aria-labelledby="settings-assistance-title" className="space-y-3">
             <p id="settings-assistance-hint">Décrivez votre demande sans mot de passe ni donnée confidentielle. Aucun envoi automatique. Le brouillon disparaît si vous quittez cet onglet ou rechargez la page.</p>
             <label className="block" htmlFor="settings-assistance-message">Votre message</label>
             <textarea ref={messageInput} id="settings-assistance-message" required maxLength={MAX_ASSISTANCE_MESSAGE} rows={6}

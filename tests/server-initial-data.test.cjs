@@ -89,3 +89,15 @@ test('the real server page renders confirmed HTML before effects and the fallbac
   const fallback=renderToStaticMarkup(require('react').createElement(Loading));
   assert.match(fallback,/aria-busy="true"/);assert.match(fallback,/role="status"/);assert.match(fallback,/aria-hidden="true"/);
 });
+
+
+test('the rendered profile form keeps personal fields out of the URL before hydration', async () => {
+  const { renderToStaticMarkup } = require('react-dom/server');
+  const { JSDOM } = require('jsdom');
+  const html = new JSDOM(renderToStaticMarkup(await Home()));
+  try {
+    const input = html.window.document.querySelector('input[name="email"]');
+    assert.ok(input, 'The actual confirmed personal-data form must be present');
+    assert.equal(input.form.method, 'post', 'The native browser fallback must never serialize the profile into a GET query');
+  } finally { html.window.close(); }
+});

@@ -51,11 +51,13 @@ describe('network surface of src/', () => {
     assert.deepEqual(surface.absoluteUrls.map(({ file, url }) => `${file} ${url}`), []);
   });
 
-  test('every business request is a generated operation called from src/lib/settings-api.ts', () => {
+  test('browser facades and the access-only server read use generated operations', () => {
     assert.ok(surface.bffOperations.length > 0);
-    assert.deepEqual([...new Set(surface.bffOperations.map(({ file }) => file))], ['lib/settings-api.ts']);
-    // requestBff is only the transport of the axios adapter: no caller, no hand-written path.
-    assert.deepEqual(surface.requestBff.map(({ file }) => file), ['lib/bff-client.ts']);
+    assert.deepEqual([...new Set(surface.bffOperations.map(({ file }) => file))], ['lib/server-settings.ts', 'lib/settings-api.ts']);
+    assert.deepEqual(surface.bffOperations.filter(entry => entry.file === 'lib/server-settings.ts').map(entry => entry.operation), ['getSettingsBootstrap']);
+    // The factory binds either the browser transport or the tested access-only server relay.
+    // No consumer calls the raw browser transport or writes a business path.
+    assert.deepEqual(surface.requestBff.map(({ file }) => file), []);
     assert.doesNotMatch(fs.readFileSync(path.join(ROOT, 'src/lib/settings-api.ts'), 'utf8'), /requestBff|["'`]\/(?:settings|api|bff)\b/);
   });
 
@@ -68,12 +70,12 @@ describe('network surface of src/', () => {
       assert.ok(contract.match(method.toUpperCase(), template), `${name}: ${method} ${template} absent de ${PACKAGE}`);
       return `${method.toUpperCase()} ${template}`;
     });
-    assert.deepEqual(routes, ['GET /settings/bootstrap', 'PATCH /settings/profile', 'PATCH /settings/appearance', 'PATCH /settings/general', 'PATCH /settings/notifications']);
+    assert.deepEqual([...new Set(routes)], ['GET /settings/bootstrap', 'PATCH /settings/profile', 'PATCH /settings/appearance', 'PATCH /settings/general', 'PATCH /settings/notifications']);
   });
 
   test('business requests use the Settings contract proxy and configured BFF URL', () => {
-    assert.deepEqual(surface.forwardToBff.map(({ file }) => file), ['lib/bff-proxy.ts']);
-    assert.ok(policy.calls(policy.parse('src/lib/bff-proxy.ts'), 'forwardToBff').every(node => policy.configuredUrl(node.arguments[1])));
+    assert.deepEqual(surface.forwardToBff.map(({ file }) => file), ['lib/bff-proxy.ts', 'lib/server-settings.ts']);
+    for (const file of ['src/lib/bff-proxy.ts', 'src/lib/server-settings.ts']) assert.ok(policy.calls(policy.parse(file), 'forwardToBff').every(node => policy.configuredUrl(node.arguments[1])));
   });
 
   test('only the business relay and explicit Login owner adapters are server routes', () => {
@@ -87,6 +89,7 @@ describe('network surface of src/', () => {
       'lib/bff-proxy.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL', 'SETTINGS_BFF_URL', 'BFF_SETTINGS_BASE_URL'],
       'lib/session-role-proxy.ts': ['SETTINGS_FRONT_URL', 'LOGIN_FRONT_URL', 'NODE_ENV'],
       'lib/session-peer.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL'],
+      'lib/server-settings.ts': ['SETTINGS_FRONT_URL'],
       'middleware.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL'],
     };
     assert.deepEqual(surface.env.map(({ file, name }) => `${file} ${name}`).sort(),

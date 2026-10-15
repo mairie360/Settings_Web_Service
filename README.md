@@ -254,3 +254,7 @@ ci-dessus distinguent les appels amont du fetch pendant l'arrêt du serveur et l
 exceptions simulées. La preuve mobile est réellement390x844 ; aucune autorisation
 ou persistance déployée, parité exhaustive ou intégration main n'est revendiquée.
 Les deux versions locales et les dépendances utilisateur restent préservées.
+
+## Initial server data / Données initiales serveur — MAIR-526
+
+[English](docs/en/initial-server-data.md) · [Français](docs/fr/donnees-initiales-serveur.md)

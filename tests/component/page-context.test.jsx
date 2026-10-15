@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, act } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
-import Home from '@/app/page';
+import Home from '@/components/settings-page';
 import DesktopNavigation from '@/components/desktop-navigation';
 import { loadSettings, saveProfile } from '@/lib/settings-api';
 

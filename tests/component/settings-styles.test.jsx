@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import Home from '@/app/page';
+import Home from '@/components/settings-page';
 import { loadSettings, saveProfile } from '@/lib/settings-api';
 import { setBrowserFrontUrls } from '@/lib/front-urls';
 import fixtures from '../support/settings-fixtures.cjs';

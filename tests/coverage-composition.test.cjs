@@ -198,3 +198,17 @@ test('a failed native run cannot be turned into a component-only success', async
   assert.equal(result.exitCode, 1);
   assert.equal(result.published, false);
 });
+
+for (const file of ['src/app/page.tsx', 'src/app/loading.tsx']) test(`server-rendered ${file} retains measured Node authority and the 60% gate`, async t => {
+  const value = await fixture(t);
+  await fs.mkdir(path.join(value.root, 'src/app'));
+  await fs.writeFile(path.join(value.root, file), 'export default function Page() { return <main>Server fixture</main>; }\n');
+  value.sources = await captureSources(value.root);
+  await fs.writeFile(path.join(value.root, 'coverage/lcov.info'), value.node + record(file, 0));
+  const result = await composeCoverage({ ...value, componentSources: ['src/view.tsx'] });
+  assert.equal(result.files[file].authority, 'node-c8');
+  assert.equal(result.files[file].lines.covered, 0);
+  assert.ok(result.failures.some(item => item.file === file && item.required === 60));
+  await fs.writeFile(path.join(value.root, 'coverage/lcov.info'), value.node + record(file, 0));
+  await assert.rejects(composeCoverage({ ...value, componentSources: ['src/view.tsx'], lineThresholdExceptions: [file] }), /Only the documented server layout/);
+});

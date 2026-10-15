@@ -15,10 +15,10 @@ const emptyProfile: ExtendedProfile = { service: '', position: '', biography: ''
 const fieldClass = 'mt-1 w-full rounded border border-[#cbd5e1] bg-white px-3 py-2 text-[#172033]';
 const buttonClass = 'rounded border border-[#cbd5e1] bg-white px-4 py-2 text-[#172033] disabled:opacity-50';
 
-export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSettingsPort, initial, extendedProfile, profileContent, securityContent, systemContent, profileInitials = '?' }: {
+export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSettingsPort, initial, extendedProfile, preferencesContent, profileContent, securityContent, systemContent, profileInitials = '?' }: {
   tab: SettingsTabId; isAdmin: boolean; port?: SettingsFeaturePort;
   profileInitials?: string;
-  profileContent?: ReactNode; securityContent?: ReactNode; systemContent?: ReactNode;
+  preferencesContent?: ReactNode; profileContent?: ReactNode; securityContent?: ReactNode; systemContent?: ReactNode;
   initial?: SettingsPreferences; extendedProfile?: ExtendedProfile;
 }) {
   const [preferences, setPreferences] = useState(initial ?? initialPreferences);
@@ -130,7 +130,7 @@ export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSe
       </section>
       {securityContent}
     </> : null}
-    {['notifications','appearance','general'].includes(tab) ? <section className="settings-feature-card"><h2>{tab === 'notifications' ? 'Préférences de notification' : tab === 'appearance' ? 'Apparence' : 'Préférences générales'}</h2><p className="text-sm">Vos choix restent un brouillon pendant cette visite. Ils ne sont pas encore synchronisés avec votre compte.</p>
+    {preferencesContent ?? (['notifications','appearance','general'].includes(tab) ? <section className="settings-feature-card"><h2>{tab === 'notifications' ? 'Préférences de notification' : tab === 'appearance' ? 'Apparence' : 'Préférences générales'}</h2><p className="text-sm">Vos choix restent un brouillon pendant cette visite. Ils ne sont pas encore synchronisés avec votre compte.</p>
       {tab === 'notifications' ? <div className="mt-4 space-y-3">{[['messages','Messages'],['projects','Projets'],['calendar','Calendrier']].map(([key,label]) => <label key={key} className="flex items-center gap-3"><input type="checkbox" disabled={Boolean(busy)} checked={preferences[key as 'messages']} onChange={event => update(key as 'messages', event.target.checked)} />{label}</label>)}</div> : tab === 'appearance' ? <>
         <fieldset className="mt-4"><legend>Thème</legend><div className="flex flex-wrap gap-4">{[['light','Clair'],['dark','Sombre'],['system','Système']].map(([value,label]) => <label key={value}><input type="radio" name="settings-theme" disabled={Boolean(busy)} value={value} checked={preferences.theme === value} onChange={() => update('theme',value as SettingsPreferences['theme'])} /> {label}</label>)}</div></fieldset>
         <label className="mt-4 block">Police de caractères<select className={fieldClass} value={preferences.fontFamily} disabled={Boolean(busy)} onChange={event => update('fontFamily',event.target.value as SettingsPreferences['fontFamily'])}><option value="system">Police système</option><option value="sans">Sans serif</option><option value="serif">Serif</option></select></label>
@@ -139,7 +139,7 @@ export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSe
         <div aria-label="Aperçu de l’apparence" className="mt-4 rounded border" style={{ background: preferences.theme === 'dark' ? '#172033' : '#fff', color: preferences.theme === 'dark' ? '#fff' : '#172033', fontFamily: preferences.fontFamily === 'serif' ? 'Georgia, serif' : 'system-ui, sans-serif', fontSize: preferences.fontSize, padding: preferences.density === 'compact' ? 8 : preferences.density === 'comfortable' ? 24 : 16 }}><strong>Aperçu</strong><p>Votre environnement Mairie360</p></div>
       </> : <><label className="mt-4 block">Page d’accueil par défaut<select className={fieldClass} disabled={Boolean(busy)} value={preferences.homePage} onChange={event => update('homePage',event.target.value as SettingsPreferences['homePage'])}>{[['dashboard','Tableau de bord'],['projects','Projets'],['calendar','Calendrier'],['messages','Messagerie']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label><label className="mt-4 flex items-center gap-3"><input type="checkbox" checked={preferences.autoOpenNotifications} disabled={Boolean(busy)} onChange={event => update('autoOpenNotifications',event.target.checked)} />Ouverture automatique des notifications</label></>}
       <button type="button" className={`${buttonClass} mt-5`} disabled={Boolean(busy) || !Object.keys(changedFields(confirmedPreferences,preferences)).length} onClick={savePreferences}>Enregistrer les préférences</button>{notice('preferences')}
-    </section> : null}
+    </section> : null)}
     {tab === 'system' ? <>{isAdmin ? <InstanceUpdatesPanel port={port} /> : null}{systemContent}</> : null}
   </div>;
 }

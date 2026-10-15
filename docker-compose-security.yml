@@ -197,7 +197,7 @@ services:
       SETTINGS_BFF_URL: http://bff-settings:4008
       # Reserved test destinations: the anonymous probe accepts307 without following Login.
       LOGIN_FRONT_URL: https://login.invalid/
-      SETTINGS_FRONT_URL: https://settings.invalid/
+      SETTINGS_FRONT_URL: http://settings-front:5000/
     expose:
       - "5000"
     networks:

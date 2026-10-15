@@ -1,6 +1,7 @@
+import { getInstanceTimeZone } from '@mairie360/front-kit/shared';
 const isoDateTime = /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?:\.\d+)?(?:Z|[+-](?:0\d|1[0-4]):[0-5]\d)$/;
 
-/** Format only valid BFF timestamps in the viewer's time zone; never guess a missing date. */
+/** Format only valid BFF timestamps in the instance time zone; never guess a missing date. */
 export function formatSessionDate(value: string | null | undefined): string | null {
   if (!value) return null;
 
@@ -17,5 +18,5 @@ export function formatSessionDate(value: string | null | undefined): string | nu
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
 
-  return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(date);
+  return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short", timeZone: getInstanceTimeZone() }).format(date);
 }

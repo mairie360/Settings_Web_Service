@@ -9,13 +9,14 @@ import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { CURRENT_PASSWORD, PASSWORD_REQUIRED_MESSAGE, PROFILE_FIELDS, isEmailChanged, profilePatch, saveErrorMessage } from "@/lib/profile-form";
 import type { ProfileField } from "@/lib/profile-form";
 import { formatSessionDate } from "@/lib/session-date";
+import SettingsPreferencesPanel from "@/components/settings-preferences";
 import SettingsPendingFeatures from "@/components/settings-pending-features";
 import SessionRevokeControl from "@/components/settings-session-revoke";
 import SettingsAssistance from "@/components/settings-assistance";
 import SettingsTabIcon from "@/components/settings-tab-icon";
 import { getActiveFrontHrefs } from "@/lib/navigation";
 import { logoutAndRedirect, navigateToLogin } from "@/lib/logout";
-import { loadSessionRole } from "@/lib/session-role";
+import { useInstanceRole } from "@mairie360/front-kit/react";
 import { usePageUrlState } from '@/lib/use-page-url-state';
 import { urlChoice } from '@/lib/page-url-state';
 import type {
@@ -33,7 +34,7 @@ const tabs = [
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
-const settingsUrlSchema = { tab: urlChoice([...tabs.map(tab => tab.id), 'notification-preferences'], 'profile') };
+const settingsUrlSchema = { tab: urlChoice([...tabs.map(tab => tab.id), 'notification-preferences', 'system-assistance'], 'profile') };
 
 function SessionDate({ value }: { value: string | null | undefined }) {
   const label = formatSessionDate(value);
@@ -69,23 +70,19 @@ export default function Home() {
   const [data, setData] = useState<Bootstrap | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const pageUrl = usePageUrlState(settingsUrlSchema);
-  // Keep historical links readable; new links name the preference section explicitly.
-  const activeTab = (pageUrl.state.tab === 'notification-preferences' ? 'notifications' : pageUrl.state.tab) as TabId;
-  const setActiveTab = (tab: TabId) => pageUrl.update({ tab: tab === 'notifications' ? 'notification-preferences' : tab });
+  // Keep historical links readable; new links name each section explicitly.
+  const activeTab = (pageUrl.state.tab === 'notification-preferences' ? 'notifications'
+    : pageUrl.state.tab === 'system-assistance' ? 'system' : pageUrl.state.tab) as TabId;
+  const setActiveTab = (tab: TabId) => pageUrl.update({
+    tab: tab === 'notifications' ? 'notification-preferences' : tab === 'system' ? 'system-assistance' : tab,
+  });
   const [error, setError] = useState("");
   const [errorDetails, setErrorDetails] = useState<string[]>([]);
   // Confirms an e-mail change (MAIR-511); never part of the profile state, cleared once used or no longer needed.
   const [currentPassword, setCurrentPassword] = useState("");
   const [readError, setReadError] = useState("");
   const [logoutError, setLogoutError] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
-  useEffect(() => {
-    const controller = new AbortController();
-    void loadSessionRole(controller.signal).then(value => {
-      if (!controller.signal.aborted) setIsAdmin(value);
-    }).catch(() => undefined);
-    return () => controller.abort();
-  }, []);
+  const isAdmin = useInstanceRole() === 'Admin';
   const logoutPending = useRef(false);
   const requestLogout = async () => {
     if (logoutPending.current) return;
@@ -99,14 +96,18 @@ export default function Home() {
   const [readAnnouncement, setReadAnnouncement] = useState("");
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  const preferencesWriting = useRef(false);
+  const [accountScope, setAccountScope] = useState(0);
+  const onPreferencesWriting = useCallback((writing: boolean) => { preferencesWriting.current = writing; }, []);
   const readRef = useRef<AbortController | null>(null);
   const confirmedProfileRef = useRef<Profile | null>(null);
 
   const readSettings = useCallback(async (fromForeground = false) => {
-    if (readRef.current || savingRef.current) return;
+    if (readRef.current || savingRef.current || preferencesWriting.current) return;
     const controller = new AbortController();
     const baseline = confirmedProfileRef.current;
     readRef.current = controller;
+    setReading(true);
     setReadAnnouncement("Chargement des paramètres…");
 
     try {
@@ -115,7 +116,9 @@ export default function Home() {
       if (!isConfirmedBootstrap(result)) {
         throw new Error("Les paramètres reçus sont incohérents. Réessayez.");
       }
-      const profileScopeChanged = fromForeground && baseline && baseline.email !== result.profile.email;
+      const preferencesScopeChanged = baseline && baseline.email !== result.profile.email;
+      const profileScopeChanged = fromForeground && preferencesScopeChanged;
+      if (preferencesScopeChanged) setAccountScope(scope => scope + 1);
       if (profileScopeChanged) {
         setCurrentPassword(""); setError(""); setErrorDetails([]); setStatus("");
       }
@@ -335,14 +338,14 @@ export default function Home() {
         </section> : null}
         <p role="status" aria-live="polite" aria-atomic="true" className={status ? "rounded border border-green-200 bg-white p-4 text-green-800" : "sr-only"}>{status}</p>
         <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{readAnnouncement}</p>
-        {!data || data.sources.sessions === "unavailable" || readError ? (
+        {!data || data.sources.sessions === "unavailable" || data.sources.preferences === "unavailable" || data.sources.notifications === "unavailable" || readError ? (
           <button
             type="button"
             className="rounded border border-[#d8d2ca] bg-white px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={reading || saving}
             aria-busy={reading}
             onClick={() => {
-              if (readRef.current || savingRef.current) return;
+              if (readRef.current || savingRef.current || preferencesWriting.current) return;
               setReading(true);
               void readSettings();
             }}
@@ -376,7 +379,7 @@ export default function Home() {
             </nav>
 
             <div role="tabpanel" id={`settings-panel-${activeTab}`} aria-labelledby={`settings-tab-${activeTab}`} className="settings-panel">
-            <SettingsPendingFeatures tab={activeTab} isAdmin={isAdmin} profileInitials={`${data.profile.first_name.trim().charAt(0)}${data.profile.last_name.trim().charAt(0)}`.toLocaleUpperCase('fr') || '?'} profileContent={profileContent} securityContent={securityContent} systemContent={<SettingsAssistance />} />
+            <SettingsPendingFeatures tab={activeTab} isAdmin={isAdmin} preferencesContent={<SettingsPreferencesPanel key={accountScope} tab={activeTab} bootstrap={data} reading={reading || saving} onWriting={onPreferencesWriting} onRefresh={() => void readSettings()} />} profileInitials={`${data.profile.first_name.trim().charAt(0)}${data.profile.last_name.trim().charAt(0)}`.toLocaleUpperCase('fr') || '?'} profileContent={profileContent} securityContent={securityContent} systemContent={<SettingsAssistance />} />
             </div>
           </>
         )}

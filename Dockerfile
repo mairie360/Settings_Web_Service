@@ -7,6 +7,7 @@ WORKDIR /app
 # Keep the tracked npm policy read-only and the existing CI credential ephemeral.
 # Neither mount is included in this layer; a missing secret must fail closed.
 COPY package.json package-lock.json ./
+COPY vendor/ ./vendor/
 RUN --mount=type=secret,id=node_auth_token,env=NODE_AUTH_TOKEN,required=true \
     --mount=type=bind,source=.npmrc,target=/app/.npmrc \
     npm ci

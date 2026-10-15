@@ -306,7 +306,7 @@ test('unconfirmed account-menu logout retains the draft until explicit canonical
   assert.deepEqual(destinations, []);
   assert.match(view.text(), /déconnexion n’a pas été confirmée/);
   assert.match(view.html, /value="Brouillon conservé"/);
-  assert.deepEqual(front.browserCalls.map(call => call.method + ' ' + call.path), ['GET /api/auth/role', 'GET /settings/bootstrap', 'POST /api/auth/logout']);
+  assert.deepEqual(front.browserCalls.map(call => call.method + ' ' + call.path), ['GET /settings/bootstrap', 'POST /api/auth/logout']);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
   await view.click('Retour à la connexion');
   assert.equal(destinations.length, 1);
@@ -321,7 +321,7 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
 
   assert.match(view.html, /<button id="settings-tab-security" type="button" role="tab" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg[^>]*aria-hidden="true"[^]*?Sécurité<\/button>/);
   assert.match(view.html, /<h2[^>]*>Sessions<\/h2>/);
-  const createdAt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })
+  const createdAt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })
     .format(new Date('2026-09-15T08:00:00Z'));
   assert.ok(view.text().includes(`Firefox sur Linux — 192.0.2.10 Création : ${createdAt}`));
   assert.match(view.html, /<time dateTime="2026-09-15T08:00:00Z">/);
@@ -337,8 +337,9 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
 
   await view.click('Notifications');
   assert.match(view.html, /<h2[^>]*>Préférences de notification<\/h2>/);
-  assert.match(view.text(), /Vos choix restent un brouillon/);
-  assert.match(view.text(), /ne sont pas encore synchronisés avec votre compte/);
+  assert.match(view.text(), /Vos modifications sont enregistrées uniquement après confirmation/);
+  assert.equal(view.hostElements((props, text, tag) => tag === 'select').length, 6);
+  assert.equal(view.hostElements('Enregistrer les préférences').find(element => element.type === 'button').props.disabled, true);
   assert.doesNotMatch(view.text(), /BFF/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap'], 'an unavailable tab does not call the BFF');
 });

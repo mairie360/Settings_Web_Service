@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
-import { validSessionToken } from '@mairie360/lib-components/next';
+import { validSessionToken } from '@mairie360/front-kit/next';
+import { normalizeDisplayRole } from '@mairie360/front-kit/shared';
 import { validatedFrontHref } from './navigation';
 
 const unavailable = (status: number) => Response.json({ message: 'Les informations du profil sont indisponibles.' }, {
@@ -36,7 +37,7 @@ export async function sessionRole(request: NextRequest) {
       : Array.isArray(user.roles) ? user.roles : 'roles' in body && Array.isArray(body.roles) ? body.roles : [];
     const isAdmin = roles.some(role => {
       const name = typeof role === 'string' ? role : typeof role === 'object' && role !== null && 'name' in role ? role.name : undefined;
-      return typeof name === 'string' && ['admin', 'administrateur', 'administrator'].includes(name.trim().toLowerCase().replace(/^role[\s_-]*/, ''));
+      return normalizeDisplayRole(name) === 'Admin';
     });
     const headers = new Headers({ 'Cache-Control': 'no-store' });
     // Only the trusted Login owner may rotate the shared pair on this API read.

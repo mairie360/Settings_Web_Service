@@ -40,4 +40,4 @@ Le composant partagé et le thème sont préparés dans la PR bibliothèque exis
 
 Les tests locaux et captures utilisent des données fictives. Ils ne certifient pas le RGAA complet ni une instance déployée : lecteur d’écran et recette métier en dev restent à vérifier faute de compte utilisable. Les budgets ne constituent pas une date d’activation. Aucune source BFF/API ni déploiement Stage/Prod manuel n’est modifié.
 
-La section des notifications écrit `tab=notification-preferences` ; les anciens liens `tab=notifications` restent lisibles. Ce nom distingue les préférences du centre de notifications commun sans changer le filtrage des valeurs ou les règles ZAP.
+La section des notifications écrit `tab=notification-preferences` ; les anciens liens `tab=notifications` restent lisibles. Ce nom distingue les préférences du centre de notifications commun sans changer le filtrage des valeurs ou les règles ZAP. La section Système et assistance écrit `tab=system-assistance` ; les anciens liens `tab=system` restent lisibles. Le choix du thème reste indépendant de cet identifiant de section.

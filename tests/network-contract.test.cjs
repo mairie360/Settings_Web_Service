@@ -40,7 +40,7 @@ describe('published BFF_Settings contract in src/', () => {
 describe('network surface of src/', () => {
   test('only declared data, role and logout adapters use a raw network API', () => {
     assert.deepEqual(surface.raw.map(({ file, api }) => `${file} ${api}`), [
-      'lib/bff-client.ts fetch',
+      'lib/bff-client.ts sessionFetch',
       'lib/logout.ts fetch',
       'lib/session-role-proxy.ts fetch',
       'lib/session-role.ts fetch',
@@ -68,7 +68,7 @@ describe('network surface of src/', () => {
       assert.ok(contract.match(method.toUpperCase(), template), `${name}: ${method} ${template} absent de ${PACKAGE}`);
       return `${method.toUpperCase()} ${template}`;
     });
-    assert.deepEqual(routes, ['GET /settings/bootstrap', 'PATCH /settings/profile']);
+    assert.deepEqual(routes, ['GET /settings/bootstrap', 'PATCH /settings/profile', 'PATCH /settings/appearance', 'PATCH /settings/general', 'PATCH /settings/notifications']);
   });
 
   test('business requests use the Settings contract proxy and configured BFF URL', () => {
@@ -77,24 +77,24 @@ describe('network surface of src/', () => {
   });
 
   test('only the business relay and explicit Login owner adapters are server routes', () => {
-    assert.deepEqual(surface.routes, ['app/[...path]/route.ts', 'app/api/auth/logout/route.ts', 'app/api/auth/role/route.ts']);
+    assert.deepEqual(surface.routes, ['app/[...path]/route.ts', 'app/api/auth/logout/route.ts', 'app/api/auth/refresh/route.ts', 'app/api/auth/resume/route.ts', 'app/api/auth/role/route.ts']);
   });
 
   test('environment reads are limited to the BFF and explicit active-front navigation URLs', () => {
     const expected = {
       'app/api/auth/logout/route.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL'],
-      'app/layout.tsx': ['COOKIE_DOMAIN'],
+      'app/layout.tsx': ['COOKIE_DOMAIN', 'INSTANCE_TIMEZONE'],
       'lib/bff-proxy.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL', 'SETTINGS_BFF_URL', 'BFF_SETTINGS_BASE_URL'],
-      'lib/front-urls.ts': ['SETTINGS_FRONT_URL', 'LOGIN_FRONT_URL', 'DASHBOARD_FRONT_URL', 'PROJECT_FRONT_URL', 'CALENDAR_FRONT_URL', 'MESSAGE_FRONT_URL', 'ELEARNING_FRONT_URL', 'ADMINISTRATION_FRONT_URL'],
       'lib/session-role-proxy.ts': ['SETTINGS_FRONT_URL', 'LOGIN_FRONT_URL', 'NODE_ENV'],
-      'middleware.ts': ['NODE_ENV'],
+      'lib/session-peer.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL'],
+      'middleware.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL'],
     };
     assert.deepEqual(surface.env.map(({ file, name }) => `${file} ${name}`).sort(),
       Object.entries(expected).flatMap(([file, names]) => names.map(name => `${file} ${name}`)).sort());
   });
 
   test('the browser Content-Security-Policy only allows same-origin connections', () => {
-    const { buildContentSecurityPolicy } = requireSrc('lib/content-security-policy.ts');
+    const { buildContentSecurityPolicy } = require('@mairie360/front-kit/shared');
     for (const isDevelopment of [false, true]) {
       const directives = buildContentSecurityPolicy('nonce', isDevelopment).split('; ');
       assert.ok(directives.includes("connect-src 'self'"));

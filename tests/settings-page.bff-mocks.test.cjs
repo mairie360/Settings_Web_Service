@@ -338,7 +338,11 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
   await view.click('Notifications');
   assert.match(view.html, /<h2[^>]*>Préférences de notification<\/h2>/);
   assert.match(view.text(), /Vos modifications sont enregistrées uniquement après confirmation/);
-  assert.equal(view.hostElements((props, text, tag) => tag === 'select').length, 6);
+  // The SDK form wrapper receives JSX children as props; count the rendered DOM,
+  // rather than the harness's intermediate child-prop host registrations.
+  const preferencesDom = new (require('jsdom').JSDOM)(view.html);
+  try { assert.equal(preferencesDom.window.document.querySelectorAll('select').length, 6); }
+  finally { preferencesDom.window.close(); }
   assert.equal(view.hostElements('Enregistrer les préférences').find(element => element.type === 'button').props.disabled, true);
   assert.doesNotMatch(view.text(), /BFF/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap'], 'an unavailable tab does not call the BFF');

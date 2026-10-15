@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
+import { applyConfirmedAppearance, safeFontFamily } from '@mairie360/front-kit/theme';
 import type { SettingsAppearance, SettingsAppearancePatch, SettingsBootstrap, SettingsGeneral, SettingsGeneralPatch, SettingsNotifications, SettingsNotificationsPatch } from '@mairie360/bff-settings-openapi/model';
 import * as api from '@/lib/settings-api';
 import { changedFields } from '@/lib/settings-features';
@@ -61,6 +62,11 @@ export default function SettingsPreferencesPanel({ tab, bootstrap, reading, onWr
     const baseline = initialValues(bootstrap);
     return { received: bootstrap, baseline, draft: baseline, feedback: {} as Feedback };
   });
+  useEffect(() => {
+    // Only a confirmed baseline reaches the public display cache. Unavailable
+    // reads keep the previous baseline; draft edits never change other fronts.
+    if (state.baseline.appearance !== empty.appearance) applyConfirmedAppearance(state.baseline.appearance);
+  }, [state.baseline.appearance]);
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const alive = useRef(true);
@@ -125,7 +131,7 @@ export default function SettingsPreferencesPanel({ tab, bootstrap, reading, onWr
         <label className="block mt-4">Police de caractères<input className={fieldClass} disabled={disabled} maxLength={128} pattern=".*\S.*" placeholder="Par défaut" value={appearance.font_family ?? ''} onChange={event => update('appearance', 'font_family', event.target.value || null)} /></label>
         <label className="block mt-4">Taille de police (px)<input className={fieldClass} disabled={disabled} type="number" min={1} max={32767} step={1} placeholder="Par défaut" value={appearance.font_size ?? ''} onChange={event => update('appearance', 'font_size', event.target.value ? Number(event.target.value) : null)} /></label>
         {select('Compacité de l’interface', appearance.density, choices.density, value => update('appearance', 'density', value || null))}
-        <div aria-label="Aperçu de l’apparence" className="mt-4 rounded border" style={{ colorScheme: appearance.theme === 'system' || appearance.theme === null ? 'light dark' : appearance.theme, background: appearance.theme === 'dark' ? '#172033' : undefined, color: appearance.theme === 'dark' ? '#fff' : undefined, fontFamily: appearance.font_family ?? undefined, fontSize: appearance.font_size ?? undefined, padding: appearance.density === 'compact' ? 8 : appearance.density === 'comfortable' ? 24 : 16 }}><strong>Aperçu</strong><p>Votre environnement Mairie360</p></div>
+        <div aria-label="Aperçu de l’apparence" data-preview-theme={appearance.theme ?? 'system'} className="mairie-appearance-preview mt-4 rounded border" style={{ colorScheme: appearance.theme === 'system' || appearance.theme === null ? 'light dark' : appearance.theme, fontFamily: safeFontFamily(appearance.font_family), fontSize: appearance.font_size === null ? undefined : Math.min(24, Math.max(12, appearance.font_size)), padding: appearance.density === 'compact' ? 8 : appearance.density === 'comfortable' ? 24 : 16 }}><strong>Aperçu</strong><p>Votre environnement Mairie360</p></div><p className="mt-2 text-sm">La taille de cet aperçu est limitée entre 12 et 24 px. La taille de lecture commune de l’interface reste conservée.</p>
       </> : section === 'general' ? <>
         <label className="block mt-4">Langue<input className={fieldClass} disabled={disabled} pattern="[a-z]{2,3}(-[A-Z]{2})?" placeholder="Par défaut" value={general.language ?? ''} onChange={event => update('general', 'language', event.target.value || null)} /></label>
         {select('Format des dates', general.date_format, choices.date_format, value => update('general', 'date_format', value || null))}

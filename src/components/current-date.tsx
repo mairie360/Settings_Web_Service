@@ -1,8 +1,9 @@
 "use client";
+import { getInstanceTimeZone } from "@mairie360/front-kit/shared";
 import { useSyncExternalStore } from "react";
 const subscribe = () => () => {};
 const snapshot = () => {
-  const label = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date());
+  const label = new Intl.DateTimeFormat("fr-FR", { timeZone: getInstanceTimeZone(), weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date());
   return label.charAt(0).toLocaleUpperCase("fr") + label.slice(1);
 };
 export default function CurrentDate() {

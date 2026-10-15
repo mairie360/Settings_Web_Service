@@ -16,7 +16,7 @@ import SettingsAssistance from "@/components/settings-assistance";
 import SettingsTabIcon from "@/components/settings-tab-icon";
 import { getActiveFrontHrefs } from "@/lib/navigation";
 import { logoutAndRedirect, navigateToLogin } from "@/lib/logout";
-import { loadSessionRole } from "@/lib/session-role";
+import { useInstanceRole } from "@mairie360/front-kit/react";
 import { usePageUrlState } from '@/lib/use-page-url-state';
 import { urlChoice } from '@/lib/page-url-state';
 import type {
@@ -79,14 +79,7 @@ export default function Home() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [readError, setReadError] = useState("");
   const [logoutError, setLogoutError] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
-  useEffect(() => {
-    const controller = new AbortController();
-    void loadSessionRole(controller.signal).then(value => {
-      if (!controller.signal.aborted) setIsAdmin(value);
-    }).catch(() => undefined);
-    return () => controller.abort();
-  }, []);
+  const isAdmin = useInstanceRole() === 'Admin';
   const logoutPending = useRef(false);
   const requestLogout = async () => {
     if (logoutPending.current) return;

@@ -36,6 +36,7 @@ for (const [name, configure, headers, status] of [
 
 for (const [name, body, isAdmin] of [
   ['primary role', { user: { role: 'ROLE_Administrator' } }, true],
+  ['shared accented alias', { user: { role: 'Rôle Administrateur' } }, true],
   ['user role list', { user: { roles: [{ name: ' administrateur ' }] } }, true],
   ['top-level role list', { user: {}, roles: ['Admin'] }, true],
   ['regular user', { user: {}, roles: [{ name: 'Responsable' }] }, false],

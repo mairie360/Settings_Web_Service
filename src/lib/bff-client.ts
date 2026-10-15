@@ -1,3 +1,4 @@
+import { sessionFetch } from '@mairie360/front-kit/browser';
 import axios, { type AxiosAdapter } from 'axios';
 import { getBffSettings } from '@mairie360/bff-settings-openapi/endpoints/bffSettings';
 import { navigateToLogin, isSessionRecoveryPending } from './logout';
@@ -48,7 +49,7 @@ export async function requestBff<T>(path: string, init: RequestInit = {}): Promi
   headers.delete('Authorization');
   headers.set('Accept', 'application/json');
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-  const response = await fetch(path, { ...init, headers, credentials: 'same-origin', cache: 'no-store', redirect: 'manual' });
+  const response = await sessionFetch(path, { ...init, headers, credentials: 'same-origin', cache: 'no-store', redirect: 'manual' });
   init.signal?.throwIfAborted();
   if (response.type === 'opaqueredirect') {
     navigateToLogin();

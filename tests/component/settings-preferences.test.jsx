@@ -128,3 +128,24 @@ it('offers a safe retry when an available source returns unusable preference val
   expect(screen.getByLabelText('Thème').value).toBe('system');
   expect(api.saveAppearance).not.toHaveBeenCalled();
 });
+
+it('resets preference drafts and confirmations when a manual retry reads another account', async () => {
+  api.loadSettings.mockResolvedValueOnce(fixtures.bootstrap({ sources: { sessions: 'unavailable' } }));
+  render(<Home />); await screen.findByRole('tab', { name: 'Notifications' });
+  tab('Notifications'); select('Messages', 'false'); save();
+  await screen.findByText('Préférences enregistrées.');
+  tab('Apparence'); select('Thème', 'dark');
+  api.loadSettings.mockResolvedValueOnce(fixtures.bootstrap({
+    profile: fixtures.profile({ email: 'another-account@mairie.test' }),
+    appearance: fixtures.appearance({ theme: 'light' }),
+    notifications: fixtures.notifications({ messages: true }),
+  }));
+  fireEvent.click(screen.getByRole('button', { name: 'Actualiser les paramètres' }));
+  await waitFor(() => expect(api.loadSettings).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(screen.getByLabelText('Thème').value).toBe('light'));
+  expect(screen.getByRole('button', { name: 'Enregistrer les préférences' }).disabled).toBe(true);
+  expect(api.saveAppearance).not.toHaveBeenCalled();
+  tab('Notifications'); expect(screen.getByLabelText('Messages').value).toBe('true');
+  expect(screen.queryByText('Préférences enregistrées.')).toBeNull();
+  expect(screen.getByRole('button', { name: 'Enregistrer les préférences' }).disabled).toBe(true);
+});

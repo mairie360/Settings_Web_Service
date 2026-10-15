@@ -120,9 +120,10 @@ export default function Home() {
       if (!isConfirmedBootstrap(result)) {
         throw new Error("Les paramètres reçus sont incohérents. Réessayez.");
       }
-      const profileScopeChanged = fromForeground && baseline && baseline.email !== result.profile.email;
+      const preferencesScopeChanged = baseline && baseline.email !== result.profile.email;
+      const profileScopeChanged = fromForeground && preferencesScopeChanged;
+      if (preferencesScopeChanged) setAccountScope(scope => scope + 1);
       if (profileScopeChanged) {
-        setAccountScope(scope => scope + 1);
         setCurrentPassword(""); setError(""); setErrorDetails([]); setStatus("");
       }
       confirmedProfileRef.current = result.profile;

@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vitest';
-import Home from '@/app/page';
+import Home from '@/components/settings-page';
 import { loadSettings, saveProfile } from '@/lib/settings-api';
 import fixtures from '../support/settings-fixtures.cjs';
 

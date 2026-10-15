@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import Home from "@/app/page";
+import Home from "@/components/settings-page";
 import { InstanceProvider } from "@mairie360/front-kit/react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { loadSessionRole } from "@/lib/session-role";

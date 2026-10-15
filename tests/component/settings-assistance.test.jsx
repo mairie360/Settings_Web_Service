@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import Home from "@/app/page";
+import Home from "@/components/settings-page";
 import { loadSettings } from "@/lib/settings-api";
 import { downloadLocalFile } from "@/lib/local-assistance";
 

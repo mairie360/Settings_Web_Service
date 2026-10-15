@@ -16,7 +16,7 @@ const { ContractMockServer } = require('./support/contract-mock-server.cjs');
 const { createFront } = require('./support/front-harness.cjs');
 const fixtures = require('./support/settings-fixtures.cjs');
 const { setBrowserFrontUrls } = requireSrc('lib/front-urls.ts');
-const Home = requireSrc('app/page.tsx').default;
+const Home = requireSrc('components/settings-page.tsx').default;
 
 const bffSettings = new ContractMockServer('BFF_SETTINGS', OpenApiContract.load(path.join(ROOT, 'contracts', 'openapi.json')));
 const front = createFront({ cookies: { accessToken: fixtures.ACCESS_TOKEN }, upstreams: () => [bffSettings.url] });

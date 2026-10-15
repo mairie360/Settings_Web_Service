@@ -91,13 +91,16 @@ test('the real server page renders confirmed HTML before effects and the fallbac
 });
 
 
-test('the rendered profile form keeps personal fields out of the URL before hydration', async () => {
+test('confirmed personal fields cannot submit before the SDK handlers are hydrated', async () => {
   const { renderToStaticMarkup } = require('react-dom/server');
   const { JSDOM } = require('jsdom');
   const html = new JSDOM(renderToStaticMarkup(await Home()));
   try {
     const input = html.window.document.querySelector('input[name="email"]');
-    assert.ok(input, 'The actual confirmed personal-data form must be present');
-    assert.equal(input.form.method, 'post', 'The native browser fallback must never serialize the profile into a GET query');
+    assert.ok(input, 'The confirmed personal fields remain server-rendered');
+    assert.equal(input.form, null, 'There is no native fallback endpoint for SDK mutations');
+    assert.equal(input.matches(':disabled'), true, 'The server-rendered controls stay read-only until their handlers attach');
+    assert.equal(html.window.document.querySelectorAll('form').length, 0);
+    assert.match(html.window.document.querySelector('noscript').textContent, /JavaScript/);
   } finally { html.window.close(); }
 });

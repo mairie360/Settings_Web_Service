@@ -39,3 +39,16 @@ it('keeps personal data and preferences out of native GET submissions in every s
     expect(forms.every(form => form.method === 'post')).toBe(true);
   }
 });
+
+it('enables hydrated fields and keeps profile saving on the existing SDK handler', async () => {
+  vi.mocked(saveProfile).mockReset().mockResolvedValue(fixtures.profile({ first_name: 'Confirmed edit' }));
+  render(<StrictMode><Home initialData={fixtures.bootstrap()} /></StrictMode>);
+  const firstName = screen.getByRole('textbox', { name: 'Prénom' });
+  expect(firstName.matches(':disabled')).toBe(false);
+  fireEvent.change(firstName, { target: { value: 'Confirmed edit' } });
+  fireEvent.submit(firstName.form);
+  await waitFor(() => expect(saveProfile).toHaveBeenCalledOnce());
+  expect(saveProfile.mock.calls[0][0]).toEqual({ first_name: 'Confirmed edit' });
+  await screen.findByText('Votre profil a été enregistré.');
+  expect(firstName.value).toBe('Confirmed edit');
+});

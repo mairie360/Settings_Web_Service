@@ -1,5 +1,7 @@
 "use client";
 
+import SettingsMutationForm from '@/components/settings-mutation-form';
+
 import { useEffect, useRef, useState } from 'react';
 import { applyConfirmedAppearance, safeFontFamily } from '@mairie360/front-kit/theme';
 import type { SettingsAppearance, SettingsAppearancePatch, SettingsGeneral, SettingsGeneralPatch, SettingsNotifications, SettingsNotificationsPatch } from '@mairie360/bff-settings-openapi/model';
@@ -126,7 +128,7 @@ export default function SettingsPreferencesPanel({ tab, bootstrap, reading, onWr
     <h2>{section === 'appearance' ? 'Apparence' : section === 'general' ? 'Préférences générales' : 'Préférences de notification'}</h2>
     <p className="text-sm">« Par défaut » conserve le comportement défini par votre compte. Vos modifications sont enregistrées uniquement après confirmation.</p>
     {!enabled ? <><p role="alert">Ces préférences sont temporairement indisponibles. Votre saisie est conservée ; actualisez les paramètres pour réessayer.</p><button type="button" className="mt-3 rounded border px-4 py-2 disabled:opacity-50" disabled={reading || busy} onClick={onRefresh}>Actualiser les préférences</button></> : null}
-    <form method="post" onSubmit={event => { event.preventDefault(); void save(section); }}>
+    <SettingsMutationForm onSubmit={event => { event.preventDefault(); void save(section); }}>
       {section === 'appearance' ? <>
         {select('Thème', appearance.theme, choices.theme, value => update('appearance', 'theme', (value || null) as SettingsAppearance['theme']))}
         <label className="block mt-4">Police de caractères<input className={fieldClass} disabled={disabled} maxLength={128} pattern=".*\S.*" placeholder="Par défaut" value={appearance.font_family ?? ''} onChange={event => update('appearance', 'font_family', event.target.value || null)} /></label>
@@ -140,7 +142,7 @@ export default function SettingsPreferencesPanel({ tab, bootstrap, reading, onWr
         {select('Ouverture automatique des notifications', general.auto_open_notifications, [['true', 'Activée'], ['false', 'Désactivée']], value => update('general', 'auto_open_notifications', value === '' ? null : value === 'true'))}
       </> : <>{([['email', 'E-mail'], ['push', 'Notifications push'], ['desktop', 'Notifications sur le bureau'], ['messages', 'Messages'], ['projects', 'Projets'], ['calendar', 'Calendrier']] as const).map(([field, label]) => <div key={field}>{select(label, notifications[field], [['true', 'Activées'], ['false', 'Désactivées']], value => update('notifications', field, value === '' ? null : value === 'true'))}</div>)}</>}
       <button type="submit" className="mt-5 rounded border border-[#cbd5e1] bg-white px-4 py-2 text-[#172033] disabled:opacity-50" disabled={disabled || reading || !Object.keys(changedFields(state.baseline[section], state.draft[section])).length}>{busy ? 'Enregistrement…' : 'Enregistrer les préférences'}</button>
-    </form>
+    </SettingsMutationForm>
     <p role="status" aria-live="polite" aria-atomic="true" className={feedback && !feedback.failed ? 'mt-3 text-sm' : 'sr-only'}>{feedback && !feedback.failed ? feedback.message : ''}</p>
     {feedback?.failed ? <p role="alert" className="mt-3 text-sm">{feedback.message}</p> : null}
   </section>;

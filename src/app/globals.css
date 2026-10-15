@@ -85,7 +85,7 @@ body {
 .settings-tab:hover { background: #ffffff99; }
 .settings-tab[aria-selected="true"] { background: white; color: #1256a6; box-shadow: 0 1px 3px #0000001a, 0 1px 2px -1px #0000001a; }
 .settings-page :is(button, input, textarea, summary):focus-visible { outline: 2px solid #1256a6; outline-offset: 2px; }
-.settings-panel > :is(form, section) { padding: 20px; border-color: #d8d2ca; border-radius: 12px; box-shadow: 0 5px 15px rgb(23 32 51 / 14%), 0 1px 3px rgb(23 32 51 / 12%); }
+.settings-panel > :is(form, [data-settings-mutation], section) { padding: 20px; border-color: #d8d2ca; border-radius: 12px; box-shadow: 0 5px 15px rgb(23 32 51 / 14%), 0 1px 3px rgb(23 32 51 / 12%); }
 .settings-panel h2 { font-size: 17px; line-height: 25.5px; font-weight: 400; }
 .settings-profile-fields { display: grid; gap: 17px; margin-top: 25.5px; }
 .settings-profile-fields label { min-width: 0; font-size: 15.9375px; line-height: 1.4286; font-weight: 500; }
@@ -116,7 +116,7 @@ body {
   .settings-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; }
   .settings-tab { height: 28px; padding-inline: 16px; }
   .settings-page > header h1 { font-size: 30px; }
-  .settings-panel > :is(form, section) { padding: 25.5px; }
+  .settings-panel > :is(form, [data-settings-mutation], section) { padding: 25.5px; }
 }
 @media (min-width: 1024px) {
   .settings-tabs { grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -151,7 +151,7 @@ body {
 .settings-tab { height: 40px; font-size: 17px; color: #334155; }
 .settings-tab[aria-selected="true"] { color: var(--settings-accent); background: var(--settings-surface); box-shadow: inset 0 0 0 1px #a5bedb, 0 1px 3px rgb(23 32 51 / 8%); }
 .settings-tab svg { width: 20px; height: 20px; }
-.settings-feature-card, .settings-panel > :is(form, section) {
+.settings-feature-card, .settings-panel > :is(form, [data-settings-mutation], section) {
   border-color: var(--settings-soft-border); border-radius: 16px;
   background: var(--settings-surface); color: var(--settings-text); box-shadow: var(--settings-shadow); padding: 28px;
 }
@@ -183,7 +183,7 @@ body {
 @media (max-width: 767px) {
   .settings-page > header h1 { font-size: 30px; }
   .settings-page > header p { font-size: 16px; }
-  .settings-feature-card, .settings-panel > :is(form, section) { padding: 20px; }
+  .settings-feature-card, .settings-panel > :is(form, [data-settings-mutation], section) { padding: 20px; }
   .settings-feature-card h2, .settings-panel h2 { font-size: 22px; }
   .settings-photo-row { gap: 18px; flex-wrap: wrap; }
   .settings-photo-avatar { width: 80px; height: 80px; font-size: 28px; }
@@ -216,7 +216,7 @@ body {
 .settings-photo-row { margin-top: 20px; padding-bottom: 22px; }
 .settings-photo-controls > p { font-size: 14px; }
 .settings-profile-fields { gap: 20px 36px; margin-top: 20px; }
-.settings-account-card > form { margin-top: 16px; }
+.settings-account-card > :is(form, [data-settings-mutation]) { margin-top: 16px; }
 .settings-profile-fields { margin-top: 16px; }
 .settings-profile-fields label > span:last-child:not(:first-child) { font-size: 14px; line-height: 20px; }
 .settings-photo-row { margin-top: 16px; }

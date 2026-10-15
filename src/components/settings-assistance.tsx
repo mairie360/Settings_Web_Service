@@ -1,5 +1,7 @@
 "use client";
 
+import SettingsMutationForm from '@/components/settings-mutation-form';
+
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent, MouseEvent } from "react";
 import {
@@ -101,7 +103,7 @@ export default function SettingsAssistance() {
             <p>Dans Sécurité, consultez les sessions disponibles. Cette page ne permet pas encore de les révoquer ni de changer votre mot de passe.</p>
             <p>Dans Notifications, Apparence et Général, préparez vos préférences. Leur enregistrement dans le compte reste indisponible.</p>
             <p>Les fichiers ci-dessous sont préparés dans votre navigateur. Relisez-les puis transmettez-les vous-même à votre équipe par votre canal habituel.</p>
-          </div> : <form method="post" onSubmit={submit} aria-labelledby="settings-assistance-title" className="space-y-3">
+          </div> : <SettingsMutationForm onSubmit={submit} aria-labelledby="settings-assistance-title" className="space-y-3">
             <p id="settings-assistance-hint">Décrivez votre demande sans mot de passe ni donnée confidentielle. Aucun envoi automatique. Le brouillon disparaît si vous quittez cet onglet ou rechargez la page.</p>
             <label className="block" htmlFor="settings-assistance-message">Votre message</label>
             <textarea ref={messageInput} id="settings-assistance-message" required maxLength={MAX_ASSISTANCE_MESSAGE} rows={6}
@@ -110,7 +112,7 @@ export default function SettingsAssistance() {
               onChange={(event) => { setMessage(event.target.value); setError(""); setStatus(""); }} />
             <p id="settings-assistance-count" className="text-sm">{message.length} / {MAX_ASSISTANCE_MESSAGE} caractères</p>
             <button className={buttonClass} type="submit">Télécharger la demande</button>
-          </form>}
+          </SettingsMutationForm>}
           {error ? <p role="alert" className="text-red-700">{error}</p> : null}
           <button type="button" className={buttonClass} onClick={() => setKind(null)}>Fermer</button>
         </> : null}

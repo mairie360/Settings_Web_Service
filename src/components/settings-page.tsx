@@ -1,4 +1,6 @@
 "use client";
+
+import SettingsMutationForm from '@/components/settings-mutation-form';
 import { subscribePageReturn } from "@/lib/page-return";
 
 import { isConfirmedBootstrap, isConfirmedProfile } from '@/lib/settings-bootstrap';
@@ -203,7 +205,7 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
 
 
   const profileContent = data && profile ? (
-<form method="post" onSubmit={save} aria-busy={saving || reading} className="mt-5 space-y-4">
+<SettingsMutationForm onSubmit={save} aria-busy={saving || reading} className="mt-5 space-y-4">
                 <div className="settings-profile-fields">
                 {PROFILE_FIELDS.map(({ field, label, type, required, maxLength, pattern, help }) => (
                   <Fragment key={field}>
@@ -257,7 +259,7 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
                   {saving ? "Enregistrement…" : "Enregistrer le profil"}
                 </button>
                 {!hasChanges ? <p className="text-sm text-[#596274]">Aucune modification à enregistrer.</p> : null}
-              </form>
+              </SettingsMutationForm>
   ) : null;
 
   const securityContent = data ? (

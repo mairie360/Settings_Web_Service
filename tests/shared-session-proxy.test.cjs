@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test, before, after, beforeEach, afterEach } = require('node:test');
 const path = require('node:path');
 const { NextRequest } = require('next/server');
-const { createSessionRefreshHandler, createSessionLogoutHandler, proxyPublishedBffRequest, forgetUserSession } = require('@mairie360/lib-components/next');
+const { createSessionRefreshHandler, createSessionLogoutHandler, proxyPublishedBffRequest, forgetUserSession } = require('@mairie360/front-kit/next');
 const { ROOT, requireSrc } = require('./support/load-ts.cjs');
 const { OpenApiContract } = require('./support/openapi-contract.cjs');
 const { ContractMockServer } = require('./support/contract-mock-server.cjs');
@@ -61,7 +61,7 @@ const business = () => settings.on('GET', '/settings/bootstrap', req => req.head
 test('Settings renews once at Login and retries the actual bootstrap without browser-visible tokens', async () => {
   renewed(); business();
   assert.deepEqual(await client.requestBff('/settings/bootstrap'), fixtures.bootstrap());
-  assert.deepEqual(front.browserCalls, [{ method: 'GET', path: '/settings/bootstrap' }]);
+  assert.deepEqual(front.browserCalls, [{ method: 'GET', path: '/settings/bootstrap' }, { method: 'POST', path: '/api/auth/refresh' }, { method: 'GET', path: '/settings/bootstrap' }]);
   assert.equal(user.calls('/auth/refresh').length, 1);
   assert.deepEqual(user.calls('/auth/refresh')[0].body, { refresh_token: refresh });
   assert.equal(user.calls('/auth/refresh')[0].headers.authorization, undefined);

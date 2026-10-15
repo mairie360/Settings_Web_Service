@@ -149,7 +149,7 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
       test(`${name} rejects with the BFF message on a ${status}`, async () => {
         bffSettings.on(method, template, bffError(status, `Refus ${status} du BFF.`));
 
-        await assert.rejects(call(), { message: status === 401 ? 'Votre session a expiré. Veuillez vous reconnecter.' : `Refus ${status} du BFF.` });
+        await assert.rejects(call(), { message: status === 401 ? 'La session est temporairement indisponible.' : `Refus ${status} du BFF.` });
         assert.equal(bffSettings.calls(template, method).length, 1);
       });
     }

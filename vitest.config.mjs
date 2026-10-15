@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+import coverageScope from "./scripts/coverage-scope.cjs";
 
 export default defineConfig({
   resolve: {
@@ -12,8 +13,8 @@ export default defineConfig({
     maxWorkers: 1,
     coverage: {
       provider: "v8",
-      include: ["src/**/*.tsx"],
-      exclude: ["src/app/layout.tsx"],
+      include: ["src/**/*.tsx", ...coverageScope.reactSources],
+      exclude: coverageScope.serverTsxSources,
       reportsDirectory: "coverage/components",
       reporter: ["text", "lcov", "json-summary"],
       thresholds: { lines: 60, branches: 60, functions: 60, statements: 60, perFile: { lines: 60 } },

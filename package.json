@@ -11,20 +11,21 @@
     "contracts:check": "node scripts/contracts.mjs --check",
     "contracts:sync": "node scripts/contracts.mjs --sync",
     "test:contracts": "node --test tests/*.test.cjs",
-    "test:node": "mkdir -p coverage && node --test --enable-source-maps --experimental-test-coverage --test-coverage-branches=60 --test-coverage-functions=60 --test-coverage-lines=60 --test-coverage-include='src/**' --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info tests/*.test.cjs",
+    "test:node": "node scripts/test-node-coverage.cjs",
     "test:components": "vitest run --coverage",
-    "test": "npm run test:node && npm run test:components",
-    "performance:report": "node scripts/frontend-performance.mjs"
+    "test": "npm run test:node && node scripts/test-components-coverage.cjs",
+    "performance:report": "node scripts/frontend-performance.mjs",
+    "test:node:native": "mkdir -p coverage && node --test --test-concurrency=1 --enable-source-maps --experimental-test-coverage --test-coverage-branches=60 --test-coverage-functions=60 --test-coverage-lines=60 --test-coverage-include='src/**' --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info tests/*.test.cjs"
   },
   "dependencies": {
     "@mairie360/bff-settings-openapi": "0.0.0-dev.6d726190fa0a1d5d4db5a7e0c500b46bd832ca41",
+    "@mairie360/front-kit": "file:vendor/mairie360-front-kit-0.1.0.tgz",
     "@mairie360/lib-components": "0.8.0",
     "axios": "1.20.0",
     "lucide-react": "1.0.0",
     "next": "16.3.8",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@mairie360/front-kit": "file:vendor/mairie360-front-kit-0.1.0.tgz"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -35,6 +36,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "5.0.2",
+    "c8": "12.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
     "jest-axe": "11.0.0",

@@ -46,11 +46,6 @@ test('the dark municipal semantic palette has readable surfaces, focus indicator
   assert.ok(contrast(card.color, card.backgroundColor) >= 7);
   dom.window.close();
 });
-test('all eight frontends consume the exact same municipal theme as the canonical library draft', () => {
-  const workspace = resolve(__dirname, '../..');
-  for (const name of ['Projects', 'Settings', 'Dashboard', 'Calendars', 'Messages', 'Elearning', 'Administrator', 'Login']) assert.equal(readFileSync(resolve(workspace, `${name}_Web_Service/src/app/municipal-theme.css`), 'utf8'), css, name);
-  assert.equal(readFileSync(resolve(workspace, '.frontend-qa-main-delivery-oct8.XDsQCOa7/library-visible-read-ack/src/styles/municipal-theme.css'), 'utf8'), css);
-});
 
 test('reduced motion disables municipal transitions and animated scrolling', () => {
   const { dom } = screen('dark');

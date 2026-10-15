@@ -54,8 +54,8 @@ function reconcile<T extends object>(baseline: T, draft: T, incoming: T): T {
   return { ...incoming, ...changedFields(baseline, draft) };
 }
 
-export default function SettingsPreferencesPanel({ tab, bootstrap, reading, onWriting }: {
-  tab: string; bootstrap: SettingsBootstrap; reading: boolean; onWriting: (writing: boolean) => void;
+export default function SettingsPreferencesPanel({ tab, bootstrap, reading, onWriting, onRefresh }: {
+  tab: string; bootstrap: SettingsBootstrap; reading: boolean; onWriting: (writing: boolean) => void; onRefresh: () => void;
 }) {
   const [state, setState] = useState(() => {
     const baseline = initialValues(bootstrap);
@@ -118,7 +118,7 @@ export default function SettingsPreferencesPanel({ tab, bootstrap, reading, onWr
   return <section className="settings-feature-card" aria-busy={busy}>
     <h2>{section === 'appearance' ? 'Apparence' : section === 'general' ? 'Préférences générales' : 'Préférences de notification'}</h2>
     <p className="text-sm">« Par défaut » conserve le comportement défini par votre compte. Vos modifications sont enregistrées uniquement après confirmation.</p>
-    {!enabled ? <p role="alert">Ces préférences sont temporairement indisponibles. Votre saisie est conservée ; actualisez les paramètres pour réessayer.</p> : null}
+    {!enabled ? <><p role="alert">Ces préférences sont temporairement indisponibles. Votre saisie est conservée ; actualisez les paramètres pour réessayer.</p><button type="button" className="mt-3 rounded border px-4 py-2 disabled:opacity-50" disabled={reading || busy} onClick={onRefresh}>Actualiser les préférences</button></> : null}
     <form onSubmit={event => { event.preventDefault(); void save(section); }}>
       {section === 'appearance' ? <>
         {select('Thème', appearance.theme, choices.theme, value => update('appearance', 'theme', (value || null) as SettingsAppearance['theme']))}

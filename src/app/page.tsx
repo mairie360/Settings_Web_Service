@@ -382,7 +382,7 @@ export default function Home() {
             </nav>
 
             <div role="tabpanel" id={`settings-panel-${activeTab}`} aria-labelledby={`settings-tab-${activeTab}`} className="settings-panel">
-            <SettingsPendingFeatures tab={activeTab} isAdmin={isAdmin} preferencesContent={<SettingsPreferencesPanel key={accountScope} tab={activeTab} bootstrap={data} reading={reading || saving} onWriting={onPreferencesWriting} />} profileInitials={`${data.profile.first_name.trim().charAt(0)}${data.profile.last_name.trim().charAt(0)}`.toLocaleUpperCase('fr') || '?'} profileContent={profileContent} securityContent={securityContent} systemContent={<SettingsAssistance />} />
+            <SettingsPendingFeatures tab={activeTab} isAdmin={isAdmin} preferencesContent={<SettingsPreferencesPanel key={accountScope} tab={activeTab} bootstrap={data} reading={reading || saving} onWriting={onPreferencesWriting} onRefresh={() => void readSettings()} />} profileInitials={`${data.profile.first_name.trim().charAt(0)}${data.profile.last_name.trim().charAt(0)}`.toLocaleUpperCase('fr') || '?'} profileContent={profileContent} securityContent={securityContent} systemContent={<SettingsAssistance />} />
             </div>
           </>
         )}

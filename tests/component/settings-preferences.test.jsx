@@ -117,3 +117,14 @@ it('keeps edits made during a foreground read and waits for that read before sav
   save(); await screen.findByText('Préférences enregistrées.');
   expect(api.saveAppearance).toHaveBeenCalledExactlyOnceWith({ theme: 'dark' });
 });
+
+it('offers a safe retry when an available source returns unusable preference values', async () => {
+  api.loadSettings.mockResolvedValueOnce(fixtures.bootstrap({ appearance: { theme: 'unsupported', font_family: null, font_size: null, density: null } }));
+  render(<Home />); await screen.findByRole('tab', { name: 'Apparence' }); tab('Apparence');
+  expect(screen.getByLabelText('Thème').disabled).toBe(true);
+  expect(screen.getByRole('button', { name: 'Enregistrer les préférences' }).disabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Actualiser les préférences' }));
+  await waitFor(() => expect(screen.getByLabelText('Thème').disabled).toBe(false));
+  expect(screen.getByLabelText('Thème').value).toBe('system');
+  expect(api.saveAppearance).not.toHaveBeenCalled();
+});

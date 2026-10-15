@@ -22,7 +22,7 @@ const front = createFront({
   upstreams: () => [bffSettings.url, unreachable],
 });
 
-const { loadSettings, saveProfile } = requireSrc('lib/settings-api.ts');
+const { loadSettings, saveProfile, saveAppearance, saveGeneral, saveNotifications } = requireSrc('lib/settings-api.ts');
 
 const BFF_URL_VARIABLES = ['SETTINGS_BFF_URL', 'BFF_SETTINGS_BASE_URL'];
 const savedEnv = Object.fromEntries(BFF_URL_VARIABLES.map((name) => [name, process.env[name]]));
@@ -97,6 +97,19 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
     assert.equal(received.headers['content-type'], 'application/json');
     assert.equal(received.headers.authorization, `Bearer ${fixtures.ACCESS_TOKEN}`);
   });
+
+  for (const [name, call, section, patch, saved] of [
+    ['appearance', saveAppearance, 'appearance', { theme: 'dark' }, fixtures.appearance({ theme: 'dark' })],
+    ['general', saveGeneral, 'general', { home_page: 'projects' }, fixtures.general({ home_page: 'projects' })],
+    ['notifications', saveNotifications, 'notifications', { messages: false }, fixtures.notifications({ messages: false })],
+  ]) {
+    test(`save ${name} uses the generated PATCH and returns its snapshot`, async () => {
+      bffSettings.on('PATCH', `/settings/${section}`, { body: saved });
+      assert.deepEqual(await call(patch), saved);
+      assert.deepEqual(front.browserCalls, [{ method: 'PATCH', path: `/settings/${section}` }]);
+      assert.deepEqual(bffSettings.requests[0].body, patch);
+    });
+  }
 
   test('saveProfile forwards current_password with the new e-mail (MAIR-511)', async () => {
     const saved = fixtures.profile({ email: 'anne.nouvelle@mairie.test' });

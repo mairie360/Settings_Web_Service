@@ -337,8 +337,9 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
 
   await view.click('Notifications');
   assert.match(view.html, /<h2[^>]*>Préférences de notification<\/h2>/);
-  assert.match(view.text(), /Vos choix restent un brouillon/);
-  assert.match(view.text(), /ne sont pas encore synchronisés avec votre compte/);
+  assert.match(view.text(), /Vos modifications sont enregistrées uniquement après confirmation/);
+  assert.equal(view.hostElements((props, text, tag) => tag === 'select').length, 6);
+  assert.equal(view.hostElements('Enregistrer les préférences').find(element => element.type === 'button').props.disabled, true);
   assert.doesNotMatch(view.text(), /BFF/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap'], 'an unavailable tab does not call the BFF');
 });

@@ -68,7 +68,7 @@ describe('network surface of src/', () => {
       assert.ok(contract.match(method.toUpperCase(), template), `${name}: ${method} ${template} absent de ${PACKAGE}`);
       return `${method.toUpperCase()} ${template}`;
     });
-    assert.deepEqual(routes, ['GET /settings/bootstrap', 'PATCH /settings/profile']);
+    assert.deepEqual(routes, ['GET /settings/bootstrap', 'PATCH /settings/profile', 'PATCH /settings/appearance', 'PATCH /settings/general', 'PATCH /settings/notifications']);
   });
 
   test('business requests use the Settings contract proxy and configured BFF URL', () => {

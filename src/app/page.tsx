@@ -9,6 +9,7 @@ import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { CURRENT_PASSWORD, PASSWORD_REQUIRED_MESSAGE, PROFILE_FIELDS, isEmailChanged, profilePatch, saveErrorMessage } from "@/lib/profile-form";
 import type { ProfileField } from "@/lib/profile-form";
 import { formatSessionDate } from "@/lib/session-date";
+import SettingsPreferencesPanel from "@/components/settings-preferences";
 import SettingsPendingFeatures from "@/components/settings-pending-features";
 import SessionRevokeControl from "@/components/settings-session-revoke";
 import SettingsAssistance from "@/components/settings-assistance";
@@ -99,14 +100,18 @@ export default function Home() {
   const [readAnnouncement, setReadAnnouncement] = useState("");
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  const preferencesWriting = useRef(false);
+  const [accountScope, setAccountScope] = useState(0);
+  const onPreferencesWriting = useCallback((writing: boolean) => { preferencesWriting.current = writing; }, []);
   const readRef = useRef<AbortController | null>(null);
   const confirmedProfileRef = useRef<Profile | null>(null);
 
   const readSettings = useCallback(async (fromForeground = false) => {
-    if (readRef.current || savingRef.current) return;
+    if (readRef.current || savingRef.current || preferencesWriting.current) return;
     const controller = new AbortController();
     const baseline = confirmedProfileRef.current;
     readRef.current = controller;
+    setReading(true);
     setReadAnnouncement("Chargement des paramètres…");
 
     try {
@@ -117,6 +122,7 @@ export default function Home() {
       }
       const profileScopeChanged = fromForeground && baseline && baseline.email !== result.profile.email;
       if (profileScopeChanged) {
+        setAccountScope(scope => scope + 1);
         setCurrentPassword(""); setError(""); setErrorDetails([]); setStatus("");
       }
       confirmedProfileRef.current = result.profile;
@@ -335,14 +341,14 @@ export default function Home() {
         </section> : null}
         <p role="status" aria-live="polite" aria-atomic="true" className={status ? "rounded border border-green-200 bg-white p-4 text-green-800" : "sr-only"}>{status}</p>
         <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{readAnnouncement}</p>
-        {!data || data.sources.sessions === "unavailable" || readError ? (
+        {!data || data.sources.sessions === "unavailable" || data.sources.preferences === "unavailable" || data.sources.notifications === "unavailable" || readError ? (
           <button
             type="button"
             className="rounded border border-[#d8d2ca] bg-white px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={reading || saving}
             aria-busy={reading}
             onClick={() => {
-              if (readRef.current || savingRef.current) return;
+              if (readRef.current || savingRef.current || preferencesWriting.current) return;
               setReading(true);
               void readSettings();
             }}
@@ -376,7 +382,7 @@ export default function Home() {
             </nav>
 
             <div role="tabpanel" id={`settings-panel-${activeTab}`} aria-labelledby={`settings-tab-${activeTab}`} className="settings-panel">
-            <SettingsPendingFeatures tab={activeTab} isAdmin={isAdmin} profileInitials={`${data.profile.first_name.trim().charAt(0)}${data.profile.last_name.trim().charAt(0)}`.toLocaleUpperCase('fr') || '?'} profileContent={profileContent} securityContent={securityContent} systemContent={<SettingsAssistance />} />
+            <SettingsPendingFeatures tab={activeTab} isAdmin={isAdmin} preferencesContent={<SettingsPreferencesPanel key={accountScope} tab={activeTab} bootstrap={data} reading={reading || saving} onWriting={onPreferencesWriting} />} profileInitials={`${data.profile.first_name.trim().charAt(0)}${data.profile.last_name.trim().charAt(0)}`.toLocaleUpperCase('fr') || '?'} profileContent={profileContent} securityContent={securityContent} systemContent={<SettingsAssistance />} />
             </div>
           </>
         )}

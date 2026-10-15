@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Home from "@/app/page";
+import { InstanceProvider } from "@mairie360/front-kit/react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { loadSessionRole } from "@/lib/session-role";
 import { setBrowserFrontUrls } from "@/lib/front-urls";
@@ -26,9 +27,9 @@ function bootstrap(overrides = {}) {
   };
 }
 
-async function openSettings() {
+async function openSettings({ role, timeZone = "UTC" } = {}) {
   const user = userEvent.setup();
-  render(<Home />);
+  render(<InstanceProvider role={role} timeZone={timeZone}><Home /></InstanceProvider>);
   await screen.findByRole("textbox", { name: "Prénom" });
   return user;
 }
@@ -262,7 +263,7 @@ describe("Settings page", () => {
         revoked_at: null,
       }],
     }));
-    const user = await openSettings();
+    const user = await openSettings({ timeZone: "Indian/Reunion" });
     await user.click(screen.getByRole("tab", { name: "Sécurité" }));
 
     const dates = document.querySelectorAll("time");
@@ -270,7 +271,7 @@ describe("Settings page", () => {
     expect(dates[0].dateTime).toBe("2026-09-15T08:00:00Z");
     expect(dates[1].dateTime).toBe("2026-09-22T08:00:00Z");
     expect(dates[0].textContent).toBe(new Intl.DateTimeFormat("fr-FR", {
-      dateStyle: "medium", timeStyle: "short",
+      dateStyle: "medium", timeStyle: "short", timeZone: "Indian/Reunion",
     }).format(new Date(dates[0].dateTime)));
     expect(screen.queryByText("2026-09-15T08:00:00Z")).toBeNull();
   });
@@ -319,10 +320,22 @@ describe("Settings page", () => {
   });
 });
 
-for (const [isAdmin, expected] of [[true, true], [false, false]]) it(`administration command follows the authoritative role result ${isAdmin}`, async () => {
-  vi.mocked(loadSessionRole).mockResolvedValueOnce(isAdmin);
-  await openSettings();
-  if (expected) expect((await screen.findAllByRole('button', { name: 'Administration', exact: true })).length).toBeGreaterThan(0);
-  else expect(screen.queryAllByRole('button', { name: 'Administration', exact: true })).toHaveLength(0);
-  expect(loadSessionRole).toHaveBeenCalledTimes(1);
+for (const [role, unusedRoleResult, expected] of [['Admin', false, true], ['Guest', true, false], [undefined, true, false]]) {
+  it(`administration follows the trusted SSR role ${role ?? 'missing claim'} without a role lookup`, async () => {
+    vi.mocked(loadSessionRole).mockResolvedValueOnce(unusedRoleResult);
+    await openSettings({ role });
+    if (expected) expect(screen.getAllByRole('button', { name: 'Administration', exact: true }).length).toBeGreaterThan(0);
+    else expect(screen.queryAllByRole('button', { name: 'Administration', exact: true })).toHaveLength(0);
+    expect(loadSessionRole).not.toHaveBeenCalled();
+    expect(loadSettings).toHaveBeenCalledTimes(1);
+  });
+}
+
+it('an unavailable role endpoint cannot hide navigation confirmed by the Admin SSR claim', async () => {
+  vi.mocked(loadSessionRole).mockRejectedValueOnce(Object.assign(new Error('Role endpoint unavailable'), { status: 503 }));
+  await openSettings({ role: 'Admin' });
+  expect(screen.getAllByRole('button', { name: 'Administration', exact: true }).length).toBeGreaterThan(0);
+  expect(screen.getByRole('textbox', { name: 'Prénom' }).value).toBe('Test');
+  expect(loadSessionRole).not.toHaveBeenCalled();
+  expect(loadSettings).toHaveBeenCalledTimes(1);
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { EmptyState, Skeleton, Toast } from "@mairie360/lib-components/primitives";
 import SettingsMutationForm from '@/components/settings-mutation-form';
 import { subscribePageReturn } from "@/lib/page-return";
 
@@ -278,7 +279,7 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
                     ))}
                   </ul>
                 ) : (
-                  <p>Aucune session à afficher.</p>
+                  <EmptyState title="Aucune session à afficher." />
                 )}
                 <p className="text-sm text-[#596274]">L’identification de la session actuelle et les déconnexions individuelles restent à raccorder.</p>
               </section>
@@ -315,7 +316,7 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
           <p>{logoutError}</p>
           <button type="button" className="rounded border px-4 py-2 text-sm font-medium" onClick={() => navigateToLogin({ explicit: true })}>Retour à la connexion</button>
         </section> : null}
-        <p role="status" aria-live="polite" aria-atomic="true" className={status ? "rounded border border-green-200 bg-white p-4 text-green-800" : "sr-only"}>{status}</p>
+        <Toast message={status} variant="success" className={status ? "mt-4" : "sr-only"} onClose={status ? () => setStatus("") : undefined} />
         <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{readAnnouncement}</p>
         {!data || data.sources.sessions === "unavailable" || data.sources.preferences === "unavailable" || data.sources.notifications === "unavailable" || readError ? (
           <button
@@ -334,7 +335,7 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
         ) : null}
 
         {!data || !profile ? (
-          <p>{!reading && readError ? "Le profil est indisponible." : "Chargement des paramètres…"}</p>
+          <div aria-busy={reading}><p>{!reading && readError ? "Le profil est indisponible." : "Chargement des paramètres…"}</p>{reading ? <Skeleton className="mt-4 !h-64" /> : null}</div>
         ) : (
           <>
             <nav role="tablist" aria-label="Paramètres" className="settings-tabs">

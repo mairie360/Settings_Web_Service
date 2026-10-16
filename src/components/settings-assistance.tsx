@@ -1,5 +1,7 @@
 "use client";
 
+import { Toast } from "@mairie360/lib-components/primitives";
+
 import SettingsMutationForm from '@/components/settings-mutation-form';
 
 import { useEffect, useRef, useState } from "react";
@@ -125,7 +127,7 @@ export default function SettingsAssistance() {
         <button type="button" className={buttonClass} onClick={downloadDiagnostic}>Télécharger le diagnostic local</button>
       </section>
       {!kind && error ? <p role="alert" className="text-red-700">{error}</p> : null}
-      <p role="status" aria-live="polite" aria-atomic="true" className={status ? "text-green-800" : "sr-only"}>{status}</p>
+      <Toast message={status} variant="info" className={status ? "mt-3" : "sr-only"} onClose={status ? () => setStatus("") : undefined} />
     </section>
   );
 }

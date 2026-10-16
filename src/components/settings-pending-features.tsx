@@ -4,7 +4,7 @@ import SettingsMutationForm from '@/components/settings-mutation-form';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { BriefcaseBusiness } from "lucide-react";
-import { Avatar } from '@mairie360/lib-components';
+import { Avatar, Toast } from '@mairie360/lib-components/primitives';
 type SettingsTabId = 'profile' | 'security' | 'notifications' | 'appearance' | 'general' | 'system';
 import { changedFields, pendingFeatureMessage, pendingSettingsPort, validatePassword, validatePhoto } from '@/lib/settings-features';
 import type { ExtendedProfile, InstanceUpdates, SettingsFeaturePort, SettingsPreferences } from '@/lib/settings-features';
@@ -68,7 +68,8 @@ export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSe
   }
   function notice(name: string) {
     const value = feedback[name];
-    return <><p role="status" aria-live="polite" aria-atomic="true" data-feedback={name} className={value?.message && !value.failed ? 'mt-3 text-sm' : 'sr-only'}>{value && !value.failed ? value.message : ''}</p>{value?.failed && value.message ? <p role="alert" className="mt-3 text-sm">{value.message}</p> : null}</>;
+    const dismiss = () => setFeedback(current => ({ ...current, [name]: { message: '', failed: false } }));
+    return <><Toast message={value && !value.failed ? value.message : ''} variant="success" data-feedback={name} className={value?.message && !value.failed ? 'mt-3' : 'sr-only'} onClose={value?.message && !value.failed ? dismiss : undefined} />{value?.failed && value.message ? <Toast message={value.message} variant="error" className="mt-3" onClose={dismiss} /> : null}</>;
   }
   function update<K extends keyof SettingsPreferences>(key: K, value: SettingsPreferences[K]) { if (!writing.current) setPreferences(current => ({ ...current, [key]: value })); }
   function savePreferences() {
@@ -180,6 +181,6 @@ function InstanceUpdatesPanel({ port }: { port: SettingsFeaturePort }) {
     }}><label className="block">Politique de mise à jour<select className={fieldClass} value={policy} disabled={busy || reading} onChange={event => setPolicy(event.target.value as typeof policy)}><option value="automatic">Automatique</option><option value="pinned">Version épinglée</option></select></label>
       {policy === 'pinned' ? <label className="block">Version à épingler<select className={fieldClass} value={version} disabled={busy || reading || !data} required onChange={event => setVersion(event.target.value)}><option value="">Sélectionner une version</option>{data?.releases.map(release => <option value={release.version} key={release.version} disabled={!release.supported}>{release.version}</option>)}</select></label> : null}
       <button className={buttonClass} type="submit" disabled={busy || reading}>{busy ? 'Enregistrement…' : 'Appliquer la politique'}</button>
-    </SettingsMutationForm>{error ? <p role="alert">{error}</p> : null}{status ? <p role="status">{status}</p> : null}
+    </SettingsMutationForm>{error ? <p role="alert">{error}</p> : null}{status ? <Toast message={status} variant="success" className="mt-3" onClose={() => setStatus('')} /> : null}
   </section>;
 }

@@ -537,7 +537,12 @@ test('editing a field and submitting the form saves the profile with PATCH /sett
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
   assert.deepEqual(bffSettings.requests[1].body, { first_name: 'Anne' });
-  assert.match(html, /<p role="status"[^>]*>Votre profil a été enregistré\.<\/p>/);
+  const receiptDom = new (require('jsdom').JSDOM)(html);
+  try {
+    const announcements = [...receiptDom.window.document.querySelectorAll('[role="status"]')]
+      .filter(node => node.textContent.includes('Votre profil a été enregistré.'));
+    assert.equal(announcements.length, 1, 'the confirmed profile receipt has one live announcement');
+  } finally { receiptDom.window.close(); }
   assert.match(html, /<input[^>]*type="text"[^>]*value="LE GALL"/);
   assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Enregistrer le profil<\/button>/, 'the button is disabled again');
   assert.match(html, /Aucune modification à enregistrer\./);

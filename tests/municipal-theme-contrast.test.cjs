@@ -1,9 +1,8 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { readFileSync } = require('node:fs');
-const { resolve } = require('node:path');
 const { JSDOM } = require('jsdom');
-const css = readFileSync(resolve(__dirname, '../src/app/municipal-theme.css'), 'utf8');
+const css = readFileSync(require.resolve('@mairie360/lib-components/styles.css'), 'utf8');
 function screen(theme) {
   const dom = new JSDOM(`<html data-theme="${theme}"><head><style>${css}</style></head><body class="mairie-ui"><main><input class="bg-white" value="Texte"><select class="bg-white"><option>Choix</option></select><textarea class="bg-white">Texte</textarea><article class="mairie-task-card">Dossier communal</article><button type="button">Action</button></main></body></html>`);
   const root = dom.window.getComputedStyle(dom.window.document.documentElement);
@@ -49,9 +48,9 @@ test('the dark municipal semantic palette has readable surfaces, focus indicator
 
 test('reduced motion disables municipal transitions and animated scrolling', () => {
   const { dom } = screen('dark');
-  const media = [...dom.window.document.styleSheets[0].cssRules].find(rule => rule.conditionText?.includes('prefers-reduced-motion: reduce'));
+  const media = [...dom.window.document.styleSheets[0].cssRules].find(rule => rule.conditionText?.includes('prefers-reduced-motion: reduce') && [...rule.cssRules].some(child => child.style?.getPropertyValue('scroll-behavior') === 'auto'));
   assert.ok(media, 'reduced motion has a matching style block');
-  const styles = media.cssRules[0].style;
+  const styles = [...media.cssRules].find(rule => rule.style?.getPropertyValue('scroll-behavior') === 'auto').style;
   assert.ok(parseFloat(styles.getPropertyValue('animation-duration')) <= 0.01);
   assert.ok(parseFloat(styles.getPropertyValue('transition-duration')) <= 0.01);
   assert.equal(styles.getPropertyValue('scroll-behavior').replace(/\s*!important$/, ''), 'auto');

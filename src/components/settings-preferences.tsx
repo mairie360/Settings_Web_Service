@@ -1,5 +1,7 @@
 "use client";
 
+import { Toast } from "@mairie360/lib-components/primitives";
+
 import SettingsMutationForm from '@/components/settings-mutation-form';
 
 import { useEffect, useRef, useState } from 'react';
@@ -143,7 +145,7 @@ export default function SettingsPreferencesPanel({ tab, bootstrap, reading, onWr
       </> : <>{([['email', 'E-mail'], ['push', 'Notifications push'], ['desktop', 'Notifications sur le bureau'], ['messages', 'Messages'], ['projects', 'Projets'], ['calendar', 'Calendrier']] as const).map(([field, label]) => <div key={field}>{select(label, notifications[field], [['true', 'Activées'], ['false', 'Désactivées']], value => update('notifications', field, value === '' ? null : value === 'true'))}</div>)}</>}
       <button type="submit" className="mt-5 rounded border border-[#cbd5e1] bg-white px-4 py-2 text-[#172033] disabled:opacity-50" disabled={disabled || reading || !Object.keys(changedFields(state.baseline[section], state.draft[section])).length}>{busy ? 'Enregistrement…' : 'Enregistrer les préférences'}</button>
     </SettingsMutationForm>
-    <p role="status" aria-live="polite" aria-atomic="true" className={feedback && !feedback.failed ? 'mt-3 text-sm' : 'sr-only'}>{feedback && !feedback.failed ? feedback.message : ''}</p>
-    {feedback?.failed ? <p role="alert" className="mt-3 text-sm">{feedback.message}</p> : null}
+    <Toast message={feedback && !feedback.failed ? feedback.message : ''} variant="success" className={feedback && !feedback.failed ? 'mt-3' : 'sr-only'} onClose={feedback && !feedback.failed ? () => setState(current => ({ ...current, feedback: { ...current.feedback, [section]: undefined } })) : undefined} />
+    {feedback?.failed ? <Toast message={feedback.message} variant="error" className="mt-3" onClose={() => setState(current => ({ ...current, feedback: { ...current.feedback, [section]: undefined } }))} /> : null}
   </section>;
 }

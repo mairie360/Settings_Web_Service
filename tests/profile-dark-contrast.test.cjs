@@ -10,11 +10,11 @@ const markup = `<body class="mairie-ui"><div class="settings-shell"><main><secti
 async function screen(theme) {
   const { compile } = await import('tailwindcss');
   const globals = readFileSync(resolve(root, 'src/app/globals.css'), 'utf8').replace(/^@import\s+"tailwindcss";$/m, '@tailwind utilities;');
-  const municipal = readFileSync(resolve(root, 'src/app/municipal-theme.css'), 'utf8');
+  const municipal = readFileSync(require.resolve('@mairie360/lib-components/styles.css'), 'utf8');
   const dom = new JSDOM(`<html data-theme="${theme}"><head></head>${markup}</html>`);
   const classes = [...dom.window.document.querySelectorAll('[class]')].flatMap(element => [...element.classList]);
   const style = dom.window.document.createElement('style');
-  style.textContent = (await compile(`${globals}\n${municipal}`)).build(classes);
+  style.textContent = municipal + "\n" + (await compile(globals)).build(classes);
   dom.window.document.head.append(style);
   const computed = element => dom.window.getComputedStyle(element);
   // JSDOM drops shorthand backgrounds containing var(), unlike browsers.
@@ -26,6 +26,16 @@ async function screen(theme) {
       return /^#[\da-f]{6}$/i.test(value) ? value : match;
     });
   }
+  // Normalize colour-only background shorthands to equivalent longhands.
+  // JSDOM otherwise lets a later, less-specific shorthand reset an earlier
+  // background-color; Chromium's actual light/dark cascade is checked separately.
+  const parsed = require('postcss').parse(style.textContent);
+  parsed.walkDecls('background', declaration => {
+    if (/^(?:#[\da-f]{3,8}|rgba?\([^)]*\)|var\(--[\w-]+\))$/i.test(declaration.value.trim())) {
+      declaration.prop = 'background-color';
+    }
+  });
+  style.textContent = parsed.toString();
   const variable = (element, name) => {
     for (let current = element; current; current = current.parentElement) {
       const value = computed(current).getPropertyValue(name).trim();

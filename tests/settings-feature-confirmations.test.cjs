@@ -107,7 +107,11 @@ test('MAIR-357: the account console URL is derived from the public realm URL onl
   const { keycloakAccountUrl } = requireSrc('lib/keycloak-account.ts');
   assert.equal(keycloakAccountUrl('https://auth.mairie.test/realms/mairie360/'), 'https://auth.mairie.test/realms/mairie360/account');
   assert.equal(keycloakAccountUrl(' https://sso.example.org/realms/town '), 'https://sso.example.org/realms/town/account');
-  for (const invalid of [undefined, '', '   ', 'not a url', 'javascript:alert(1)', 'ftp://auth.mairie.test/realms/x', 'https://user:pw@auth.mairie.test/realms/x', 'https://auth.mairie.test/realms/x?next=1', 'https://auth.mairie.test/realms/x#a']) {
+  assert.equal(keycloakAccountUrl('https://mairie.test/auth/realms/town'), 'https://mairie.test/auth/realms/town/account');
+  assert.equal(keycloakAccountUrl('http://localhost:8080/realms/dev'), 'http://localhost:8080/realms/dev/account');
+  for (const invalid of ['', '   ', 'not a url', 'javascript:alert(1)', 'ftp://auth.mairie.test/realms/x', 'http://auth.mairie.test/realms/x',
+    'https://user:pw@auth.mairie.test/realms/x', 'https://auth.mairie.test/realms/x?next=1', 'https://auth.mairie.test/realms/x#a',
+    'https://auth.mairie.test/', 'https://auth.mairie.test/realms/', 'https://auth.mairie.test/realms/town/account']) {
     assert.equal(keycloakAccountUrl(invalid), undefined, String(invalid));
   }
   const previous = process.env.KEYCLOAK_REALM_URL;

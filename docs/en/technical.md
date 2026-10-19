@@ -107,7 +107,7 @@ Values below are local examples or explicitly described behavior, not production
 | --- | --- | --- |
 | `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL` | http://localhost:4008 | Left-to-right proxy precedence; configure an HTTP(S) URL explicitly. Missing or invalid configuration returns an uncached 503 without contacting an upstream. |
 | `LOGIN_FRONT_URL` | — | Validated runtime Login origin used to open `/logout`. |
-| `KEYCLOAK_REALM_URL` | https://auth.mairie360.fr/realms/mairie360 | Public realm URL (MAIR-357), read on the server by `src/lib/keycloak-account.ts`. The Security tab links to `<realm>/account` to manage the second factor; absent or invalid (non-HTTP(S), credentials, query or fragment) hides the link. |
+| `KEYCLOAK_REALM_URL` | https://auth.mairie360.fr/realms/mairie360 | Public realm URL (MAIR-357), read on the server by `src/lib/keycloak-account.ts`. The Security tab links to `<realm>/account` to manage the second factor; absent or invalid hides the link: HTTPS only (HTTP for a loopback host in local development), path `…/realms/<realm>`, no credentials, query or fragment. |
 
 The shared navigation reads `DASHBOARD_FRONT_URL`, `PROJECT_FRONT_URL`,
 `MESSAGE_FRONT_URL`, `ELEARNING_FRONT_URL`, `CALENDAR_FRONT_URL` and

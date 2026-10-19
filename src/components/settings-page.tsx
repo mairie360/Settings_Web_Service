@@ -45,7 +45,7 @@ function SessionDate({ value }: { value: string | null | undefined }) {
   return label && value ? <time dateTime={value}>{label}</time> : <span>Date indisponible</span>;
 }
 
-export default function SettingsPage({ initialData }: { initialData?: Bootstrap | null }) {
+export default function SettingsPage({ initialData, twoFactorUrl }: { initialData?: Bootstrap | null; twoFactorUrl?: string }) {
   const [initial] = useState(() => isConfirmedBootstrap(initialData) ? initialData : null);
   const [data, setData] = useState<Bootstrap | null>(initial);
   const [profile, setProfile] = useState<Profile | null>(initial?.profile ?? null);
@@ -359,7 +359,7 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
             </nav>
 
             <div role="tabpanel" id={`settings-panel-${activeTab}`} aria-labelledby={`settings-tab-${activeTab}`} className="settings-panel">
-            <SettingsPendingFeatures tab={activeTab} isAdmin={isAdmin} preferencesContent={<SettingsPreferencesPanel key={accountScope} tab={activeTab} bootstrap={data} reading={reading || saving} onWriting={onPreferencesWriting} onRefresh={() => void readSettings()} />} profileInitials={`${data.profile.first_name.trim().charAt(0)}${data.profile.last_name.trim().charAt(0)}`.toLocaleUpperCase('fr') || '?'} profileContent={profileContent} securityContent={securityContent} systemContent={<SettingsAssistance />} />
+            <SettingsPendingFeatures tab={activeTab} isAdmin={isAdmin} twoFactorUrl={twoFactorUrl} preferencesContent={<SettingsPreferencesPanel key={accountScope} tab={activeTab} bootstrap={data} reading={reading || saving} onWriting={onPreferencesWriting} onRefresh={() => void readSettings()} />} profileInitials={`${data.profile.first_name.trim().charAt(0)}${data.profile.last_name.trim().charAt(0)}`.toLocaleUpperCase('fr') || '?'} profileContent={profileContent} securityContent={securityContent} systemContent={<SettingsAssistance />} />
             </div>
           </>
         )}

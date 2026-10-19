@@ -97,7 +97,7 @@ describe('network surface of src/', () => {
   });
 
   test('the browser Content-Security-Policy only allows same-origin connections', () => {
-    const { buildContentSecurityPolicy } = require('@mairie360/front-kit/shared');
+    const { buildContentSecurityPolicy } = require('@mairie360/lib-components/shared');
     for (const isDevelopment of [false, true]) {
       const directives = buildContentSecurityPolicy('nonce', isDevelopment).split('; ');
       assert.ok(directives.includes("connect-src 'self'"));

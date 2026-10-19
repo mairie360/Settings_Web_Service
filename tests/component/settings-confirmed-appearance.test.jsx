@@ -61,8 +61,8 @@ it('keeps appearance controls keyboard accessible and confines extreme font size
 });
 
 it('follows system colour changes through the distributed provider and retains an explicit confirmed theme', async () => {
-  const { InstanceProvider } = await import('@mairie360/front-kit/react');
-  const { applyConfirmedAppearance } = await import('@mairie360/front-kit/theme');
+  const { InstanceProvider } = await import('@mairie360/lib-components/react');
+  const { applyConfirmedAppearance } = await import('@mairie360/lib-components/theme');
   const media = Object.assign(new EventTarget(), { matches: false });
   const original = window.matchMedia;
   window.matchMedia = () => media;

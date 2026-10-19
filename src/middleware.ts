@@ -1,4 +1,4 @@
-import { createAuthGuard } from '@mairie360/front-kit/guard';
+import { createAuthGuard } from '@mairie360/lib-components/guard';
 import contract from '../contracts/openapi.json';
 export const middleware = createAuthGuard({
   paths: contract.paths,

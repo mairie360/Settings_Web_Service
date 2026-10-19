@@ -13,7 +13,8 @@ export function keycloakAccountUrl(value = process.env.KEYCLOAK_REALM_URL): stri
     const realm = new URL(value.trim());
     const secure = realm.protocol === 'https:' || (realm.protocol === 'http:' && LOOPBACK_HOSTS.has(realm.hostname));
     if (!secure || realm.username || realm.password || realm.search || realm.hash || !REALM_PATH.test(realm.pathname)) return undefined;
-    return `${realm.href.replace(/\/+$/, '')}/account`;
+    // Built from origin and path: an empty `?` or `#` left at the end of the value is dropped.
+    return `${realm.origin}${realm.pathname.replace(/\/+$/, '')}/account`;
   } catch {
     return undefined;
   }

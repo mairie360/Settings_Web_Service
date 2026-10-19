@@ -109,6 +109,9 @@ test('MAIR-357: the account console URL is derived from the public realm URL onl
   assert.equal(keycloakAccountUrl(' https://sso.example.org/realms/town '), 'https://sso.example.org/realms/town/account');
   assert.equal(keycloakAccountUrl('https://mairie.test/auth/realms/town'), 'https://mairie.test/auth/realms/town/account');
   assert.equal(keycloakAccountUrl('http://localhost:8080/realms/dev'), 'http://localhost:8080/realms/dev/account');
+  for (const dangling of ['https://auth.mairie.test/realms/town?', 'https://auth.mairie.test/realms/town#', 'https://auth.mairie.test/realms/town/?#']) {
+    assert.equal(keycloakAccountUrl(dangling), 'https://auth.mairie.test/realms/town/account', dangling);
+  }
   for (const invalid of ['', '   ', 'not a url', 'javascript:alert(1)', 'ftp://auth.mairie.test/realms/x', 'http://auth.mairie.test/realms/x',
     'https://user:pw@auth.mairie.test/realms/x', 'https://auth.mairie.test/realms/x?next=1', 'https://auth.mairie.test/realms/x#a',
     'https://auth.mairie.test/', 'https://auth.mairie.test/realms/', 'https://auth.mairie.test/realms/town/account']) {

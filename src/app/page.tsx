@@ -1,4 +1,4 @@
-import { createNonce } from '@mairie360/front-kit/shared';
+import { createNonce } from '@mairie360/lib-components/shared';
 import SettingsPage from '@/components/settings-page';
 import { loadInitialSettings } from '@/lib/server-settings';
 import { keycloakAccountUrl } from '@/lib/keycloak-account';

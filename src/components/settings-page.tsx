@@ -21,7 +21,7 @@ import SettingsAssistance from "@/components/settings-assistance";
 import SettingsTabIcon from "@/components/settings-tab-icon";
 import { getActiveFrontHrefs } from "@/lib/navigation";
 import { logoutAndRedirect, navigateToLogin } from "@/lib/logout";
-import { useInstanceRole } from "@mairie360/front-kit/react";
+import { useInstanceRole } from "@mairie360/lib-components/react";
 import { usePageUrlState } from '@/lib/use-page-url-state';
 import { urlChoice } from '@/lib/page-url-state';
 import type {

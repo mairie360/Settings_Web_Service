@@ -12,7 +12,7 @@ test('Settings uses the shared frontend workflow with Semgrep enabled', () => {
   const reusableWorkflows = [...workflow.matchAll(/^\s+uses:\s+mairie360\/CICD\/\.github\/workflows\/frontend-cicd\.yml@([a-f0-9]{40})\s*$/gm)];
   assert.equal(reusableWorkflows.length, 1, 'Settings must call the shared frontend workflow once');
   const [, version] = reusableWorkflows[0];
-  assert.equal(version, '5b7d127d46f95d8951935b6209ca7c2ca857a21d', 'only the integrated reviewed workflow commit is accepted');
+  assert.equal(version, 'bbd2207256969f9f63e5477452d86e1f6c56339d', 'only the integrated reviewed workflow commit is accepted');
   assert.equal(workflow.match(/cicd_version:\s*"([^"]+)"/)?.[1], version,
     'the reusable workflow ref and input must use the same version');
   assert.doesNotMatch(workflow, /semgrep_fail_on_findings:\s*false|semgrep_config:|continue-on-error:/);
@@ -61,6 +61,9 @@ test('the reusable workflow receives only its declared named secrets', () => {
   assert.deepEqual(mappings.map(([, name, source]) => [name, source]), [
     ['CODECOV_TOKEN', 'CODECOV_TOKEN'],
     ['N8N_WEBHOOK_SECRET', 'N8N_WEBHOOK_SECRET'],
+    ['ANTHROPIC_API_KEY', 'ANTHROPIC_API_KEY'],
+    ['RELEASE_APP_ID', 'RELEASE_APP_ID'],
+    ['RELEASE_APP_PK', 'RELEASE_APP_PK'],
   ]);
 });
 

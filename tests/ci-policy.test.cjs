@@ -31,7 +31,7 @@ test('third-party workflow actions use immutable commits', () => {
 
 test('the legacy required security name runs real immutable blocking scanners', () => {
   const workflow = read('.github/workflows/cicd.yml');
-  assert.match(workflow, /on:\s*\n  push:\s*\n  pull_request:\s*\n  workflow_dispatch:/);
+  assert.match(workflow, /on:\s*\n(?:  #.*\n)*  push:\s*\n    branches: \[main\]\s*\n  pull_request:\s*\n  workflow_dispatch:/);
   const job = workflow.split('  required_security_scan:\n')[1]?.split('\n  CICD:')[0];
   assert.ok(job, 'the legacy required check needs its own executable scan job');
   assert.match(job, /name: CICD \/ Code Security Audit \(Semgrep\)/);

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { it, expect, vi } from 'vitest';
 import SettingsPendingFeatures from '@/components/settings-pending-features';
 import SessionRevokeControl from '@/components/settings-session-revoke';
@@ -43,13 +43,6 @@ it('validates password confirmation, reports an unavailable operation, and clear
   expect(screen.getByRole('alert').textContent).toContain('aucune modification du compte');
   rerender(<SettingsPendingFeatures tab="general" isAdmin={false} />); rerender(<SettingsPendingFeatures tab="security" isAdmin={false} />); expect(screen.getByLabelText('Mot de passe actuel').value).toBe('');
 });
-it('requires the server MFA challenge and receipt before claiming activation', async () => {
-  const confirmMfa = vi.fn().mockRejectedValue(new Error('Code refusé'));
-  render(<SettingsPendingFeatures tab="security" isAdmin={false} port={{ startMfa: vi.fn().mockResolvedValue({ challengeId:'challenge-1',instruction:'Instruction reçue' }),confirmMfa }} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Configurer la méthode' })); await screen.findByText('Instruction reçue');
-  fireEvent.change(screen.getByLabelText('Code de vérification'), { target: { value: '123456' } }); fireEvent.click(screen.getByRole('button', { name:'Vérifier et activer' }));
-  await screen.findByText('Code refusé'); expect(confirmMfa).toHaveBeenCalledExactlyOnceWith('challenge-1','123456'); expect(screen.queryByText('Authentification à deux facteurs confirmée.')).toBeNull();
-});
 it('requires session confirmation and leaves the list unchanged on refusal', async () => {
   const revoked = vi.fn(); const revokeSession = vi.fn().mockRejectedValue(new Error('Session refusée'));
   render(<SessionRevokeControl sessionId="s-1" label="Firefox" port={{ revokeSession }} onRevoked={revoked} />);
@@ -67,32 +60,13 @@ it('shows actual release notes and unsupported-version warning supplied by a fut
   fireEvent.change(screen.getByLabelText('Politique de mise à jour'), { target:{ value:'automatic' } }); fireEvent.click(screen.getByRole('button', { name:'Appliquer la politique' }));
   await screen.findByText('Demande confirmée pour la prochaine fenêtre de maintenance.'); expect(saveUpdates).toHaveBeenCalledExactlyOnceWith({ policy:'automatic' });
 });
-
-it('does not restore a delayed MFA challenge after leaving Security and returning', async () => {
-  let receive; const startMfa = vi.fn(() => new Promise(resolve => { receive = resolve; }));
-  const port = { startMfa };
-  const { rerender } = render(<SettingsPendingFeatures tab="security" isAdmin={false} port={port} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Configurer la méthode' }));
-  rerender(<SettingsPendingFeatures tab="general" isAdmin={false} port={port} />);
-  rerender(<SettingsPendingFeatures tab="security" isAdmin={false} port={port} />);
-  await act(async () => { receive({ challengeId:'late',instruction:'Late instruction' }); });
-  expect(screen.queryByText('Late instruction')).toBeNull();
-  expect(screen.queryByLabelText('Code de vérification')).toBeNull();
-});
-it('uses confirmed activation, received recovery codes, and an explicit disable receipt', async () => {
-  const disableMfa = vi.fn().mockResolvedValue(undefined);
-  const port = { startMfa:vi.fn().mockResolvedValue({ challengeId:'c1',instruction:'Instruction réelle' }),confirmMfa:vi.fn().mockResolvedValue(undefined),recoveryCodes:vi.fn().mockResolvedValue(['received-one','received-two']),disableMfa };
-  const { rerender } = render(<SettingsPendingFeatures tab="security" isAdmin={false} port={port} />);
-  fireEvent.click(screen.getByRole('button', { name:'Configurer la méthode' })); await screen.findByText('Instruction réelle');
-  fireEvent.change(screen.getByLabelText('Code de vérification'),{ target:{ value:'123456' } });
-  fireEvent.click(screen.getByRole('button',{ name:'Vérifier et activer' })); await screen.findByText('Cette méthode a été activée et confirmée.');
-  fireEvent.click(screen.getByRole('button',{ name:'Afficher les codes de récupération' })); await screen.findByText('received-one');
-  rerender(<SettingsPendingFeatures tab="general" isAdmin={false} port={port} />);
-  rerender(<SettingsPendingFeatures tab="security" isAdmin={false} port={port} />);
-  expect(screen.queryByText('received-one')).toBeNull();
-  fireEvent.click(screen.getByRole('button',{ name:'Désactiver cette méthode' })); expect(disableMfa).not.toHaveBeenCalled();
-  fireEvent.change(screen.getByLabelText('Code pour confirmer la désactivation'),{ target:{ value:'654321' } });
-  fireEvent.click(screen.getByRole('button',{ name:'Confirmer la désactivation' })); await screen.findByText('Désactivation confirmée.');
-  expect(disableMfa).toHaveBeenCalledExactlyOnceWith('authenticator','654321');
-  expect(screen.queryByText('Cette méthode a été activée et confirmée.')).toBeNull();
+it('MAIR-357: links the security tab to the Keycloak account console instead of simulated SMS or app toggles', () => {
+  const { rerender } = render(<SettingsPendingFeatures tab="security" isAdmin={false} twoFactorUrl="https://auth.mairie.test/realms/mairie360/account" />);
+  expect(screen.getByRole('heading', { name: 'Double authentification' })).toBeTruthy();
+  expect(screen.getByRole('link', { name: 'Gérer ma double authentification' }).getAttribute('href')).toBe('https://auth.mairie.test/realms/mairie360/account');
+  expect(screen.queryByRole('combobox')).toBeNull();
+  expect(screen.queryByText(/SMS/)).toBeNull();
+  rerender(<SettingsPendingFeatures tab="security" isAdmin={false} />);
+  expect(screen.queryByRole('link', { name: 'Gérer ma double authentification' })).toBeNull();
+  expect(screen.getByText('La double authentification n’est pas disponible sur cette instance.')).toBeTruthy();
 });

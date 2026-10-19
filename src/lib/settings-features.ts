@@ -18,10 +18,6 @@ export interface SettingsFeaturePort {
   saveExtendedProfile?: (patch: Partial<ExtendedProfile>) => Promise<ExtendedProfile>;
   savePhoto?: (photo: File) => Promise<string>;
   changePassword?: (current: string, next: string) => Promise<void>;
-  startMfa?: (method: 'sms' | 'authenticator') => Promise<{ challengeId: string; instruction: string }>;
-  disableMfa?: (method: 'sms' | 'authenticator', code: string) => Promise<void>;
-  recoveryCodes?: () => Promise<string[]>;
-  confirmMfa?: (challengeId: string, code: string) => Promise<void>;
   revokeSession?: (id: string) => Promise<void>;
   loadUpdates?: (signal: AbortSignal) => Promise<InstanceUpdates>;
   saveUpdates?: (choice: { policy: 'automatic' | 'pinned'; version?: string }) => Promise<InstanceUpdates>;

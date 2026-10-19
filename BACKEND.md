@@ -24,10 +24,10 @@ Les tables sont des sources ou des besoins cibles, pas un script SQL. Les réfé
 
 | Table / source propriétaire | Clés et données nécessaires | État |
 | --- | --- | --- |
-| Core `user_security_settings` | `user_id` unique, méthodes MFA activées ; secrets chiffrés côté serveur uniquement | Proposé ; même table que Connexion |
+| Core `user_security_settings` | `user_id` unique, méthodes MFA activées ; secrets chiffrés côté serveur uniquement | Abandonné : le second facteur est géré par Keycloak (MAIR-572, MAIR-357) |
 | Core `user_notification_settings` | `user_id` unique ; booléens `email`, `push`, `desktop`, `messages`, `projects`, `calendar` | Proposé ; préférences, distinctes de `notifications` |
 | Core `user_preferences` | `user_id` unique ; `theme`, `font_family`, `font_size`, `density`, `language`, `timezone`, `date_format`, `home_page`, `auto_open_notifications` | Proposé |
-| Core `system_settings` | Politique globale MFA, durée de session et limites de connexion ; aucun changement par les préférences personnelles | Proposé ; même table que Administration |
+| Core `system_settings` | Durée de session et limites de connexion ; aucun changement par les préférences personnelles. La politique MFA relève de Keycloak (MAIR-572) | Proposé ; même table que Administration |
 | Files `files`, `storage_quotas` | `files.id`, `owner_id`, `storage_key`, `mime_type`, `size_bytes`, `deleted_at` ; quota unique par `user_id` ; `user_profiles.avatar_file_id` référence le fichier avatar | Proposé ; même stockage que Fichiers |
 | Core `application_logs` | Source de diagnostic filtrée ; `id`, `level`, `source`, `message`, `user_id`, `ip_address`, `created_at` ; pas d'accès utilisateur à tous les logs | Proposé ; même table/source que Administration |
 | Configuration de déploiement / client | Version et date de déploiement ; navigateur, OS, cache temporaire, autorisations de notifications et préférence de thème système côté client | Pas de table métier |
@@ -56,10 +56,10 @@ Les tables sont des sources ou des besoins cibles, pas un script SQL. Les réfé
 | POST | Core `/api/v1/user/me/avatar` | `user_profiles.avatar_file_id` ; upload délégué à Files | Proposé |
 | POST | Files `/api/v1/files/` | `files` + stockage objet ; propriétaire utilisateur connecté | Proposé ; même route que Fichiers |
 | PATCH | Core `/api/v1/user/me/password` | `users`, `sessions` selon politique de révocation | Proposé ; distinct du changement forcé de première connexion |
-| GET | Core `/api/v1/user/me/security/` | `user_security_settings`, `system_settings` ; booleans uniquement | Proposé |
-| POST | Core `/api/v1/user/me/security/enrollments` | Défi MFA temporaire, `user_security_settings` | Proposé |
-| POST | Core `/api/v1/user/me/security/enrollments/{enrollmentId}/verify` | Défi MFA, `user_security_settings` | Proposé |
-| DELETE | Core `/api/v1/user/me/security/{method}` | `user_security_settings`, `system_settings` | Proposé |
+| GET | Core `/api/v1/user/me/security/` | `user_security_settings`, `system_settings` ; booleans uniquement | Abandonné : compte Keycloak (MAIR-357) |
+| POST | Core `/api/v1/user/me/security/enrollments` | Défi MFA temporaire, `user_security_settings` | Abandonné : compte Keycloak (MAIR-357) |
+| POST | Core `/api/v1/user/me/security/enrollments/{enrollmentId}/verify` | Défi MFA, `user_security_settings` | Abandonné : compte Keycloak (MAIR-357) |
+| DELETE | Core `/api/v1/user/me/security/{method}` | `user_security_settings`, `system_settings` | Abandonné : compte Keycloak (MAIR-357) |
 | GET, PATCH | Core `/api/v1/user/me/notification-settings/` | `user_notification_settings` | Proposé |
 | GET, PATCH | Core `/api/v1/user/me/preferences/` | `user_preferences` | Proposé ; PATCH partiel préservant les autres sections |
 | GET | Core `/api/v1/system/info` | Configuration du déploiement ; version, date | Proposé |

@@ -9,7 +9,7 @@ const { propertyName } = require('./source-policy.cjs');
 // BFF) avec l'expression de leur URL de base, variables d'environnement lues, routes serveur, paquets
 // `@mairie360/*-openapi` importés et URLs absolues en dur.
 
-const RAW_CALLS = new Set(['fetch', 'sendBeacon']);
+const RAW_CALLS = new Set(['fetch', 'sessionFetch', 'sendBeacon']);
 const RAW_CONSTRUCTORS = new Set(['XMLHttpRequest', 'WebSocket', 'EventSource']);
 const HTTP_MODULES = new Set(['axios', 'ky', 'got', 'node-fetch', 'undici', 'swr', 'http', 'https', 'net', 'node:http', 'node:https', 'node:net']);
 

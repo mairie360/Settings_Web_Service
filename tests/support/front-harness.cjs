@@ -91,7 +91,7 @@ function createFront({ cookies = {}, upstreams, owner }) {
     const headers = new Headers(init.headers);
     if (!headers.has('origin')) headers.set('origin', ORIGIN);
     if (!headers.has('sec-fetch-site')) headers.set('sec-fetch-site', 'same-origin');
-    const cookie = Object.entries(cookies).map(([name, value]) => `${name}=${value}`).join('; ');
+    const cookie = Object.entries(cookies).filter(([name]) => name !== 'refreshToken' || url.pathname === '/api' || url.pathname.startsWith('/api/')).map(([name, value]) => `${name}=${value}`).join('; ');
     if (cookie && !headers.has('cookie')) headers.set('cookie', cookie);
     const request = new NextRequest(url, { ...init, method, headers });
     const response = await server.run({ route: found.route.file }, () => handler(request, { params: Promise.resolve(found.params) }));

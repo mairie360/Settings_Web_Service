@@ -1,3 +1,4 @@
+import { sessionFetch } from '@mairie360/front-kit/browser';
 import axios, { type AxiosAdapter } from 'axios';
 import { getBffSettings } from '@mairie360/bff-settings-openapi/endpoints/bffSettings';
 import { navigateToLogin, isSessionRecoveryPending } from './logout';
@@ -48,7 +49,7 @@ export async function requestBff<T>(path: string, init: RequestInit = {}): Promi
   headers.delete('Authorization');
   headers.set('Accept', 'application/json');
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-  const response = await fetch(path, { ...init, headers, credentials: 'same-origin', cache: 'no-store', redirect: 'manual' });
+  const response = await sessionFetch(path, { ...init, headers, credentials: 'same-origin', cache: 'no-store', redirect: 'manual' });
   init.signal?.throwIfAborted();
   if (response.type === 'opaqueredirect') {
     navigateToLogin();
@@ -64,20 +65,24 @@ export async function requestBff<T>(path: string, init: RequestInit = {}): Promi
 
 // The generated operations of the published BFF_Settings contract own every path: axios only carries the
 // request through requestBff, which keeps the same-origin cookie, redirect and 401 handling.
-const contractAdapter: AxiosAdapter = async (config) => {
-  const data = await requestBff<unknown>(axios.getUri(config), {
-    method: (config.method ?? 'get').toUpperCase(),
-    headers: config.headers.toJSON() as Record<string, string>,
-    body: typeof config.data === 'string' ? config.data : undefined,
-    signal: (config.signal as AbortSignal | undefined) ?? undefined,
-  });
-  return {
-    data,
-    status: data === undefined ? 204 : 200,
-    statusText: data === undefined ? 'No Content' : 'OK',
-    headers: {},
-    config,
+export function createSettingsClient(request: typeof requestBff = requestBff) {
+  const contractAdapter: AxiosAdapter = async (config) => {
+    const data = await request<unknown>(axios.getUri(config), {
+      method: (config.method ?? 'get').toUpperCase(),
+      headers: config.headers.toJSON() as Record<string, string>,
+      body: typeof config.data === 'string' ? config.data : undefined,
+      signal: (config.signal as AbortSignal | undefined) ?? undefined,
+    });
+    return {
+      data,
+      status: data === undefined ? 204 : 200,
+      statusText: data === undefined ? 'No Content' : 'OK',
+      headers: {},
+      config,
+    };
   };
-};
 
-export const bffSettings = getBffSettings(axios.create({ adapter: contractAdapter, headers: { Accept: 'application/json' } }));
+  return getBffSettings(axios.create({ adapter: contractAdapter, headers: { Accept: 'application/json' } }));
+}
+
+export const bffSettings = createSettingsClient();

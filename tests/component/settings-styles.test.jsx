@@ -1,15 +1,17 @@
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import Home from '@/app/page';
+import Home from '@/components/settings-page';
 import { loadSettings, saveProfile } from '@/lib/settings-api';
 import { setBrowserFrontUrls } from '@/lib/front-urls';
 import fixtures from '../support/settings-fixtures.cjs';
 
 vi.mock('@/lib/settings-api', () => ({ loadSettings: vi.fn(), saveProfile: vi.fn() }));
-const stylesheet = readFileSync(resolve(process.cwd(), 'src/app/globals.css'), 'utf8');
+const require = createRequire(import.meta.url);
+const stylesheet = readFileSync(require.resolve('@mairie360/lib-components/styles.css'), 'utf8') + '\n' + readFileSync(resolve(process.cwd(), 'src/app/globals.css'), 'utf8');
 let style;
 const dialogMethods = new Map(['showModal', 'close'].map(name => [name, Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, name)]));
 // Only model dialog state. Native modal isolation, hit testing and geometry remain browser checks.
@@ -35,6 +37,7 @@ async function page() {
   const user = userEvent.setup(); render(<Home />); await screen.findByRole('textbox', { name: 'Prénom' }); return user;
 }
 function shadow(value) {
+  value = value.replace(/var\((--[\w-]+)\)/g, (_match, name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim());
   return value.split(/,(?![^()]*\))/).map(part => {
     const tokens = part.trim().split(/\s+(?![^()]*\))/), lengths = tokens.filter(token => Number.isFinite(Number.parseFloat(token)));
     const colors = tokens.filter(token => !Number.isFinite(Number.parseFloat(token)));
@@ -55,7 +58,7 @@ describe('actual Settings page with the published shell and consumer styles', ()
     const user = userEvent.setup();
     const skip = screen.getByRole('link', { name: 'Aller au contenu' });
     await user.click(skip);
-    expect(document.activeElement).toBe(screen.getByRole('main').firstElementChild);
+    expect(document.activeElement).toBe(screen.getByRole('main'));
     expect(screen.getByRole('contentinfo').closest('aside')).toBeNull();
   });
 
@@ -96,11 +99,26 @@ describe('actual Settings page with the published shell and consumer styles', ()
 
   it('opens bounded assistance content and closes it through the actual command', async () => {
     const user = await page(); await user.click(screen.getByRole('tab', { name: 'Système', exact: true }));
+    const skip = screen.getByRole('link', { name: 'Aller au contenu' });
+    const main = screen.getByRole('main');
+    expect(skip.getAttribute('href')).toBe(`#${main.id}`);
+    expect(skip.compareDocumentPosition(document.querySelector('.app-desktop-navigation button')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Centre d’aide', exact: true }));
     const dialog = screen.getByRole('dialog', { name: 'Centre d’aide' }); const computed = getComputedStyle(dialog);
+    expect(dialog.open).toBe(true);
+    expect(document.querySelectorAll(`a[href="#${main.id}"]`)).toHaveLength(1);
+    await user.tab();
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    // The native showModal() boundary makes outside content inert in browsers.
+    // JSDOM models open/close only; an inert attribute is not expected on the skip link here.
     expect(computed.width.replace(/\s+/g, '')).toBe('min(600px,100%-32px)');
     expect(computed.maxHeight.replace(/\s+/g, '')).toBe('calc(100dvh-32px)'); expect(computed.overflow).toBe('auto');
     await user.click(within(dialog).getByRole('button', { name: 'Fermer', exact: true })); expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('main')).toBe(main);
+    expect(screen.getByRole('link', { name: 'Aller au contenu' })).toBe(skip);
+    expect(skip.closest('[inert]')).toBeNull();
+    await user.click(skip);
+    expect(document.activeElement).toBe(main);
     expect(loadSettings).toHaveBeenCalledTimes(1); expect(saveProfile).not.toHaveBeenCalled();
   });
   // API functions reuse existing canonical fixtures. No deployed BFF response-schema or persistence certification here.

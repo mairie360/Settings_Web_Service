@@ -16,7 +16,7 @@ const { ContractMockServer } = require('./support/contract-mock-server.cjs');
 const { createFront } = require('./support/front-harness.cjs');
 const fixtures = require('./support/settings-fixtures.cjs');
 const { setBrowserFrontUrls } = requireSrc('lib/front-urls.ts');
-const Home = requireSrc('app/page.tsx').default;
+const Home = requireSrc('components/settings-page.tsx').default;
 
 const bffSettings = new ContractMockServer('BFF_SETTINGS', OpenApiContract.load(path.join(ROOT, 'contracts', 'openapi.json')));
 const front = createFront({ cookies: { accessToken: fixtures.ACCESS_TOKEN }, upstreams: () => [bffSettings.url] });
@@ -306,7 +306,7 @@ test('unconfirmed account-menu logout retains the draft until explicit canonical
   assert.deepEqual(destinations, []);
   assert.match(view.text(), /déconnexion n’a pas été confirmée/);
   assert.match(view.html, /value="Brouillon conservé"/);
-  assert.deepEqual(front.browserCalls.map(call => call.method + ' ' + call.path), ['GET /api/auth/role', 'GET /settings/bootstrap', 'POST /api/auth/logout']);
+  assert.deepEqual(front.browserCalls.map(call => call.method + ' ' + call.path), ['GET /settings/bootstrap', 'POST /api/auth/logout']);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
   await view.click('Retour à la connexion');
   assert.equal(destinations.length, 1);
@@ -321,7 +321,7 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
 
   assert.match(view.html, /<button id="settings-tab-security" type="button" role="tab" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg[^>]*aria-hidden="true"[^]*?Sécurité<\/button>/);
   assert.match(view.html, /<h2[^>]*>Sessions<\/h2>/);
-  const createdAt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })
+  const createdAt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })
     .format(new Date('2026-09-15T08:00:00Z'));
   assert.ok(view.text().includes(`Firefox sur Linux — 192.0.2.10 Création : ${createdAt}`));
   assert.match(view.html, /<time dateTime="2026-09-15T08:00:00Z">/);
@@ -337,8 +337,13 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
 
   await view.click('Notifications');
   assert.match(view.html, /<h2[^>]*>Préférences de notification<\/h2>/);
-  assert.match(view.text(), /Vos choix restent un brouillon/);
-  assert.match(view.text(), /ne sont pas encore synchronisés avec votre compte/);
+  assert.match(view.text(), /Vos modifications sont enregistrées uniquement après confirmation/);
+  // The SDK form wrapper receives JSX children as props; count the rendered DOM,
+  // rather than the harness's intermediate child-prop host registrations.
+  const preferencesDom = new (require('jsdom').JSDOM)(view.html);
+  try { assert.equal(preferencesDom.window.document.querySelectorAll('select').length, 6); }
+  finally { preferencesDom.window.close(); }
+  assert.equal(view.hostElements('Enregistrer les préférences').find(element => element.type === 'button').props.disabled, true);
   assert.doesNotMatch(view.text(), /BFF/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap'], 'an unavailable tab does not call the BFF');
 });
@@ -532,7 +537,12 @@ test('editing a field and submitting the form saves the profile with PATCH /sett
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
   assert.deepEqual(bffSettings.requests[1].body, { first_name: 'Anne' });
-  assert.match(html, /<p role="status"[^>]*>Votre profil a été enregistré\.<\/p>/);
+  const receiptDom = new (require('jsdom').JSDOM)(html);
+  try {
+    const announcements = [...receiptDom.window.document.querySelectorAll('[role="status"]')]
+      .filter(node => node.textContent.includes('Votre profil a été enregistré.'));
+    assert.equal(announcements.length, 1, 'the confirmed profile receipt has one live announcement');
+  } finally { receiptDom.window.close(); }
   assert.match(html, /<input[^>]*type="text"[^>]*value="LE GALL"/);
   assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Enregistrer le profil<\/button>/, 'the button is disabled again');
   assert.match(html, /Aucune modification à enregistrer\./);

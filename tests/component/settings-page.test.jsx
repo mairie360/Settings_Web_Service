@@ -2,7 +2,8 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import Home from "@/app/page";
+import Home from "@/components/settings-page";
+import { InstanceProvider } from "@mairie360/front-kit/react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { loadSessionRole } from "@/lib/session-role";
 import { setBrowserFrontUrls } from "@/lib/front-urls";
@@ -26,9 +27,9 @@ function bootstrap(overrides = {}) {
   };
 }
 
-async function openSettings() {
+async function openSettings({ role, timeZone = "UTC" } = {}) {
   const user = userEvent.setup();
-  render(<Home />);
+  render(<InstanceProvider role={role} timeZone={timeZone}><Home /></InstanceProvider>);
   await screen.findByRole("textbox", { name: "Prénom" });
   return user;
 }
@@ -60,6 +61,34 @@ describe("Settings page", () => {
       await user.click(notificationTab);
       expect(new URLSearchParams(window.location.search).get("tab")).toBe("notification-preferences");
       expect(notificationTab.getAttribute("aria-selected")).toBe("true");
+    } finally { window.history.replaceState(null, "", "/"); }
+  });
+
+  it.each([
+    ["system", "Système"],
+    ["system-assistance", "Système"],
+    ['system" onfocus="alert(1)', "Profil"],
+  ])("reads bounded system links (%s) and writes the assistance URL on keyboard selection", async (value, selected) => {
+    window.history.replaceState(null, "", "/?event=12&tab=" + encodeURIComponent(value) + "#detail");
+    try {
+      const user = userEvent.setup();
+      render(<Home />);
+      const selectedTab = await screen.findByRole("tab", { name: selected, exact: true });
+      expect(selectedTab.getAttribute("aria-selected")).toBe("true");
+      expect(screen.getByRole("tabpanel").getAttribute("aria-labelledby")).toBe(selectedTab.id);
+      expect(document.querySelector('[onfocus]')).toBeNull();
+      if (selected === "Système") expect(screen.getByRole("heading", { name: "Système et assistance" })).toBeTruthy();
+      const profileTab = screen.getByRole("tab", { name: "Profil", exact: true });
+      await user.click(profileTab);
+      await user.keyboard("{End}");
+      const systemTab = screen.getByRole("tab", { name: "Système", exact: true });
+      expect(document.activeElement).toBe(systemTab);
+      expect(systemTab.getAttribute("aria-selected")).toBe("true");
+      expect(window.location.search).toBe("?event=12&tab=system-assistance");
+      expect(window.location.hash).toBe("#detail");
+      await user.click(profileTab);
+      await user.click(systemTab);
+      expect(new URLSearchParams(window.location.search).get("tab")).toBe("system-assistance");
     } finally { window.history.replaceState(null, "", "/"); }
   });
 
@@ -262,7 +291,7 @@ describe("Settings page", () => {
         revoked_at: null,
       }],
     }));
-    const user = await openSettings();
+    const user = await openSettings({ timeZone: "Indian/Reunion" });
     await user.click(screen.getByRole("tab", { name: "Sécurité" }));
 
     const dates = document.querySelectorAll("time");
@@ -270,7 +299,7 @@ describe("Settings page", () => {
     expect(dates[0].dateTime).toBe("2026-09-15T08:00:00Z");
     expect(dates[1].dateTime).toBe("2026-09-22T08:00:00Z");
     expect(dates[0].textContent).toBe(new Intl.DateTimeFormat("fr-FR", {
-      dateStyle: "medium", timeStyle: "short",
+      dateStyle: "medium", timeStyle: "short", timeZone: "Indian/Reunion",
     }).format(new Date(dates[0].dateTime)));
     expect(screen.queryByText("2026-09-15T08:00:00Z")).toBeNull();
   });
@@ -294,13 +323,13 @@ describe("Settings page", () => {
     expect(screen.queryByText("not-a-date")).toBeNull();
   });
 
-  it.each(["Notifications", "Apparence", "Général"])("prepares %s as an unsynchronized draft without technical jargon", async (tabName) => {
+  it.each(["Notifications", "Apparence", "Général"])("shows the persisted %s controls with explicit save confirmation", async (tabName) => {
     const user = await openSettings();
     await user.click(screen.getByRole("tab", { name: tabName }));
 
     expect(screen.getByRole("heading", { name: tabName === "Notifications" ? "Préférences de notification" : tabName === "Général" ? "Préférences générales" : tabName })).toBeTruthy();
-    expect(screen.getByText(/Vos choix restent un brouillon/)).toBeTruthy();
-    expect(screen.getByText(/ne sont pas encore synchronisés/)).toBeTruthy();
+    expect(screen.getByText(/Vos modifications sont enregistrées uniquement après confirmation/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Enregistrer les préférences" }).disabled).toBe(true);
     expect(document.querySelector("main").textContent).not.toContain("BFF");
     expect(saveProfile).not.toHaveBeenCalled();
   });
@@ -319,10 +348,22 @@ describe("Settings page", () => {
   });
 });
 
-for (const [isAdmin, expected] of [[true, true], [false, false]]) it(`administration command follows the authoritative role result ${isAdmin}`, async () => {
-  vi.mocked(loadSessionRole).mockResolvedValueOnce(isAdmin);
-  await openSettings();
-  if (expected) expect((await screen.findAllByRole('button', { name: 'Administration', exact: true })).length).toBeGreaterThan(0);
-  else expect(screen.queryAllByRole('button', { name: 'Administration', exact: true })).toHaveLength(0);
-  expect(loadSessionRole).toHaveBeenCalledTimes(1);
+for (const [role, unusedRoleResult, expected] of [['Admin', false, true], ['Guest', true, false], [undefined, true, false]]) {
+  it(`administration follows the trusted SSR role ${role ?? 'missing claim'} without a role lookup`, async () => {
+    vi.mocked(loadSessionRole).mockResolvedValueOnce(unusedRoleResult);
+    await openSettings({ role });
+    if (expected) expect(screen.getAllByRole('button', { name: 'Administration', exact: true }).length).toBeGreaterThan(0);
+    else expect(screen.queryAllByRole('button', { name: 'Administration', exact: true })).toHaveLength(0);
+    expect(loadSessionRole).not.toHaveBeenCalled();
+    expect(loadSettings).toHaveBeenCalledTimes(1);
+  });
+}
+
+it('an unavailable role endpoint cannot hide navigation confirmed by the Admin SSR claim', async () => {
+  vi.mocked(loadSessionRole).mockRejectedValueOnce(Object.assign(new Error('Role endpoint unavailable'), { status: 503 }));
+  await openSettings({ role: 'Admin' });
+  expect(screen.getAllByRole('button', { name: 'Administration', exact: true }).length).toBeGreaterThan(0);
+  expect(screen.getByRole('textbox', { name: 'Prénom' }).value).toBe('Test');
+  expect(loadSessionRole).not.toHaveBeenCalled();
+  expect(loadSettings).toHaveBeenCalledTimes(1);
 });

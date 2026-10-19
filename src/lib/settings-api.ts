@@ -1,4 +1,4 @@
-import type { SettingsBootstrap, SettingsProfile, SettingsProfilePatch } from '@mairie360/bff-settings-openapi/model';
+import type { SettingsBootstrap, SettingsProfile, SettingsProfilePatch, SettingsAppearancePatch, SettingsGeneralPatch, SettingsNotificationsPatch } from '@mairie360/bff-settings-openapi/model';
 import { bffSettings } from './bff-client';
 
 // Types of the published BFF_Settings contract (@mairie360/bff-settings-openapi, exact version pinned in package.json).
@@ -19,4 +19,16 @@ export async function loadSettings(signal?: AbortSignal) {
 
 export async function saveProfile(patch: SettingsProfilePatch) {
   return (await bffSettings.patchSettingsProfile(patch)).data;
+}
+
+export async function saveAppearance(patch: SettingsAppearancePatch) {
+  return (await bffSettings.patchSettingsAppearance(patch)).data;
+}
+
+export async function saveGeneral(patch: SettingsGeneralPatch) {
+  return (await bffSettings.patchSettingsGeneral(patch)).data;
+}
+
+export async function saveNotifications(patch: SettingsNotificationsPatch) {
+  return (await bffSettings.patchSettingsNotifications(patch)).data;
 }

@@ -21,10 +21,9 @@ for (const file of ['docker-compose-security.yml', 'docker-compose-performance.y
       const response = middleware(new NextRequest(service.healthcheck.test.at(-1)));
       assert.equal(response.status, 307);
       const destination = new URL(response.headers.get('location'));
-      assert.equal(destination.protocol, 'https:');
-      assert.equal(destination.hostname, 'login.invalid');
-      assert.equal(destination.searchParams.get('redirect'), 'https://settings.invalid/');
-      assert.equal(destination.searchParams.get('resumeSession'), '1');
+      assert.equal(destination.origin, new URL(service.environment.SETTINGS_FRONT_URL).origin);
+      assert.equal(destination.pathname, '/api/auth/resume');
+      assert.equal(destination.searchParams.get('next'), '/');
       assert.equal(response.headers.get('set-cookie'), null);
       assert.equal(response.headers.get('cache-control'), 'no-store');
       assert.ok(!service.healthcheck.test.includes('-L'), 'readiness must not follow Login outside the isolated stack');

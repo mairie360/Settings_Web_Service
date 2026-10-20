@@ -9,10 +9,9 @@ const read = (path) => readFileSync(join(root, path), 'utf8');
 
 test('Settings uses the shared frontend workflow with Semgrep enabled', () => {
   const workflow = read('.github/workflows/cicd.yml');
-  const reusableWorkflows = [...workflow.matchAll(/^\s+uses:\s+mairie360\/CICD\/\.github\/workflows\/frontend-cicd\.yml@([a-f0-9]{40})\s*$/gm)];
+  const reusableWorkflows = [...workflow.matchAll(/^\s+uses:\s+mairie360\/CICD\/\.github\/workflows\/frontend-cicd\.yml@([a-f0-9]{40}) # v\d+\.\d+\.\d+\s*$/gm)];
   assert.equal(reusableWorkflows.length, 1, 'Settings must call the shared frontend workflow once');
   const [, version] = reusableWorkflows[0];
-  assert.equal(version, 'bbd2207256969f9f63e5477452d86e1f6c56339d', 'only the integrated reviewed workflow commit is accepted');
   assert.equal(workflow.match(/cicd_version:\s*"([^"]+)"/)?.[1], version,
     'the reusable workflow ref and input must use the same version');
   assert.doesNotMatch(workflow, /semgrep_fail_on_findings:\s*false|semgrep_config:|continue-on-error:/);

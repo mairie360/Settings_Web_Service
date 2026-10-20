@@ -46,7 +46,13 @@ npm run contracts:check     # fail if the version isn't an accepted exact versio
 
 These commands run offline. After a bump, also move the `bff-settings` image tag of the `docker-compose*.yml` files to the image built from the same commit (`X.Y.Z` for a release, `dev-<sha7>` for a dev package; `package-contract.test.cjs` enforces it), then add the new operations to `SETTINGS_OPERATIONS`. The stacks also pin dev images of Core API and the database: the dev Liquibase needs `-Dallow_template_admin=true`, the database enforces argon2id hashes in `init-test.sql`, the dev Core API needs `JWT_ALLOW_WEAK_SECRET` for the shared test secret and `RATE_LIMIT_ENABLED=false`, and BFF_Settings refuses to start without `JWT_SECRET`.
 
+## Figma mockup
+
+Figma is the source of truth: design and agree any UI change on **Mairie360 – Settings_Web_Service** (https://www.figma.com/design/8lGidmyfK2O59e3qvlrKGf) first, then code it. Shared components come from the lib mockup https://www.figma.com/design/T7vetUfuzPEXk5TxjHRiO2 and are instantiated, never redrawn.
+
 ## Architecture
+
+- **Shell from the lib (MAIR-578)** — `src/components/settings-page.tsx` renders `AccessibleShell` and `CurrentDate` from `@mairie360/lib-components/shell`; `src/lib/front-urls-provider.tsx` uses the lib `configureSidebarCookieDomain`. No local `accessible-shell.tsx`, `desktop-navigation.tsx`, `current-date.tsx` or `sidebar-preference.ts` (pinned by `tests/lib-shell-adoption.test.cjs`).
 
 - **Contract-gated catch-all proxy** — `src/app/[...path]/route.ts` exports `proxyBffRequest` (`src/lib/bff-proxy.ts`) for every method. It matches the path against `contracts/openapi.json` `paths` (brace segments are wildcards): unknown path → 404, method not declared → 405 with `Allow` (GET implies HEAD), empty/`.`/`..` segments → 400; `/openapi.json` and `/swagger.json` are always forwarded. **A BFF route is therefore reachable from the browser only once the synced contract declares it.**
 - **`forwardToBff`** strips hop-by-hop headers, the `cookie` header and the middleware-added `x-nonce` / `content-security-policy` request headers (a new header injected by the middleware must be added to that list), turns the `accessToken` cookie into `Authorization: Bearer` when no Authorization header is present, keeps the query string and raw (binary) body, uses `redirect: 'manual'`, a 15 s timeout and `Cache-Control: no-store`, preserves upstream status/headers (including `Set-Cookie`, empty 204/205/304 bodies) and returns a controlled 502 JSON error when the BFF is unreachable. `tests/proxy.test.cjs` pins this behaviour.

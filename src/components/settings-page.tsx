@@ -6,8 +6,7 @@ import { subscribePageReturn } from "@/lib/page-return";
 
 import { isConfirmedBootstrap, isConfirmedProfile } from '@/lib/settings-bootstrap';
 import type { SettingsBootstrapRead as Bootstrap } from '@/lib/settings-bootstrap';
-import CurrentDate from "@/components/current-date";
-import AccessibleShell from "@/components/accessible-shell";
+import { AccessibleShell, CurrentDate } from "@mairie360/lib-components/shell";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";

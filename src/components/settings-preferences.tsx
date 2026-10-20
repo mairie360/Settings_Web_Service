@@ -5,7 +5,7 @@ import { Toast } from "@mairie360/lib-components/primitives";
 import SettingsMutationForm from '@/components/settings-mutation-form';
 
 import { useEffect, useRef, useState } from 'react';
-import { applyConfirmedAppearance, safeFontFamily } from '@mairie360/front-kit/theme';
+import { applyConfirmedAppearance, safeFontFamily } from '@mairie360/lib-components/theme';
 import type { SettingsAppearance, SettingsAppearancePatch, SettingsGeneral, SettingsGeneralPatch, SettingsNotifications, SettingsNotificationsPatch } from '@mairie360/bff-settings-openapi/model';
 import type { SettingsBootstrapRead as SettingsBootstrap } from '@/lib/settings-bootstrap';
 import * as api from '@/lib/settings-api';

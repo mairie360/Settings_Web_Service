@@ -86,32 +86,41 @@ test('password submission validates confirmation and clears secrets only after a
   assert.ok(view.hostElements((props, text, tag) => tag === 'input').every(x => x.props.value === ''));
 });
 
-test('MFA activation requires a challenge and successful verification before recovery or disabling', async t => {
-  const calls = []; let accepted = false;
-  const view = panel(t, 'security', {
-    startMfa: async method => { calls.push(['start', method]); return { challengeId: 'received-challenge', instruction: 'Instruction reçue' }; },
-    confirmMfa: async (...args) => { calls.push(['confirm', ...args]); if (!accepted) throw new Error('Code refusé'); },
-    recoveryCodes: async () => ['fixture-recovery'],
-    disableMfa: async (...args) => { calls.push(['disable', ...args]); },
-  });
-  assert.doesNotMatch(view.text(), /Afficher les codes de récupération/);
-  await view.click('Configurer la méthode');
-  assert.match(view.text(), /Instruction reçue/);
-  await change(view, 'input', 3, '123456');
-  await submit(view, 'Vérifier et activer');
-  assert.match(view.text(), /Code refusé/);
-  assert.doesNotMatch(view.text(), /Cette méthode a été activée et confirmée/);
-  accepted = true; await submit(view, 'Vérifier et activer');
-  await view.click('Afficher les codes de récupération');
-  assert.match(view.text(), /fixture-recovery/);
-  await view.click('Masquer les codes');
-  assert.doesNotMatch(view.text(), /fixture-recovery/);
-  await view.click('Désactiver cette méthode');
-  await change(view, 'input', 3, '654321');
-  await submit(view, 'Confirmer la désactivation');
-  assert.match(view.text(), /Désactivation confirmée/);
-  assert.doesNotMatch(view.text(), /Cette méthode a été activée et confirmée/);
-  assert.deepEqual(calls, [['start', 'authenticator'], ['confirm', 'received-challenge', '123456'], ['confirm', 'received-challenge', '123456'], ['disable', 'authenticator', '654321']]);
+test('MAIR-357: the second factor is managed in the Keycloak account console, never simulated in Settings', async t => {
+  const view = panel(t, 'security', {}, { twoFactorUrl: 'https://auth.mairie.test/realms/mairie360/account' });
+  const [link] = view.hostElements((props, text, tag) => tag === 'a' && text.includes('Gérer ma double authentification'));
+  assert.equal(link.props.href, 'https://auth.mairie.test/realms/mairie360/account');
+  assert.equal(link.props.target, undefined);
+  assert.match(view.text(), /application d’authentification ou avec une clé de sécurité/);
+  assert.doesNotMatch(view.text(), /SMS|Configurer la méthode|Vérifier et activer|codes de récupération|activée et confirmée/);
+  assert.deepEqual(view.hostElements((props, text, tag) => tag === 'select'), []);
+});
+
+test('MAIR-357: without Keycloak the security tab says two-factor authentication is unavailable, with no fake state', async t => {
+  const view = panel(t, 'security');
+  assert.match(view.text(), /La double authentification n’est pas disponible sur cette instance\./);
+  assert.deepEqual(view.hostElements((props, text, tag) => tag === 'a' && text.includes('double authentification')), []);
+  assert.doesNotMatch(view.text(), /SMS|activée/);
+});
+
+test('MAIR-357: the account console URL is derived from the public realm URL only', () => {
+  const { keycloakAccountUrl } = requireSrc('lib/keycloak-account.ts');
+  assert.equal(keycloakAccountUrl('https://auth.mairie.test/realms/mairie360/'), 'https://auth.mairie.test/realms/mairie360/account');
+  assert.equal(keycloakAccountUrl(' https://sso.example.org/realms/town '), 'https://sso.example.org/realms/town/account');
+  assert.equal(keycloakAccountUrl('https://mairie.test/auth/realms/town'), 'https://mairie.test/auth/realms/town/account');
+  assert.equal(keycloakAccountUrl('http://localhost:8080/realms/dev'), 'http://localhost:8080/realms/dev/account');
+  for (const dangling of ['https://auth.mairie.test/realms/town?', 'https://auth.mairie.test/realms/town#', 'https://auth.mairie.test/realms/town/?#']) {
+    assert.equal(keycloakAccountUrl(dangling), 'https://auth.mairie.test/realms/town/account', dangling);
+  }
+  for (const invalid of ['', '   ', 'not a url', 'javascript:alert(1)', 'ftp://auth.mairie.test/realms/x', 'http://auth.mairie.test/realms/x',
+    'https://user:pw@auth.mairie.test/realms/x', 'https://auth.mairie.test/realms/x?next=1', 'https://auth.mairie.test/realms/x#a',
+    'https://auth.mairie.test/', 'https://auth.mairie.test/realms/', 'https://auth.mairie.test/realms/town/account']) {
+    assert.equal(keycloakAccountUrl(invalid), undefined, String(invalid));
+  }
+  const previous = process.env.KEYCLOAK_REALM_URL;
+  process.env.KEYCLOAK_REALM_URL = 'https://auth.dev.mairie.test/realms/mairie360';
+  try { assert.equal(keycloakAccountUrl(), 'https://auth.dev.mairie.test/realms/mairie360/account'); }
+  finally { if (previous === undefined) delete process.env.KEYCLOAK_REALM_URL; else process.env.KEYCLOAK_REALM_URL = previous; }
 });
 
 test('instance policy shows received versions and preserves a refused choice until confirmation', async t => {

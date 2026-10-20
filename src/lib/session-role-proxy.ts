@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
-import { validSessionToken } from '@mairie360/front-kit/next';
-import { normalizeDisplayRole } from '@mairie360/front-kit/shared';
+import { validSessionToken } from '@mairie360/lib-components/next';
+import { normalizeDisplayRole } from '@mairie360/lib-components/shared';
 import { validatedFrontHref } from './navigation';
 
 const unavailable = (status: number) => Response.json({ message: 'Les informations du profil sont indisponibles.' }, {

@@ -87,6 +87,8 @@ describe('network surface of src/', () => {
       'app/api/auth/logout/route.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL'],
       'app/layout.tsx': ['COOKIE_DOMAIN', 'INSTANCE_TIMEZONE'],
       'lib/bff-proxy.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL', 'SETTINGS_BFF_URL', 'BFF_SETTINGS_BASE_URL'],
+      // MAIR-357: public realm URL, only to link the account console (no call to Keycloak).
+      'lib/keycloak-account.ts': ['KEYCLOAK_REALM_URL'],
       'lib/session-role-proxy.ts': ['SETTINGS_FRONT_URL', 'LOGIN_FRONT_URL', 'NODE_ENV'],
       'lib/session-peer.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL'],
       'lib/server-settings.ts': ['SETTINGS_FRONT_URL'],
@@ -97,7 +99,7 @@ describe('network surface of src/', () => {
   });
 
   test('the browser Content-Security-Policy only allows same-origin connections', () => {
-    const { buildContentSecurityPolicy } = require('@mairie360/front-kit/shared');
+    const { buildContentSecurityPolicy } = require('@mairie360/lib-components/shared');
     for (const isDevelopment of [false, true]) {
       const directives = buildContentSecurityPolicy('nonce', isDevelopment).split('; ');
       assert.ok(directives.includes("connect-src 'self'"));

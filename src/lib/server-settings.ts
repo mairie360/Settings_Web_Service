@@ -1,7 +1,7 @@
 import 'server-only';
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
-import { isExpiredJwt, publicOrigin } from '@mairie360/front-kit/shared';
+import { isExpiredJwt, publicOrigin } from '@mairie360/lib-components/shared';
 import { createSettingsClient, type requestBff } from './bff-client';
 import { configuredBffUrl, forwardToBff } from './bff-proxy';
 import { selectSettingsBootstrap } from './settings-bootstrap';

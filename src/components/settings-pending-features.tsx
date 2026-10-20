@@ -17,8 +17,10 @@ const emptyProfile: ExtendedProfile = { service: '', position: '', biography: ''
 const fieldClass = 'mt-1 w-full rounded border border-[#cbd5e1] bg-white px-3 py-2 text-[#172033]';
 const buttonClass = 'rounded border border-[#cbd5e1] bg-white px-4 py-2 text-[#172033] disabled:opacity-50';
 
-export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSettingsPort, initial, extendedProfile, preferencesContent, profileContent, securityContent, systemContent, profileInitials = '?' }: {
+export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSettingsPort, initial, extendedProfile, preferencesContent, profileContent, securityContent, systemContent, profileInitials = '?', twoFactorUrl }: {
   tab: SettingsTabId; isAdmin: boolean; port?: SettingsFeaturePort;
+  /** Keycloak account console, where the second factor is managed (MAIR-357); absent without Keycloak. */
+  twoFactorUrl?: string;
   profileInitials?: string;
   preferencesContent?: ReactNode; profileContent?: ReactNode; securityContent?: ReactNode; systemContent?: ReactNode;
   initial?: SettingsPreferences; extendedProfile?: ExtendedProfile;
@@ -31,12 +33,6 @@ export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSe
   const [photoPreview, setPhotoPreview] = useState('');
   const [confirmedPhoto, setConfirmedPhoto] = useState('');
   const [passwords, setPasswords] = useState({ current: '', next: '', confirmation: '' });
-  const [method, setMethod] = useState<'sms' | 'authenticator'>('authenticator');
-  const [challenge, setChallenge] = useState<{ challengeId: string; instruction: string } | null>(null);
-  const [code, setCode] = useState('');
-  const [enabledMethods, setEnabledMethods] = useState<Record<'sms' | 'authenticator', boolean | null>>({ sms:null,authenticator:null });
-  const [disablingMfa, setDisablingMfa] = useState(false);
-  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<Record<string, { message: string; failed: boolean }>>({});
   const [busy, setBusy] = useState('');
   const writing = useRef(false);
@@ -48,13 +44,13 @@ export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSe
     const url = URL.createObjectURL(photo); setPhotoPreview(url);
     return () => URL.revokeObjectURL(url);
   }, [photo,confirmedPhoto]);
-  // Passwords and one-time codes live only in memory and are cleared when leaving Security.
-  useEffect(() => { if (tab !== 'security') { securityEpoch.current += 1; setPasswords({ current: '', next: '', confirmation: '' }); setCode(''); setChallenge(null); setDisablingMfa(false); setRecoveryCodes([]); setFeedback(current => Object.fromEntries(Object.entries(current).filter(([key]) => !['password','mfa','disableMfa','recoveryCodes'].includes(key)))); } }, [tab]);
+  // Passwords live only in memory and are cleared when leaving Security.
+  useEffect(() => { if (tab !== 'security') { securityEpoch.current += 1; setPasswords({ current: '', next: '', confirmation: '' }); setFeedback(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== 'password'))); } }, [tab]);
 
   async function perform(name: string, operation?: () => Promise<void>, success = 'Modification confirmée.') {
     if (writing.current) return;
     const epoch = securityEpoch.current;
-    const securityOperation = ['password','mfa','disableMfa','recoveryCodes'].includes(name);
+    const securityOperation = name === 'password';
     const current = () => alive.current && (!securityOperation || epoch === securityEpoch.current);
     setFeedback(current => ({ ...current, [name]: { message: '', failed: false } }));
     if (!operation) { setFeedback(current => ({ ...current, [name]: { message: pendingFeatureMessage, failed: true } })); return; }
@@ -118,18 +114,10 @@ export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSe
         if (error) { setFeedback(current => ({ ...current, password: { message: error, failed: true } })); return; }
         void perform('password', port.changePassword ? async () => { const epoch = securityEpoch.current; await port.changePassword!(passwords.current,passwords.next); if (alive.current && epoch === securityEpoch.current) setPasswords({ current: '',next: '',confirmation: '' }); } : undefined, 'Mot de passe modifié.');
       }}><h2>Mot de passe</h2><div className="mt-4 space-y-3">{[['current','Mot de passe actuel'],['next','Nouveau mot de passe'],['confirmation','Confirmer le mot de passe']].map(([key,label]) => <label className="block" key={key}>{label}<input type="password" required autoComplete={key === 'current' ? 'current-password' : 'new-password'} className={fieldClass} disabled={Boolean(busy)} value={passwords[key as keyof typeof passwords]} onChange={event => setPasswords(current => ({ ...current, [key]: event.target.value }))} /></label>)}</div><button type="submit" className={`${buttonClass} mt-4`} disabled={Boolean(busy)}>Changer le mot de passe</button>{notice('password')}</SettingsMutationForm>
-      <section className="settings-feature-card"><h2>Authentification à deux facteurs</h2><p>État initial du compte indisponible. Aucune activation n’est supposée.</p>
-        <label className="mt-3 block">Méthode<select className={fieldClass} disabled={Boolean(busy) || Boolean(challenge)} value={method} onChange={event => setMethod(event.target.value as typeof method)}><option value="authenticator">Application d’authentification</option><option value="sms">SMS</option></select></label>
-        {!challenge ? <button type="button" className={`${buttonClass} mt-3`} disabled={Boolean(busy)} onClick={() => void perform('mfa', port.startMfa ? async () => {
-          const epoch = securityEpoch.current; const next = await port.startMfa!(method); if (!next?.challengeId || !next.instruction) throw new Error('L’inscription n’a pas pu être préparée.'); if (alive.current && epoch === securityEpoch.current) setChallenge(next);
-        } : undefined, 'Vérifiez les instructions reçues.')}>Configurer la méthode</button> : <SettingsMutationForm onSubmit={event => { event.preventDefault(); void perform('mfa', port.confirmMfa ? async () => { const epoch = securityEpoch.current; await port.confirmMfa!(challenge.challengeId,code); if (alive.current && epoch === securityEpoch.current) { setChallenge(null); setCode(''); setEnabledMethods(current => ({ ...current,[method]:true })); } } : undefined, 'Authentification à deux facteurs confirmée.'); }}><p>{challenge.instruction}</p><label>Code de vérification<input className={fieldClass} required pattern="[0-9]{6}" inputMode="numeric" autoComplete="one-time-code" disabled={Boolean(busy)} value={code} onChange={event => setCode(event.target.value)} /></label><button className={buttonClass} disabled={Boolean(busy)} type="submit">Vérifier et activer</button></SettingsMutationForm>}{notice('mfa')}
-        {enabledMethods[method] === true ? <div className="mt-4 space-y-3"><p>Cette méthode a été activée et confirmée.</p>
-          {!disablingMfa ? <button type="button" className={buttonClass} onClick={() => setDisablingMfa(true)}>Désactiver cette méthode</button> : <SettingsMutationForm onSubmit={event => { event.preventDefault(); void perform('disableMfa',port.disableMfa ? async () => { const epoch = securityEpoch.current; await port.disableMfa!(method,code); if (alive.current && epoch === securityEpoch.current) { setEnabledMethods(current => ({ ...current,[method]:false })); setDisablingMfa(false); setCode(''); setRecoveryCodes([]); } } : undefined,'Désactivation confirmée.'); }}><label>Code pour confirmer la désactivation<input required pattern="[0-9]{6}" inputMode="numeric" autoComplete="one-time-code" disabled={Boolean(busy)} className={fieldClass} value={code} onChange={event => setCode(event.target.value)} /></label><button type="submit" className={buttonClass} disabled={Boolean(busy)}>Confirmer la désactivation</button><button type="button" className={buttonClass} disabled={Boolean(busy)} onClick={() => { setDisablingMfa(false); setCode(''); }}>Annuler</button></SettingsMutationForm>}
-          <button type="button" className={buttonClass} disabled={Boolean(busy)} onClick={() => void perform('recoveryCodes',port.recoveryCodes ? async () => {
-            const epoch = securityEpoch.current; const codes = await port.recoveryCodes!(); if (!Array.isArray(codes) || !codes.length || codes.some(value => typeof value !== 'string' || !value.trim())) throw new Error('Les codes de récupération n’ont pas pu être reçus.'); if (alive.current && epoch === securityEpoch.current) setRecoveryCodes(codes);
-          } : undefined,'Codes reçus. Conservez-les dans un endroit sûr.')}>Afficher les codes de récupération</button>
-          {recoveryCodes.length ? <div><ul>{recoveryCodes.map((value,index) => <li key={index}><code>{value}</code></li>)}</ul><button type="button" className={buttonClass} onClick={() => setRecoveryCodes([])}>Masquer les codes</button></div> : null}{notice('recoveryCodes')}
-        </div> : null}{notice('disableMfa')}
+      <section className="settings-feature-card" aria-labelledby="settings-two-factor-title"><h2 id="settings-two-factor-title">Double authentification</h2>
+        {twoFactorUrl ? <><p className="settings-section-description">Protégez votre compte avec un code généré par une application d’authentification ou avec une clé de sécurité. Ce réglage se gère dans votre compte unique ; le code vous sera ensuite demandé à chaque connexion avec le compte unique.</p>
+          <a className={`${buttonClass} mt-3 inline-block`} href={twoFactorUrl}>Gérer ma double authentification</a></>
+          : <p className="settings-section-description">La double authentification n’est pas disponible sur cette instance.</p>}
       </section>
       {securityContent}
     </> : null}

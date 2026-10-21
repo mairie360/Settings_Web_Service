@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import Home from "@/components/settings-page";
+import Home from '@/components/SettingsPage';
 import { InstanceProvider } from "@mairie360/lib-components/react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { loadSessionRole } from "@/lib/session-role";
@@ -115,12 +115,13 @@ describe("Settings page", () => {
 
   it("renders six recognizable tabs with hidden icons and a responsive four-field grid", async () => {
     await openSettings();
+    // MAIR-608: the tabs are the lib Tabs (Figma Base/Tabs) with the lib Icon per tab.
     const navigation = screen.getByRole("tablist", { name: "Paramètres" });
-    expect(navigation.className).toBe("settings-tabs");
+    expect(navigation.closest(".settings-tabs")).not.toBeNull();
     for (const label of ["Profil", "Sécurité", "Notifications", "Apparence", "Général", "Système"]) {
       const tab = within(navigation).getByRole("tab", { name: label, exact: true });
       expect(tab.querySelector('svg[aria-hidden="true"][focusable="false"]')).toBeTruthy();
-      expect(tab.className).toBe("settings-tab");
+      expect(tab.id).toBe(`settings-tab-${{ Profil: 'profile', Sécurité: 'security', Notifications: 'notifications', Apparence: 'appearance', Général: 'general', Système: 'system' }[label]}`);
       expect(tab.getAttribute("aria-controls")).toBe(tab.getAttribute("aria-selected") === "true"
         ? tab.id.replace("-tab-", "-panel-") : null);
     }

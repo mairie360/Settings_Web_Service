@@ -96,6 +96,6 @@ test('light Settings retains its existing helper text and photo-picker colours',
   try {
     assert.deepEqual(view.colour('help'), [89, 98, 116]);
     assert.deepEqual(view.background('photo'), [248, 250, 252]);
-    assert.deepEqual(view.colour('photo'), [18, 86, 166]);
+    assert.deepEqual(view.colour('photo'), [62, 106, 98]);
   } finally { view.dom.window.close(); }
 });

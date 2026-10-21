@@ -1,5 +1,21 @@
 # Settings_Web_Service
 
+## Figma mockup / Maquette Figma
+
+Source of truth for every screen of this front: **[Mairie360 – Settings_Web_Service](https://www.figma.com/design/8lGidmyfK2O59e3qvlrKGf)** (Mairie360 Figma team), built from the published **[Mairie360 – lib-components](https://www.figma.com/design/T7vetUfuzPEXk5TxjHRiO2)** library. A visual or behavioural change is designed and agreed in Figma first; the code then implements the mockup.
+
+Référence de chaque écran de ce front : **[Mairie360 – Settings_Web_Service](https://www.figma.com/design/8lGidmyfK2O59e3qvlrKGf)**, construit à partir de la bibliothèque **[Mairie360 – lib-components](https://www.figma.com/design/T7vetUfuzPEXk5TxjHRiO2)**. Tout changement visuel ou de comportement est d’abord conçu et validé dans Figma ; le code implémente ensuite la maquette.
+
+## Shared shell — MAIR-578
+
+The application shell (collapsible sidebar, top bar, footer, page date) comes from `@mairie360/lib-components/shell` (`AccessibleShell`, `CurrentDate`, sidebar-preference helpers); this front keeps no local copy. `tests/lib-shell-adoption.test.cjs` pins that.
+
+## Sessions through the shared SessionList — MAIR-607
+
+The Sécurité tab renders the library's `SessionList` (`@mairie360/lib-components/primitives`): same columns (device, IP address, creation, expiry or revocation, state) and the same loading / empty / unavailable states as the Administrator console. The row action opens `settings-session-revoke.tsx`, a confirmation built on the lib `ConfirmModal`, which calls the feature port and marks the session revoked once confirmed. `tests/lib-session-list-adoption.test.cjs` pins it.
+
+L'onglet Sécurité affiche le `SessionList` de la lib : mêmes colonnes (appareil, IP, création, expiration ou révocation, état) et mêmes états que la console d'administration. L'action de ligne ouvre une confirmation (`ConfirmModal` de la lib) qui appelle le port de fonctionnalité puis marque la session révoquée.
+
 ## Current shared UI artifact — 10 October 2026
 
 This frontend consumes the published `@mairie360/lib-components@0.6.12` artifact from source commit `6c022cb53da535fd16d4fa80a5cdb943d3791f31`. The selected manifest version, root lock entry, installed package, registry integrity and recorded distribution hashes are checked together by the release tests. Application pins and published BFF contracts are unchanged by this documentation update. Historical 0.6.11 notes below describe the earlier delivery.

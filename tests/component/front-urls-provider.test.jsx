@@ -3,7 +3,7 @@ import { afterEach, expect, it } from 'vitest';
 import { FrontUrlsProvider } from '@/lib/front-urls-provider';
 import { getActiveFrontHrefs } from '@/lib/navigation';
 import { setBrowserFrontUrls } from '@/lib/front-urls';
-import { configureSidebarCookieDomain, sidebarPreferenceCookie } from '@/lib/sidebar-preference';
+import { configureSidebarCookieDomain, sidebarPreferenceCookie } from '@mairie360/lib-components/shell';
 
 function RuntimeLink() { return <a href={getActiveFrontHrefs().projects}>Projects</a>; }
 afterEach(() => { setBrowserFrontUrls({}); configureSidebarCookieDomain(undefined); });

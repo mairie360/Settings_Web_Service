@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { it, expect, vi } from 'vitest';
-import SettingsPendingFeatures from '@/components/settings-pending-features';
-import SessionRevokeControl from '@/components/settings-session-revoke';
+import SettingsPendingFeatures from '@/components/SettingsPage/components/SettingsPendingFeatures';
+import SessionRevokeControl from '@/components/SettingsPage/components/SessionsSection/components/SessionRevokeDialog';
 
 it('preserves preference and professional drafts across tabs without calling a profile or invented endpoint', async () => {
   const { rerender } = render(<SettingsPendingFeatures tab="notifications" isAdmin={false} />);
@@ -12,7 +12,7 @@ it('preserves preference and professional drafts across tabs without calling a p
   fireEvent.click(screen.getByText('Informations professionnelles', { exact: true }).closest('summary'));
   fireEvent.change(screen.getByLabelText('Service'), { target: { value: 'Service saisi' } });
   rerender(<SettingsPendingFeatures tab="appearance" isAdmin={false} />);
-  fireEvent.click(screen.getByLabelText('Sombre')); expect(screen.getByLabelText('Aperçu de l’apparence').style.background).toBe('rgb(23, 32, 51)');
+  fireEvent.click(screen.getByLabelText('Sombre')); expect(screen.getByLabelText('Aperçu de l’apparence').style.background).toBe('var(--mairie-navigation-background)');
   rerender(<SettingsPendingFeatures tab="notifications" isAdmin={false} />); expect(screen.getByLabelText('Messages').checked).toBe(false);
   rerender(<SettingsPendingFeatures tab="profile" isAdmin={false} />);
   fireEvent.click(screen.getByText('Informations professionnelles', { exact: true }).closest('summary')); expect(screen.getByLabelText('Service').value).toBe('Service saisi');
@@ -45,9 +45,10 @@ it('validates password confirmation, reports an unavailable operation, and clear
 });
 it('requires session confirmation and leaves the list unchanged on refusal', async () => {
   const revoked = vi.fn(); const revokeSession = vi.fn().mockRejectedValue(new Error('Session refusée'));
-  render(<SessionRevokeControl sessionId="s-1" label="Firefox" port={{ revokeSession }} onRevoked={revoked} />);
-  fireEvent.click(screen.getByRole('button', { name:'Déconnecter cette session' })); expect(revokeSession).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name:'Confirmer la déconnexion' })); await screen.findByText('Session refusée'); expect(revoked).not.toHaveBeenCalled(); expect(revokeSession).toHaveBeenCalledExactlyOnceWith('s-1');
+  // MAIR-607: the dialog is opened by the SessionList row action; the request waits for the confirmation.
+  render(<SessionRevokeControl session={{ id: 's-1', device_info: 'Firefox' }} port={{ revokeSession }} onRevoked={revoked} onClose={() => {}} />);
+  expect(revokeSession).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name:'Confirmer la déconnexion' })); expect((await screen.findByRole('alert')).textContent).toContain('Session refusée'); expect(revoked).not.toHaveBeenCalled(); expect(revokeSession).toHaveBeenCalledExactlyOnceWith('s-1');
 });
 it('does not expose instance update controls to nonadministrators or invent deployed versions', () => {
   render(<SettingsPendingFeatures tab="system" isAdmin={false} />); expect(screen.queryByText('Mises à jour de l’instance')).toBeNull();

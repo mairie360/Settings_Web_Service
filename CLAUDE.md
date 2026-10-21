@@ -46,7 +46,46 @@ npm run contracts:check     # fail if the version isn't an accepted exact versio
 
 These commands run offline. After a bump, also move the `bff-settings` image tag of the `docker-compose*.yml` files to the image built from the same commit (`X.Y.Z` for a release, `dev-<sha7>` for a dev package; `package-contract.test.cjs` enforces it), then add the new operations to `SETTINGS_OPERATIONS`. The stacks also pin dev images of Core API and the database: the dev Liquibase needs `-Dallow_template_admin=true`, the database enforces argon2id hashes in `init-test.sql`, the dev Core API needs `JWT_ALLOW_WEAK_SECRET` for the shared test secret and `RATE_LIMIT_ENABLED=false`, and BFF_Settings refuses to start without `JWT_SECRET`.
 
+## Figma mockup
+
+Figma is the source of truth: design and agree any UI change on **Mairie360 – Settings_Web_Service** (https://www.figma.com/design/8lGidmyfK2O59e3qvlrKGf) first, then code it. Shared components come from the lib mockup https://www.figma.com/design/T7vetUfuzPEXk5TxjHRiO2 and are instantiated, never redrawn.
+
+## Component tree convention
+
+Every component under `src/components/` is a **folder named after it**, and the folder tree
+mirrors the composition tree:
+
+```
+Name/
+  index.ts          # exports the component (and the helpers it owns)
+  Name.tsx          # imports ONLY its direct sub-components, through their index.ts
+  Name.test.jsx     # its tests, co-located (vitest + jsdom; `.jsx` in this repo, `.tsx` in the TypeScript-tested fronts)
+  components/       # one such folder per direct sub-component, recursively
+```
+
+- A component needs nothing but the `index.ts` of its direct sub-components: `Name.tsx` imports
+  `./components/Sub`, never `./components/Sub/Sub` nor a sub-sub-component. Leaves are folders
+  too (without `components/`).
+- Helpers a component owns (models, hooks, `*.ts`) sit beside it and are exported by its
+  `index.ts`; a helper shared by two siblings sits in their closest common ancestor.
+- A big component is acceptable only for a technical reason stated in a comment; otherwise
+  split it so that each visible part is a component and what composes it a sub-component.
+- Page and journey tests stay in `tests/`; per-component tests are the co-located
+  `Name.test.jsx`. `tests/component-tree-convention.test.cjs` enforces the folder, the index,
+  the co-located test and the index-only imports.
+
+## Front tickets and the Figma mockup
+
+A front ticket (Jira + GitHub issue + PR) **must link the Figma frame that serves as the
+example** of what is being built or changed. Without that link the ticket cannot be worked
+on, unless the change does not affect the display (tooling, tests, proxy, contracts…). Update
+and agree the mockup first, then code it: the sync direction is Figma → code.
+
 ## Architecture
+
+- **One component tree on the normalised lib (MAIR-608)** — `src/components/SettingsPage/` is the single root (see *Component tree convention*): `SettingsPage.tsx` renders the lib `AccessibleShell`, its hooks `use-settings-data.ts` (bootstrap read, page-return reload, retained data) and `use-profile-form.ts` sit beside it, and `components/` holds its direct parts: `SettingsHeader/`, `SettingsLoading/`, `SettingsNotices/`, `SettingsTabs/` (+ `settings-tabs.ts`, the URL ↔ tab mapping), the three cards shared by the tabs (`SettingsMutationForm/`, `SettingsSection/`, `FeedbackToast/`), and one component per tab content: `ProfileForm/`, `SessionsSection/components/SessionRevokeDialog/`, `PreferencesPanel/components/{PreferenceSelect,AppearancePreview}/`, `SystemPanel/components/{BrowserInformation,DiagnosticSection,AssistanceDialog}/`, `SettingsPendingFeatures/components/{ProfilePhoto,ProfessionalDraft,PasswordForm,TwoFactorSection,DraftPreferences,InstanceUpdatesPanel}/`. `src/app/page.tsx` imports `@/components/SettingsPage`; every component has its co-located `Name.test.jsx`, `tests/component-tree-convention.test.cjs` checks the tree.
+- **Sessions through the lib `SessionList` (MAIR-607)** — `src/components/SettingsPage/components/SessionsSection/SessionsSection.tsx` renders `SessionList` from `@mairie360/lib-components/primitives` (states by the lib `sessionState`); its row action opens `security/SessionRevokeDialog.tsx` (lib `ConfirmModal` + feature port `revokeSession`, pending message when the port is not wired). No local session list markup (pinned by `tests/lib-session-list-adoption.test.cjs`).
+- **Shell from the lib (MAIR-578)** — `src/components/SettingsPage/SettingsPage.tsx` renders `AccessibleShell` from `@mairie360/lib-components/shell` (the page date comes through the lib `PageHeader`); `src/lib/front-urls-provider.tsx` uses the lib `configureSidebarCookieDomain`. No local `accessible-shell.tsx`, `desktop-navigation.tsx`, `current-date.tsx` or `sidebar-preference.ts` (pinned by `tests/lib-shell-adoption.test.cjs`).
 
 - **Contract-gated catch-all proxy** — `src/app/[...path]/route.ts` exports `proxyBffRequest` (`src/lib/bff-proxy.ts`) for every method. It matches the path against `contracts/openapi.json` `paths` (brace segments are wildcards): unknown path → 404, method not declared → 405 with `Allow` (GET implies HEAD), empty/`.`/`..` segments → 400; `/openapi.json` and `/swagger.json` are always forwarded. **A BFF route is therefore reachable from the browser only once the synced contract declares it.**
 - **`forwardToBff`** strips hop-by-hop headers, the `cookie` header and the middleware-added `x-nonce` / `content-security-policy` request headers (a new header injected by the middleware must be added to that list), turns the `accessToken` cookie into `Authorization: Bearer` when no Authorization header is present, keeps the query string and raw (binary) body, uses `redirect: 'manual'`, a 15 s timeout and `Cache-Control: no-store`, preserves upstream status/headers (including `Set-Cookie`, empty 204/205/304 bodies) and returns a controlled 502 JSON error when the BFF is unreachable. `tests/proxy.test.cjs` pins this behaviour.

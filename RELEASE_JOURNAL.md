@@ -1,21 +1,37 @@
 # Journal des releases — Settings_Web_Service
 
-<!-- release-journal-state {"dev": "a2bf3c68882e787a45e923d87f057b92bdde7553", "prod": "a2bf3c68882e787a45e923d87f057b92bdde7553", "prod_tag": "v1.7.0", "staging": "a2bf3c68882e787a45e923d87f057b92bdde7553", "updated": {"dev": "2026-10-21 11:13 UTC", "prod": "2026-10-21 11:20 UTC", "staging": "2026-10-21 11:18 UTC"}} -->
+<!-- release-journal-state {"dev": "5d8598e2f3b78c4d58653ce0ab38df2c0b110b4d", "prod": "a2bf3c68882e787a45e923d87f057b92bdde7553", "prod_tag": "v1.7.0", "staging": "a2bf3c68882e787a45e923d87f057b92bdde7553", "updated": {"dev": "2026-10-21 17:59 UTC", "prod": "2026-10-21 11:20 UTC", "staging": "2026-10-21 11:18 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v1.7.0 | `a2bf3c6` | 2026-10-21 11:20 UTC |
 | staging | — | `a2bf3c6` | 2026-10-21 11:18 UTC |
-| dev | — | `a2bf3c6` | 2026-10-21 11:13 UTC |
+| dev | — | `5d8598e` | 2026-10-21 17:59 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v1.7.0)
 
-_Rien._
+#### Changements de comportement
+- Les onglets des Réglages utilisent désormais le composant `Tabs` de la lib (ids stables `settings-tab-<key>`, panneau géré par l'hôte). L'apparence et la mise en page des onglets changent, et les sélecteurs CSS qui ciblaient les anciennes classes `.settings-tab` ne correspondent plus. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- L'onglet Sécurité affiche les sessions avec le `SessionList` de la lib, qui gère les états de chargement, vide et indisponible. L'action de révocation ouvre une confirmation (`ConfirmModal` de la lib) ; si le port `revokeSession` n'est pas branché, un message d'attente s'affiche à la place de la révocation. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- La coque de l'application (barre latérale, barre du haut, pied de page) vient de `AccessibleShell` de la lib, et la date de la page passe par le `PageHeader` de la lib. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- Les champs de formulaire (`TextField`, `PasswordField`, `SelectField`, `TextArea`, `Checkbox`, `RadioGroup`, `Slider`), les boutons, les `StatusPill` et les notifications `Toast` (le ton selon le message) viennent de la lib. L'apparence des écrans change donc pour les agents. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+#### Technique
+- Mise à jour de `@mairie360/lib-components` de 0.10.2 à 1.0.3 (version majeure, commit marqué breaking) et ajout de `@types/jest-axe` en dev. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- Réorganisation des composants de réglages en un dossier par composant sous `src/components/SettingsPage/`, avec tests co-localisés et contrôle par `tests/component-tree-convention.test.cjs`. Les anciens fichiers `settings-*.tsx`, `accessible-shell.tsx`, `desktop-navigation.tsx`, `current-date.tsx` et `sidebar-preference.ts` sont supprimés. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- Ajout de tests de contrôle de l'adoption de la lib et des fixtures de releases partagées, exclusion des fichiers de test de la couverture des sources, et documentation Figma dans `README.md` et `CLAUDE.md`. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
-_Rien._
+#### Changements de comportement
+- Les onglets des Réglages utilisent désormais le composant `Tabs` de la lib (ids stables `settings-tab-<key>`, panneau géré par l'hôte). L'apparence et la mise en page des onglets changent, et les sélecteurs CSS qui ciblaient les anciennes classes `.settings-tab` ne correspondent plus. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- L'onglet Sécurité affiche les sessions avec le `SessionList` de la lib, qui gère les états de chargement, vide et indisponible. L'action de révocation ouvre une confirmation (`ConfirmModal` de la lib) ; si le port `revokeSession` n'est pas branché, un message d'attente s'affiche à la place de la révocation. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- La coque de l'application (barre latérale, barre du haut, pied de page) vient de `AccessibleShell` de la lib, et la date de la page passe par le `PageHeader` de la lib. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- Les champs de formulaire (`TextField`, `PasswordField`, `SelectField`, `TextArea`, `Checkbox`, `RadioGroup`, `Slider`), les boutons, les `StatusPill` et les notifications `Toast` (le ton selon le message) viennent de la lib. L'apparence des écrans change donc pour les agents. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+#### Technique
+- Mise à jour de `@mairie360/lib-components` de 0.10.2 à 1.0.3 (version majeure, commit marqué breaking) et ajout de `@types/jest-axe` en dev. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- Réorganisation des composants de réglages en un dossier par composant sous `src/components/SettingsPage/`, avec tests co-localisés et contrôle par `tests/component-tree-convention.test.cjs`. Les anciens fichiers `settings-*.tsx`, `accessible-shell.tsx`, `desktop-navigation.tsx`, `current-date.tsx` et `sidebar-preference.ts` sont supprimés. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- Ajout de tests de contrôle de l'adoption de la lib et des fixtures de releases partagées, exclusion des fichiers de test de la couverture des sources, et documentation Figma dans `README.md` et `CLAUDE.md`. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
 
 ## Différence staging → prod (en staging, pas encore en prod)
 
@@ -26,6 +42,7 @@ _Rien._
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-10-21 17:59 UTC | dev | — | `5d8598e` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/39647798138) |
 | 2026-10-21 11:20 UTC | prod | v1.7.0 | `a2bf3c6` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/39591072177) |
 | 2026-10-21 11:18 UTC | staging | — | `a2bf3c6` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/39590420186) |
 | 2026-10-21 11:13 UTC | dev | — | `a2bf3c6` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/39589446566) |

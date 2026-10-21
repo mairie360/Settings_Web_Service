@@ -139,9 +139,10 @@ test('instance policy shows received versions and preserves a refused choice unt
 
 test('session revocation requires explicit confirmation and keeps refusal visible without notifying removal', async t => {
   const calls = []; const removed = [];
-  const view = mount(React.createElement(Revoke, { sessionId: 'received-session', label: 'Firefox', port: { revokeSession: async id => { calls.push(id); throw new Error('Session refusée'); } }, onRevoked: id => removed.push(id) }));
+  // MAIR-607: the SessionList row action opens this dialog; nothing is sent before the confirmation.
+  const view = mount(React.createElement(Revoke, { session: { id: 'received-session', device_info: 'Firefox' }, port: { revokeSession: async id => { calls.push(id); throw new Error('Session refusée'); } }, onRevoked: id => removed.push(id), onClose: () => {} }));
   t.after(() => view.unmount());
-  await view.click('Déconnecter cette session');
+  assert.match(view.text(), /Déconnecter cette session \?/);
   assert.deepEqual(calls, []);
   await view.click('Confirmer la déconnexion');
   assert.match(view.text(), /Session refusée/);

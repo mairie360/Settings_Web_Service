@@ -52,6 +52,7 @@ Figma is the source of truth: design and agree any UI change on **Mairie360 – 
 
 ## Architecture
 
+- **Sessions through the lib `SessionList` (MAIR-607)** — the Sécurité tab of `src/components/settings-page.tsx` renders `SessionList` from `@mairie360/lib-components/primitives` (states by the lib `sessionState`); its row action opens `src/components/settings-session-revoke.tsx` (`SessionRevokeDialog`, lib `ConfirmModal` + feature port `revokeSession`, pending message when the port is not wired). No local session list markup (pinned by `tests/lib-session-list-adoption.test.cjs`).
 - **Shell from the lib (MAIR-578)** — `src/components/settings-page.tsx` renders `AccessibleShell` and `CurrentDate` from `@mairie360/lib-components/shell`; `src/lib/front-urls-provider.tsx` uses the lib `configureSidebarCookieDomain`. No local `accessible-shell.tsx`, `desktop-navigation.tsx`, `current-date.tsx` or `sidebar-preference.ts` (pinned by `tests/lib-shell-adoption.test.cjs`).
 
 - **Contract-gated catch-all proxy** — `src/app/[...path]/route.ts` exports `proxyBffRequest` (`src/lib/bff-proxy.ts`) for every method. It matches the path against `contracts/openapi.json` `paths` (brace segments are wildcards): unknown path → 404, method not declared → 405 with `Allow` (GET implies HEAD), empty/`.`/`..` segments → 400; `/openapi.json` and `/swagger.json` are always forwarded. **A BFF route is therefore reachable from the browser only once the synced contract declares it.**

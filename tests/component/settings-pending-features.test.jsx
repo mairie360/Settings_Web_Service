@@ -45,9 +45,10 @@ it('validates password confirmation, reports an unavailable operation, and clear
 });
 it('requires session confirmation and leaves the list unchanged on refusal', async () => {
   const revoked = vi.fn(); const revokeSession = vi.fn().mockRejectedValue(new Error('Session refusée'));
-  render(<SessionRevokeControl sessionId="s-1" label="Firefox" port={{ revokeSession }} onRevoked={revoked} />);
-  fireEvent.click(screen.getByRole('button', { name:'Déconnecter cette session' })); expect(revokeSession).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name:'Confirmer la déconnexion' })); await screen.findByText('Session refusée'); expect(revoked).not.toHaveBeenCalled(); expect(revokeSession).toHaveBeenCalledExactlyOnceWith('s-1');
+  // MAIR-607: the dialog is opened by the SessionList row action; the request waits for the confirmation.
+  render(<SessionRevokeControl session={{ id: 's-1', device_info: 'Firefox' }} port={{ revokeSession }} onRevoked={revoked} onClose={() => {}} />);
+  expect(revokeSession).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name:'Confirmer la déconnexion' })); expect((await screen.findByRole('alert')).textContent).toContain('Session refusée'); expect(revoked).not.toHaveBeenCalled(); expect(revokeSession).toHaveBeenCalledExactlyOnceWith('s-1');
 });
 it('does not expose instance update controls to nonadministrators or invent deployed versions', () => {
   render(<SettingsPendingFeatures tab="system" isAdmin={false} />); expect(screen.queryByText('Mises à jour de l’instance')).toBeNull();

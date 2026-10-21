@@ -1,6 +1,6 @@
 "use client";
 
-import { EmptyState, Skeleton, Toast } from "@mairie360/lib-components/primitives";
+import { EmptyState, SessionList, Skeleton, Toast } from "@mairie360/lib-components/primitives";
 import SettingsMutationForm from '@/components/settings-mutation-form';
 import { subscribePageReturn } from "@/lib/page-return";
 
@@ -12,10 +12,9 @@ import type { FormEvent, KeyboardEvent } from "react";
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { CURRENT_PASSWORD, PASSWORD_REQUIRED_MESSAGE, PROFILE_FIELDS, isEmailChanged, profilePatch, saveErrorMessage } from "@/lib/profile-form";
 import type { ProfileField } from "@/lib/profile-form";
-import { formatSessionDate } from "@/lib/session-date";
 import SettingsPreferencesPanel from "@/components/settings-preferences";
 import SettingsPendingFeatures from "@/components/settings-pending-features";
-import SessionRevokeControl from "@/components/settings-session-revoke";
+import SessionRevokeDialog from "@/components/settings-session-revoke";
 import SettingsAssistance from "@/components/settings-assistance";
 import SettingsTabIcon from "@/components/settings-tab-icon";
 import { getActiveFrontHrefs } from "@/lib/navigation";
@@ -39,14 +38,10 @@ const tabs = [
 type TabId = (typeof tabs)[number]["id"];
 const settingsUrlSchema = { tab: urlChoice([...tabs.map(tab => tab.id), 'notification-preferences', 'system-assistance'], 'profile') };
 
-function SessionDate({ value }: { value: string | null | undefined }) {
-  const label = formatSessionDate(value);
-  return label && value ? <time dateTime={value}>{label}</time> : <span>Date indisponible</span>;
-}
-
 export default function SettingsPage({ initialData, twoFactorUrl }: { initialData?: Bootstrap | null; twoFactorUrl?: string }) {
   const [initial] = useState(() => isConfirmedBootstrap(initialData) ? initialData : null);
   const [data, setData] = useState<Bootstrap | null>(initial);
+  const [sessionToRevoke, setSessionToRevoke] = useState<{ id: string; device_info: string } | null>(null);
   const [profile, setProfile] = useState<Profile | null>(initial?.profile ?? null);
   const pageUrl = usePageUrlState(settingsUrlSchema);
   // Keep historical links readable; new links name each section explicitly.
@@ -265,22 +260,24 @@ export default function SettingsPage({ initialData, twoFactorUrl }: { initialDat
   const securityContent = data ? (
               <section className="space-y-3 rounded-lg border border-[#e0dbd4] bg-white p-6">
                 <h2 className="text-xl font-semibold">Sessions</h2>
-                {data.sources.sessions === "unavailable" ? (
-                  <p>Les sessions sont temporairement indisponibles.</p>
-                ) : data.sessions.length ? (
-                  <ul>
-                    {data.sessions.map((session) => (
-                      <li className="border-b py-3 last:border-b-0" key={session.id}>
-                        <p>{session.device_info} — {session.ip_address}</p>
-                        <p className="text-sm">Création : <SessionDate value={session.created_at} /> · Expiration : <SessionDate value={session.expires_at} /></p>
-                        {session.revoked_at ? <p className="text-sm text-[#7b3f00]">Révocation : <SessionDate value={session.revoked_at} /></p> : <SessionRevokeControl sessionId={session.id} label={session.device_info} />}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <EmptyState title="Aucune session à afficher." />
-                )}
-                <p className="text-sm text-[#596274]">L’identification de la session actuelle et les déconnexions individuelles restent à raccorder.</p>
+                <SessionList
+                  sessions={data.sources.sessions === "unavailable" ? null : data.sessions}
+                  unavailableMessage="Les sessions sont temporairement indisponibles."
+                  emptyMessage="Aucune session à afficher."
+                  onRevoke={(session) => setSessionToRevoke({ id: session.id, device_info: session.device_info })}
+                />
+                {sessionToRevoke ? (
+                  <SessionRevokeDialog
+                    session={sessionToRevoke}
+                    onClose={() => setSessionToRevoke(null)}
+                    onRevoked={(id) => {
+                      const revokedAt = new Date().toISOString();
+                      setData((current) => current ? { ...current, sessions: current.sessions.map((session) => session.id === id ? { ...session, revoked_at: revokedAt } : session) } : current);
+                      setSessionToRevoke(null);
+                    }}
+                  />
+                ) : null}
+                <p className="text-sm text-[#596274]">L’identification de la session actuelle reste à raccorder.</p>
               </section>
   ) : null;
 

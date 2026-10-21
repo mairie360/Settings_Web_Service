@@ -323,10 +323,12 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
   assert.match(view.html, /<h2[^>]*>Sessions<\/h2>/);
   const createdAt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })
     .format(new Date('2026-09-15T08:00:00Z'));
-  assert.ok(view.text().includes(`Firefox sur Linux — 192.0.2.10 Création : ${createdAt}`));
+  // MAIR-607: the shared SessionList renders one row per session (device, IP, creation, expiry, state).
+  assert.match(view.html, /<th[^>]*>Appareil<\/th><th[^>]*>Adresse IP<\/th>/);
+  assert.match(view.text(), /Firefox sur Linux/); assert.match(view.text(), /192\.0\.2\.10/); assert.ok(view.text().includes(createdAt));
   assert.match(view.html, /<time dateTime="2026-09-15T08:00:00Z">/);
   assert.doesNotMatch(view.text(), /2026-09-15T08:00:00Z/);
-  assert.match(view.text(), /Chrome sur Android — 198\.51\.100\.7/);
+  assert.match(view.text(), /Chrome sur Android/); assert.match(view.text(), /198\.51\.100\.7/);
   assert.match(view.text(), /Mot de passe actuel/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap'], 'changing tab does not call the BFF');
 

@@ -12,7 +12,7 @@ it('preserves preference and professional drafts across tabs without calling a p
   fireEvent.click(screen.getByText('Informations professionnelles', { exact: true }).closest('summary'));
   fireEvent.change(screen.getByLabelText('Service'), { target: { value: 'Service saisi' } });
   rerender(<SettingsPendingFeatures tab="appearance" isAdmin={false} />);
-  fireEvent.click(screen.getByLabelText('Sombre')); expect(screen.getByLabelText('Aperçu de l’apparence').style.background).toBe('rgb(23, 32, 51)');
+  fireEvent.click(screen.getByLabelText('Sombre')); expect(screen.getByLabelText('Aperçu de l’apparence').style.background).toBe('var(--mairie-navigation-background)');
   rerender(<SettingsPendingFeatures tab="notifications" isAdmin={false} />); expect(screen.getByLabelText('Messages').checked).toBe(false);
   rerender(<SettingsPendingFeatures tab="profile" isAdmin={false} />);
   fireEvent.click(screen.getByText('Informations professionnelles', { exact: true }).closest('summary')); expect(screen.getByLabelText('Service').value).toBe('Service saisi');

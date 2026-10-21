@@ -26,11 +26,9 @@ function policy() {
   return { parsed, rows, declaration };
 }
 
-test('parsed media policies retain two/three/six tabs, desktop profile columns and mobile main inset', () => {
-  const { declaration } = policy();
-  for (const [media, columns] of [[null, 2], ['(min-width: 640px)', 3], ['(min-width: 1024px)', 6]]) {
-    assert.equal(compact(declaration('.settings-tabs', 'grid-template-columns', media)), `repeat(${columns},minmax(0,1fr))`);
-  }
+test('parsed media policies retain the desktop profile columns and mobile main inset (the lib Tabs own their layout, MAIR-608)', () => {
+  const { declaration, rows } = policy();
+  assert.equal(rows.some(row => row.selectors.includes('.settings-tab')), false, 'no local tab styling remains');
   assert.equal(compact(declaration('.settings-profile-fields', 'grid-template-columns', '(min-width: 1024px)')), 'repeat(2,minmax(0,1fr))');
   assert.equal(declaration('.settings-shell main', 'padding', '(max-width: 767px)').replace(/\s+/g, ' '), '20px 14px');
   // Parsed configuration does not evaluate media queries or native geometry.

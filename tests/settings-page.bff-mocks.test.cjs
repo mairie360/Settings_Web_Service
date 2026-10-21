@@ -282,14 +282,14 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.equal(typeof view.props('AppShell').onLogout, 'function');
   assert.doesNotMatch(html, />Administration</);
   assert.match(html, /aria-label="Notifications"/);
-  assert.match(html, /<nav role="tablist" aria-label="Paramètres"/);
-  assert.match(html, /<button id="settings-tab-profile" type="button" role="tab" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg[^>]*aria-hidden="true"[^]*?Profil<\/button>/);
+  assert.match(html, /<div role="tablist" aria-label="Paramètres"/);
+  assert.match(html, /<button id="settings-tab-profile" role="tab" type="button" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg[^>]*aria-hidden="true"[^]*?Profil<\/button>/);
   assert.match(html, /<div role="tabpanel" id="settings-panel-profile" aria-labelledby="settings-tab-profile"[^>]*>/);
   assert.match(html, /<h2[^>]*>Informations personnelles<\/h2>/);
   assert.match(html, /<input[^>]*type="text"[^>]*required=""[^>]*value="Anne Marie"/);
   assert.match(html, /<input[^>]*type="email"[^>]*value="anne\.le-gall@mairie\.test"/);
   assert.match(html, /<input[^>]*type="tel"[^>]*value="\+33123456789"/);
-  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Enregistrer le profil<\/button>/);
+  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>(?:<svg[^]*?<\/svg>)?Enregistrer le profil<\/button>/);
   assert.match(html, /Aucune modification à enregistrer\./);
   assert.doesNotMatch(html, /role="alert"/);
 });
@@ -319,7 +319,7 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
 
   await view.click('Sécurité');
 
-  assert.match(view.html, /<button id="settings-tab-security" type="button" role="tab" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg[^>]*aria-hidden="true"[^]*?Sécurité<\/button>/);
+  assert.match(view.html, /<button id="settings-tab-security" role="tab" type="button" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg[^>]*aria-hidden="true"[^]*?Sécurité<\/button>/);
   assert.match(view.html, /<h2[^>]*>Sessions<\/h2>/);
   const createdAt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })
     .format(new Date('2026-09-15T08:00:00Z'));
@@ -353,11 +353,15 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
 test('arrow, Home and End keys select and focus Settings tabs without a BFF call', async () => {
   await renderLoadedPage();
   const focused = [];
-  const children = tabsForFocus(6, focused);
+  // MAIR-608: the lib Tabs focus the next tab by id (settings-tab-<key>); the runner has no DOM, so the ids resolve here.
+  const ids = ['profile', 'security', 'notifications', 'appearance', 'general', 'system'];
+  const previousGetElementById = global.document?.getElementById;
+  global.document.getElementById = (id) => { const index = ids.indexOf(String(id).replace('settings-tab-', '')); return index === -1 ? null : { focus() { focused.push(index); } }; };
+  try {
   const key = async (label, pressed) => view.fire(
     (props, text) => props.role === 'tab' && text === label,
     'onKeyDown',
-    { key: pressed, currentTarget: { parentElement: { children } } },
+    { key: pressed, preventDefault() {} },
   );
 
   await key('Profil', 'ArrowRight');
@@ -372,11 +376,8 @@ test('arrow, Home and End keys select and focus Settings tabs without a BFF call
   await key('Profil', 'Home');
   assert.deepEqual(focused, [1, 5, 0, 0]);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+  } finally { global.document.getElementById = previousGetElementById; }
 });
-
-function tabsForFocus(count, focused) {
-  return Array.from({ length: count }, (_, index) => ({ focus() { focused.push(index); } }));
-}
 
 test('system assistance is local and does not fetch unsupported settings', async () => {
   await renderLoadedPage();
@@ -546,7 +547,7 @@ test('editing a field and submitting the form saves the profile with PATCH /sett
     assert.equal(announcements.length, 1, 'the confirmed profile receipt has one live announcement');
   } finally { receiptDom.window.close(); }
   assert.match(html, /<input[^>]*type="text"[^>]*value="LE GALL"/);
-  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>Enregistrer le profil<\/button>/, 'the button is disabled again');
+  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>(?:<svg[^]*?<\/svg>)?Enregistrer le profil<\/button>/, 'the button is disabled again');
   assert.match(html, /Aucune modification à enregistrer\./);
 });
 
@@ -619,13 +620,13 @@ test('the input constraints mirror the SettingsProfilePatch schema of the publis
 test('the rendered inputs carry the contract constraints and their help text', async () => {
   const html = await renderLoadedPage();
   // react-dom/server writes `maxLength` as such and escapes `<` / `>` in attribute values.
-  assert.match(html, /<input[^>]*maxLength="64"[^>]*pattern="\[\^&lt;&gt;\]\*"[^>]*aria-describedby="settings-first_name-help"[^>]*name="first_name"/);
-  assert.match(html, /<input[^>]*maxLength="64"[^>]*pattern="\[\^&lt;&gt;\]\*"[^>]*name="last_name"/);
-  assert.match(html, /<input[^>]*type="email"[^>]*maxLength="320"[^>]*name="email"/);
+  assert.match(html, /<input(?=[^>]*maxLength="64")(?=[^>]*pattern="\[\^&lt;&gt;\]\*")(?=[^>]*aria-describedby="settings-first_name-hint")[^>]*name="first_name"/);
+  assert.match(html, /<input(?=[^>]*maxLength="64")(?=[^>]*pattern="\[\^&lt;&gt;\]\*")[^>]*name="last_name"/);
+  assert.match(html, /<input(?=[^>]*type="email")(?=[^>]*maxLength="320")[^>]*name="email"/);
   assert.doesNotMatch(html, /<input[^>]*type="email"[^>]*pattern=/);
-  assert.match(html, /<input[^>]*type="tel"[^>]*maxLength="32"[^>]*pattern="\(\\\+\?\[\\d\\s\.\\\(\\\)\\-\]\+\)\?"[^>]*aria-describedby="settings-phone-help"[^>]*name="phone"/);
-  assert.match(html, /<span id="settings-phone-help"[^>]*>Chiffres, espaces, points, tirets et parenthèses, avec un \+ initial facultatif \(32 caractères maximum\)\.<\/span>/);
-  assert.match(html, /<span id="settings-first_name-help"[^>]*>64 caractères maximum, sans &lt; ni &gt;\.<\/span>/);
+  assert.match(html, /<input(?=[^>]*type="tel")(?=[^>]*maxLength="32")(?=[^>]*pattern="\(\\\+\?\[\\d\\s\.\\\(\\\)\\-\]\+\)\?")[^>]*aria-describedby="settings-phone-hint"[^>]*name="phone"/);
+  assert.match(html, /<p id="settings-phone-hint"[^>]*>Chiffres, espaces, points, tirets et parenthèses, avec un \+ initial facultatif \(32 caractères maximum\)\.<\/p>/);
+  assert.match(html, /<p id="settings-first_name-hint"[^>]*>64 caractères maximum, sans &lt; ni &gt;\.<\/p>/);
   assert.equal(passwordInputs().length, 0);
 });
 
@@ -633,8 +634,8 @@ test('a changed e-mail shows the current-password field, which disappears once t
   await renderLoadedPage();
   await view.fire(isEmailInput, 'onChange', { target: { value: 'anne.nouvelle@mairie.test' } });
   assert.equal(passwordInputs().length, 1);
-  assert.match(passwordInputs()[0], /type="password"[^>]*autoComplete="current-password"[^>]*required=""[^>]*maxLength="255"[^>]*aria-describedby="settings-current_password-help"[^>]*name="current_password"/);
-  assert.match(view.html, /<span id="settings-current_password-help"[^>]*>Requis pour confirmer le changement d’adresse e-mail\. Il n’est pas conservé\.<\/span>/);
+  assert.match(passwordInputs()[0], /<input(?=[^>]*type="password")(?=[^>]*autoComplete="current-password")(?=[^>]*required="")(?=[^>]*maxLength="255")(?=[^>]*aria-describedby="settings-current_password-hint")[^>]*name="current_password"/);
+  assert.match(view.html, /<p id="settings-current_password-hint"[^>]*>Requis pour confirmer le changement d’adresse e-mail\. Il n’est pas conservé\.<\/p>/);
   assert.match(view.html, /type="email"[^]*?type="password"[^]*?type="tel"/, 'the password field follows the e-mail field');
 
   await view.fire((props) => props.type === 'password', 'onChange', { target: { value: 'secret' } });

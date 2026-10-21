@@ -19,7 +19,7 @@ export default defineConfig({
       reporter: ["text", "lcov", "json-summary"],
       thresholds: { lines: 60, branches: 60, functions: 60, statements: 60, perFile: { lines: 60 } },
     },
-    include: ["tests/component/**/*.test.jsx"],
+    include: ["tests/component/**/*.test.jsx", "tests/component/**/*.test.tsx"],
     setupFiles: ["./tests/component/setup.js"],
     clearMocks: true,
   },

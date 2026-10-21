@@ -12,7 +12,7 @@ test('MAIR-578 the settings page renders the library shell, not a local copy', (
   for (const copy of ['src/components/accessible-shell.tsx', 'src/components/desktop-navigation.tsx', 'src/components/current-date.tsx', 'src/lib/sidebar-preference.ts']) {
     assert.equal(fs.existsSync(path.join(root, copy)), false, `${copy} must not exist`);
   }
-  const page = read('src/components/settings/page/SettingsPage.tsx');
+  const page = read('src/components/SettingsPage/SettingsPage.tsx');
   assert.match(page, /import \{ AccessibleShell \} from "@mairie360\/lib-components\/shell"/);
   assert.doesNotMatch(page, /@\/components\/(accessible-shell|desktop-navigation|current-date)/);
   assert.match(read('src/lib/front-urls-provider.tsx'), /configureSidebarCookieDomain \} from "@mairie360\/lib-components\/shell"/);

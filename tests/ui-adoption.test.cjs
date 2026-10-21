@@ -7,7 +7,7 @@ const fixtures = require('./support/settings-fixtures.cjs');
 
 installReactRuntime();
 const React = require('react');
-const Home = requireSrc('components/settings-page.tsx').default;
+const Home = requireSrc('components/SettingsPage/index.ts').default;
 const api = requireSrc('lib/settings-api.ts');
 
 test('a confirmed profile notification closes by Escape without repeating its save or losing the next draft', async t => {

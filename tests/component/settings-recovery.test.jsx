@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
-import Home from "@/components/settings-page";
+import Home from '@/components/SettingsPage';
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { logoutAndRedirect, navigateToLogin } from "@/lib/logout";
 

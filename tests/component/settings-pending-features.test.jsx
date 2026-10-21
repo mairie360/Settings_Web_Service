@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { it, expect, vi } from 'vitest';
-import SettingsPendingFeatures from '@/components/settings-pending-features';
-import SessionRevokeControl from '@/components/settings-session-revoke';
+import SettingsPendingFeatures from '@/components/SettingsPage/components/SettingsPendingFeatures';
+import SessionRevokeControl from '@/components/SettingsPage/components/SessionsSection/components/SessionRevokeDialog';
 
 it('preserves preference and professional drafts across tabs without calling a profile or invented endpoint', async () => {
   const { rerender } = render(<SettingsPendingFeatures tab="notifications" isAdmin={false} />);

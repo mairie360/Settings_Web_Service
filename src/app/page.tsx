@@ -1,5 +1,5 @@
 import { createNonce } from '@mairie360/lib-components/shared';
-import SettingsPage from '@/components/settings-page';
+import SettingsPage from '../components/SettingsPage';
 import { loadInitialSettings } from '@/lib/server-settings';
 import { keycloakAccountUrl } from '@/lib/keycloak-account';
 

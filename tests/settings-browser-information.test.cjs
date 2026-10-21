@@ -3,7 +3,7 @@ const { test } = require('node:test');
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
 const { requireSrc } = require('./support/load-ts.cjs');
-const Information = requireSrc('components/settings-browser-information.tsx').default;
+const Information = requireSrc('components/SettingsPage/components/SystemPanel/components/BrowserInformation/index.ts').default;
 
 test('browser information has stable server markup without accessing browser or account state', (t) => {
   const previous = Object.getOwnPropertyDescriptor(globalThis, 'navigator');

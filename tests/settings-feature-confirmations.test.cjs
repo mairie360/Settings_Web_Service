@@ -4,8 +4,8 @@ const { installReactRuntime, mount } = require('./support/server-view.cjs');
 installReactRuntime();
 const React = require('react');
 const { requireSrc } = require('./support/load-ts.cjs');
-const Features = requireSrc('components/settings-pending-features.tsx').default;
-const Revoke = requireSrc('components/settings-session-revoke.tsx').default;
+const Features = requireSrc('components/SettingsPage/components/SettingsPendingFeatures/index.ts').default;
+const Revoke = requireSrc('components/SettingsPage/components/SessionsSection/components/SessionRevokeDialog/index.ts').default;
 
 function panel(t, tab, port = {}, extra = {}) {
   const view = mount(React.createElement(Features, { tab, port, isAdmin: true, ...extra }));

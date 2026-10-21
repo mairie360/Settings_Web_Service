@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, act } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
-import Home from '@/components/settings-page';
+import Home from '@/components/SettingsPage';
 import { DesktopNavigation } from '@mairie360/lib-components/shell';
 import { loadSettings, saveProfile } from '@/lib/settings-api';
 

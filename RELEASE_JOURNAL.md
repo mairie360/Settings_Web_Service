@@ -1,70 +1,54 @@
 # Journal des releases — Settings_Web_Service
 
-<!-- release-journal-state {"dev": "eab97acf63024a7e123ae589c9d38b3b54d9ff19", "prod": "3e6410991fb271011a2248fa3ba17c778250bc3b", "prod_tag": "v1.6.0", "staging": "891e2fad0cf68e2078376437df51d542d2223490", "updated": {"dev": "2026-10-21 05:01 UTC", "staging": "2026-10-20 18:18 UTC"}} -->
+<!-- release-journal-state {"dev": "c14bf72eadf5a6284839eeaa1b8f5f2997794ef9", "prod": "3e6410991fb271011a2248fa3ba17c778250bc3b", "prod_tag": "v1.6.0", "staging": "891e2fad0cf68e2078376437df51d542d2223490", "updated": {"dev": "2026-10-21 09:22 UTC", "staging": "2026-10-20 18:18 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v1.6.0 | `3e64109` | — |
 | staging | — | `891e2fa` | 2026-10-20 18:18 UTC |
-| dev | — | `eab97ac` | 2026-10-21 05:01 UTC |
+| dev | — | `c14bf72` | 2026-10-21 09:22 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v1.6.0)
 
-#### Nouveautés
-- Onglet Sécurité : la section « Double authentification » renvoie vers le compte Keycloak de l'agent (**Gérer ma double authentification**, lien `<realm>/account`) quand `KEYCLOAK_REALM_URL` est configurée. Sans elle, le message « La double authentification n’est pas disponible sur cette instance. » s'affiche. (MAIR-357, [#139](https://github.com/mairie360/Settings_Web_Service/pull/139))
-- Après chaque release, CICD réécrit `RELEASE_JOURNAL.md` sur `main` avec un résumé rédigé par Claude. Le workflow reçoit désormais les secrets `ANTHROPIC_API_KEY`, `RELEASE_APP_ID` et `RELEASE_APP_PK`. (MAIR-571, [#136](https://github.com/mairie360/Settings_Web_Service/pull/136))
-- Promotion manuelle vers staging et prod via `promote-staging.yml` et `promote-prod.yml` (`gh workflow run … [-f sha=<sha>]`), avec un verrou par cible. (MAIR-494, [#150](https://github.com/mairie360/Settings_Web_Service/pull/150))
-
 #### Changements de comportement
-- La simulation de double authentification est retirée de l'onglet Sécurité : plus de choix SMS / application, de faux défi, de codes de récupération ni de désactivation. Les membres MFA de `SettingsFeaturePort` sont supprimés. (MAIR-357, [#139](https://github.com/mairie360/Settings_Web_Service/pull/139))
-- Contrat `@mairie360/bff-settings-openapi` : par rapport à la prod, la dépendance et `x-source-package` de `contracts/openapi.json` passent de `0.0.0-dev.6d726190…` à `0.0.0-dev.bdc4a888…`. La `2.0.0` introduite par #134 est retirée par #145 dans la même plage. (MAIR-569, [#134](https://github.com/mairie360/Settings_Web_Service/pull/134) ; MAIR-575, [#145](https://github.com/mairie360/Settings_Web_Service/pull/145))
-- Push sur `main` : `cicd.yml` ne lance plus que la release dev et s'arrête à `release-dev`. Staging et prod ne sont plus déclenchés automatiquement. (MAIR-494, [#150](https://github.com/mairie360/Settings_Web_Service/pull/150))
-- `cicd.yml` et `contracts.yml` ne tournent sur `push` que pour `main`. Une branche de PR n'exécute plus son pipeline deux fois. Le token du workflow est en lecture seule par défaut. (MAIR-436, [#129](https://github.com/mairie360/Settings_Web_Service/pull/129))
+- Onglet Sécurité : la simulation « Authentification à deux facteurs » (SMS / application, défi factice, codes de récupération, désactivation) est remplacée par « Double authentification ». Avec `KEYCLOAK_REALM_URL`, l’onglet explique la gestion du second facteur et propose le lien **Gérer ma double authentification** vers `<realm>/account` (même onglet). Sans cette variable, il affiche « La double authentification n’est pas disponible sur cette instance. » (MAIR-357, [#139](https://github.com/mairie360/Settings_Web_Service/pull/139))
+- Nouvelle variable `KEYCLOAK_REALM_URL` : URL publique du realm, HTTPS uniquement (HTTP accepté seulement pour un hôte local). Absente ou invalide, le lien est masqué. (MAIR-357, [#139](https://github.com/mairie360/Settings_Web_Service/pull/139))
+- Promotion des déploiements : un push sur `main` ne lance plus que la release dev. Staging et prod se déclenchent à la main via `promote-staging.yml` et `promote-prod.yml` (`gh workflow run … [-f sha=<sha>]`), avec approbation de l’environnement. (MAIR-494, [#150](https://github.com/mairie360/Settings_Web_Service/pull/150), [#151](https://github.com/mairie360/Settings_Web_Service/pull/151))
 
-#### Corrections
-- `docker compose up --build` : avant, `docker-compose.yml` passait `NODE_AUTH_TOKEN` en build-arg, alors que le Dockerfile ne le lisait plus et exigeait le secret, et le build échouait. Maintenant, le compose passe le secret BuildKit `node_auth_token`, alimenté par la variable `NODE_AUTH_TOKEN` exportée avant le lancement. (MAIR-436, [#129](https://github.com/mairie360/Settings_Web_Service/pull/129))
-
-#### Technical
-- Le socle front `@mairie360/front-kit` (archive vendorée 0.1.0) est remplacé par les sous-chemins de `@mairie360/lib-components` 0.10.2. L'archive et sa provenance sont supprimées, et `npm run test:bundle` est lancé par `frontend-performance.yml`. (MAIR-126, [#138](https://github.com/mairie360/Settings_Web_Service/pull/138), [#143](https://github.com/mairie360/Settings_Web_Service/pull/143))
-- Stacks de test (`docker-compose*.yml`) : `core-api` passe en 2.1.0, `database` et `liquibase-migrations` en 3.2.0, et `bff-settings` suit le contrat. (MAIR-569, [#134](https://github.com/mairie360/Settings_Web_Service/pull/134) ; MAIR-575, [#145](https://github.com/mairie360/Settings_Web_Service/pull/145))
-- CICD est épinglé par SHA avec son tag : v4.3.1, puis v4.3.2, v4.4.0 et v4.4.1 (`75e4fc4`) dans `cicd.yml`, `dev-dependency-exception.yml`, `promote-staging.yml` et `promote-prod.yml`. Les tests `tests/cicd-pin.test.cjs` et `tests/workflow-permissions.test.cjs` verrouillent ces pins. (MAIR-571, MAIR-494, MAIR-436)
-- `development.Dockerfile` passe à Node 24.21.0 épinglé par digest, avec le secret BuildKit requis ; `tests/dev-image-secret.test.cjs` vérifie ce câblage. (MAIR-436, [#129](https://github.com/mairie360/Settings_Web_Service/pull/129))
+#### Technique
+- Contrat : `@mairie360/bff-settings-openapi` passe de `0.0.0-dev.6d72619…` à `2.0.0` (MAIR-569, [#134](https://github.com/mairie360/Settings_Web_Service/pull/134)), puis à un build dev `0.0.0-dev.bdc4a88…` (MAIR-575, [#145](https://github.com/mairie360/Settings_Web_Service/pull/145)). Les stacks de test suivent ces versions, et `core-api` passe à 2.1.0 ; le diff ne montre pas de route modifiée dans le contrat.
+- CI et dépendances : `front-kit` est remplacé par `@mairie360/lib-components` 0.10.2 (MAIR-126, [#138](https://github.com/mairie360/Settings_Web_Service/pull/138), [#143](https://github.com/mairie360/Settings_Web_Service/pull/143)). CICD passe jusqu’à v4.4.1 avec un journal de release rédigé par Claude (MAIR-571, [#136](https://github.com/mairie360/Settings_Web_Service/pull/136), [#141](https://github.com/mairie360/Settings_Web_Service/pull/141), [#154](https://github.com/mairie360/Settings_Web_Service/pull/154)). Les workflows ne tournent plus en double sur les branches de PR, le token est en lecture seule par défaut, et `NODE_AUTH_TOKEN` passe en secret BuildKit (MAIR-436, [#129](https://github.com/mairie360/Settings_Web_Service/pull/129)).
+- Renovate : `core-api` passe de 2.1.0 à 2.2.0 dans les stacks de test ([#158](https://github.com/mairie360/Settings_Web_Service/pull/158)).
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
 #### Changements de comportement
-- Un push sur `main` ne lance plus que la release dev : `cicd.yml` s'arrête à `release-dev`, et staging et prod ne sont plus déclenchés automatiquement. La promotion devient manuelle via `promote-staging.yml` et `promote-prod.yml` (`-f sha=<sha>` optionnel, verrou par cible). Staging refuse un commit sans image `dev-<sha>` et sans run vert sur `main`. Les environnements `Staging` et `Prod` gardent leur approbation. (MAIR-494, [#150](https://github.com/mairie360/Settings_Web_Service/pull/150))
+- Promotion des déploiements : un push sur `main` ne lance plus que la release dev. Staging et prod se déclenchent à la main via `promote-staging.yml` et `promote-prod.yml` (`gh workflow run … [-f sha=<sha>]`), avec approbation de l’environnement. (MAIR-494, [#150](https://github.com/mairie360/Settings_Web_Service/pull/150), [#151](https://github.com/mairie360/Settings_Web_Service/pull/151))
 
-#### Technical
-- `mairie360/CICD` passe à v4.4.0 (#151) puis v4.4.1 (commit `75e4fc4`, #154) dans `cicd.yml`, `dev-dependency-exception.yml`, `promote-staging.yml` et `promote-prod.yml`. Les références restent alignées via Renovate. (MAIR-494, [#151](https://github.com/mairie360/Settings_Web_Service/pull/151), [#154](https://github.com/mairie360/Settings_Web_Service/pull/154))
-- `tests/cicd-pin.test.cjs` attend désormais 8 références CICD, et `renovate.json` couvre les deux fichiers de promotion. (MAIR-494, [#150](https://github.com/mairie360/Settings_Web_Service/pull/150))
+#### Technique
+- CICD épinglé sur v4.4.0 puis v4.4.1 dans `cicd.yml`, `dev-dependency-exception.yml` et les deux `promote-*.yml`. Le test `cicd-pin.test.cjs` contrôle désormais les huit références ([#151](https://github.com/mairie360/Settings_Web_Service/pull/151), [#154](https://github.com/mairie360/Settings_Web_Service/pull/154), [#150](https://github.com/mairie360/Settings_Web_Service/pull/150)).
+- Renovate : `core-api` passe de 2.1.0 à 2.2.0 dans les stacks de test ([#158](https://github.com/mairie360/Settings_Web_Service/pull/158)).
 
 ## Différence staging → prod (en staging, pas encore en prod)
 
 #### Nouveautés
-- Double authentification : l'onglet Sécurité renvoie vers le compte Keycloak (**Gérer ma double authentification**) quand `KEYCLOAK_REALM_URL` est configurée, sinon affiche « La double authentification n’est pas disponible sur cette instance. » (MAIR-357, [#139](https://github.com/mairie360/Settings_Web_Service/pull/139))
-- Après chaque release, CICD réécrit `RELEASE_JOURNAL.md` sur `main` avec un résumé rédigé par Claude, grâce aux secrets `ANTHROPIC_API_KEY`, `RELEASE_APP_ID` et `RELEASE_APP_PK` transmis au workflow. (MAIR-571, [#136](https://github.com/mairie360/Settings_Web_Service/pull/136))
+- Onglet Sécurité : lien **Gérer ma double authentification** vers le compte Keycloak de l’agent, affiché quand `KEYCLOAK_REALM_URL` est défini (MAIR-357, [#139](https://github.com/mairie360/Settings_Web_Service/pull/139)).
 
 #### Changements de comportement
-- La simulation de double authentification est retirée de l'onglet Sécurité : plus de choix SMS / application, de faux défi, de codes de récupération ni de désactivation. (MAIR-357, [#139](https://github.com/mairie360/Settings_Web_Service/pull/139))
-- Contrat `@mairie360/bff-settings-openapi` : par rapport à la prod, la dépendance passe de `0.0.0-dev.6d726190…` à `0.0.0-dev.bdc4a888…`. La `2.0.0` introduite par #134 est retirée par #145 dans la même plage. (MAIR-569, [#134](https://github.com/mairie360/Settings_Web_Service/pull/134) ; MAIR-575, [#145](https://github.com/mairie360/Settings_Web_Service/pull/145))
-- `cicd.yml` et `contracts.yml` ne tournent sur `push` que pour `main`. Une branche de PR n'exécute plus son pipeline deux fois. (MAIR-436, [#129](https://github.com/mairie360/Settings_Web_Service/pull/129))
+- La simulation SMS / application / codes de récupération disparaît de l’onglet Sécurité. Sans `KEYCLOAK_REALM_URL`, l’onglet affiche « La double authentification n’est pas disponible sur cette instance. » (MAIR-357, [#139](https://github.com/mairie360/Settings_Web_Service/pull/139))
+- Nouvelle variable `KEYCLOAK_REALM_URL` : HTTPS uniquement, et le lien est masqué si elle est absente ou invalide (MAIR-357, [#139](https://github.com/mairie360/Settings_Web_Service/pull/139)).
 
-#### Corrections
-- `docker compose up --build` : avant, `NODE_AUTH_TOKEN` passait en build-arg alors que le Dockerfile exigeait le secret, et le build échouait. Maintenant, le compose passe le secret BuildKit `node_auth_token`. (MAIR-436, [#129](https://github.com/mairie360/Settings_Web_Service/pull/129))
-
-#### Technical
-- Le socle front `@mairie360/front-kit` (archive vendorée) est remplacé par `@mairie360/lib-components` 0.10.2 (sous-chemins `next`, `guard`, `browser`, `shared`, `react`, `theme`). Un test de bundle est ajouté. (MAIR-126, [#138](https://github.com/mairie360/Settings_Web_Service/pull/138), [#143](https://github.com/mairie360/Settings_Web_Service/pull/143))
-- Stacks de test : `core-api` 2.1.0, `database` et `liquibase-migrations` 3.2.0. (MAIR-569, [#134](https://github.com/mairie360/Settings_Web_Service/pull/134))
-- CICD passe à v4.3.1 puis v4.3.2 avec pins par SHA et tags, et la régle Renovate couvre `cicd_version` et `cicd_ref`. Les secrets de release journal sont ajoutés. (MAIR-571, [#136](https://github.com/mairie360/Settings_Web_Service/pull/136), [#141](https://github.com/mairie360/Settings_Web_Service/pull/141))
-- `development.Dockerfile` passe à Node 24.21.0 épinglé par digest, avec le secret BuildKit requis, et les permissions CI sont restreintes au job CICD. (MAIR-436, [#129](https://github.com/mairie360/Settings_Web_Service/pull/129))
+#### Technique
+- Contrat : `@mairie360/bff-settings-openapi` passe à `2.0.0` (MAIR-569, [#134](https://github.com/mairie360/Settings_Web_Service/pull/134)), puis au build dev `0.0.0-dev.bdc4a88…` (MAIR-575, [#145](https://github.com/mairie360/Settings_Web_Service/pull/145)). Le diff ne montre pas de route modifiée dans le contrat.
+- Dépendances et CI : `front-kit` est remplacé par `@mairie360/lib-components` 0.10.2 (MAIR-126, [#138](https://github.com/mairie360/Settings_Web_Service/pull/138), [#143](https://github.com/mairie360/Settings_Web_Service/pull/143)). CICD passe à v4.3.2 avec un journal de release rédigé par Claude (MAIR-571, [#136](https://github.com/mairie360/Settings_Web_Service/pull/136), [#141](https://github.com/mairie360/Settings_Web_Service/pull/141)). Les workflows tournent sur les PR et sur push vers `main` seulement, le token est en lecture seule par défaut, et le Dockerfile de dev passe en Node 24.21.0 avec `NODE_AUTH_TOKEN` en secret BuildKit (MAIR-436, [#129](https://github.com/mairie360/Settings_Web_Service/pull/129)).
 
 ## Historique des passages
 
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-10-21 09:22 UTC | dev | — | `c14bf72` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/39575711437) |
 | 2026-10-21 05:01 UTC | dev | — | `eab97ac` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/39546748272) |
 | 2026-10-21 01:45 UTC | dev | — | `159b7f9` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/39528260272) |
 | 2026-10-20 18:18 UTC | staging | — | `891e2fa` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/39427485154) |

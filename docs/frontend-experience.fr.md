@@ -24,7 +24,7 @@ Calendrier utilise un cache de six périodes au maximum, 60 s, par instance et c
 
 `npm ci`, puis `node node_modules/playwright-core/cli.js install --with-deps chromium --only-shell`, `npm run build -- --webpack` et `npm run performance:report -- --output performance/candidate/report.json`.
 
-Node 24.21.0, Next et SDK épinglés dans le lock ; Playwright Core 1.64.0 fixe le navigateur. Trois contextes neufs, 390 × 844, CPU ×4, latence 100 ms, téléchargement 200 000 octets/s et envoi 93 750 octets/s. Date métier fixe sans modifier les horloges de performance. Le collecteur Web Vitals fourni par la version Next installée est identifié par SHA-256. Une valeur absente est un échec de mesure, jamais un zéro inventé.
+Node 24.22.1, Next et SDK épinglés dans le lock ; Playwright Core 1.64.0 fixe le navigateur. Trois contextes neufs, 390 × 844, CPU ×4, latence 100 ms, téléchargement 200 000 octets/s et envoi 93 750 octets/s. Date métier fixe sans modifier les horloges de performance. Le collecteur Web Vitals fourni par la version Next installée est identifié par SHA-256. Une valeur absente est un échec de mesure, jamais un zéro inventé.
 
 Le laboratoire lie uniquement des serveurs loopback et des fixtures fictives. Son cookie `mairie360_lab_session` est traduit uniquement par le proxy de laboratoire ; aucun cookie réel n’est relayé. Les écritures ne sont pas simulées. Les sources front de production, leur middleware et leur CSP sont compilés tels quels. Les adaptations locales se limitent au nombre de workers de compilation (un). Ce scénario mesure le front avec une latence de données contrôlée ; il ne mesure pas un backend déployé ni le percentile des utilisateurs réels.
 

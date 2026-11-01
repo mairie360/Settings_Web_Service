@@ -1,0 +1,183 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/mairie360/CICD/e314bc0c41ed45157cdd928c25358fee82b0c4f6/tests/a11y/rgaa.schema.json
+# RGAA 4.1.2 scope of the settings front (MAIR-316), checked by the rgaa job of mairie360/CICD
+# promote-prod.yml on <image>@<staging digest> (format: CICD README, "RGAA scope").
+version: 1
+target: http://settings-front:5000
+
+# Same JWT_SECRET as the services of docker-compose-accessibility.yml: the engine signs an
+# accessToken for the user of the state (as:), the front relays it to bff-settings, then core-api.
+session:
+  jwt_secret: b"secret"
+
+users:
+  # Seed users: 2 from init-test.sql, the others from init-accessibility.sql. The BFFs read the
+  # role from the database; the JWT role only drives what the page shows (Admin: instance updates).
+  agent:
+    id: 2
+    role: user
+  # Only for profile-saved, which changes the profile: the states run in parallel, the ones played
+  # as agent must not see the change.
+  editor:
+    id: 30
+    role: user
+  admin:
+    id: 31
+    role: Admin
+
+criteria:
+  # Images: the logo and the icons of the shell and the tabs.
+  - "1.1"
+  - "1.2"
+  - "1.3"
+  # 1.4-1.9: no CAPTCHA, chart, image of text or figure caption.
+  # 2.x: no frame. 4.x: no media.
+  - "3.1"
+  - "3.2"
+  - "3.3"
+  # The sessions of the Sécurité tab are a simple data table (lib-components SessionList).
+  # 5.1-5.3, 5.8: no complex or layout table.
+  - "5.4"
+  - "5.5"
+  - "5.6"
+  - "5.7"
+  # Links: the navigation of the shell (lib-components AppShell).
+  - "6.1"
+  - "6.2"
+  # Scripts: tabs, the assistance and session revoke dialogs (focus kept inside), status messages.
+  - "7.1"
+  - "7.3"
+  - "7.5"
+  - "8.1"
+  - "8.2"
+  - "8.3"
+  - "8.4"
+  - "8.5"
+  - "8.6"
+  - "8.9"
+  # 8.7, 8.8: no text in another language; 8.10: no right-to-left text.
+  - "9.1"
+  - "9.2"
+  - "9.3"
+  # 9.4: no quotation.
+  - "10.1"
+  - "10.2"
+  - "10.3"
+  - "10.4"
+  - "10.5"
+  - "10.6"
+  - "10.7"
+  - "10.8"
+  - "10.9"
+  - "10.10"
+  - "10.11"
+  - "10.12"
+  # Profile form and assistance message.
+  - "11.1"
+  - "11.2"
+  - "11.3"
+  - "11.4"
+  - "11.9"
+  - "11.10"
+  - "11.11"
+  - "11.12"
+  - "11.13"
+  # Navigation of the shell, landmarks, skip link, focus order.
+  - "12.6"
+  - "12.7"
+  - "12.8"
+  - "12.9"
+  # 13.3: the support request and the diagnostic are downloaded files, built in the browser.
+  - "13.3"
+  - "13.9"
+  - "13.11"
+
+# The page opened without a session is not a state of this front: the session guard redirects it
+# to Login (/api/auth/resume), which owns that page.
+states:
+  - id: profile
+    as: agent
+    route: /
+    steps:
+      - wait_for: { role: heading, name: Informations personnelles }
+  - id: profile-edited
+    description: A field changed, the save button enabled
+    as: agent
+    route: /
+    steps:
+      - fill: { label: Prénom, value: Camille }
+      - wait_for: { role: button, name: Enregistrer le profil }
+  - id: profile-email-changed
+    description: E-mail changed, the current password is asked for
+    as: agent
+    route: /
+    steps:
+      - fill: { label: E-mail, value: camille.martin@mairie360.fr }
+      - wait_for: { label: Mot de passe actuel }
+  - id: profile-saved
+    description: Confirmation after a save
+    as: editor
+    route: /
+    steps:
+      - fill: { label: Prénom, value: Camille }
+      - click: { role: button, name: Enregistrer le profil }
+      - wait_for: { text: Votre profil a été enregistré. }
+  - id: security
+    description: Password, second factor and the list of open sessions
+    as: agent
+    route: /
+    steps:
+      - click: { role: tab, name: Sécurité }
+      - wait_for: { role: heading, name: Sessions }
+      - wait_for: { role: table }
+  # No state for the session revoke dialog yet: Core_API serialises session dates as
+  # "2026-01-14 07:30:00 UTC" (DateTime::to_string), BFF_Settings passes them through, and the
+  # lib SessionList only accepts ISO 8601, so every session shows "État indéterminé" and no
+  # "Déconnecter" action. Add the state back once the dates are ISO 8601:
+  #   - id: session-revoke-dialog
+  #     as: agent
+  #     route: /?tab=security
+  #     steps:
+  #       - click: { role: button, name: Déconnecter la session Firefox 140 sur Windows }
+  #       - wait_for: { role: dialog }
+  - id: notifications
+    as: agent
+    route: /?tab=notification-preferences
+    steps:
+      - wait_for: { role: heading, name: Préférences de notification }
+  - id: appearance
+    as: agent
+    route: /?tab=appearance
+    steps:
+      - wait_for: { role: heading, name: Apparence }
+  - id: general
+    as: agent
+    route: /?tab=general
+    steps:
+      - wait_for: { role: heading, name: Préférences générales }
+  - id: system
+    as: agent
+    route: /
+    steps:
+      - click: { role: tab, name: Système }
+      - wait_for: { role: heading, name: Système et assistance }
+  - id: system-admin
+    description: An Admin also sees the instance updates
+    as: admin
+    route: /?tab=system-assistance
+    steps:
+      - wait_for: { role: heading, name: Mises à jour de l’instance }
+  - id: help-dialog
+    as: agent
+    route: /?tab=system-assistance
+    steps:
+      - click: { role: button, name: Centre d’aide }
+      - wait_for: { role: dialog }
+  - id: support-dialog-error
+    description: Support request submitted empty (error message in the dialog)
+    as: agent
+    route: /?tab=system-assistance
+    steps:
+      - click: { role: button, name: Préparer une demande de support }
+      - wait_for: { label: Votre message }
+      - click: { role: button, name: Télécharger la demande }
+      - wait_for: { text: Décrivez votre demande }

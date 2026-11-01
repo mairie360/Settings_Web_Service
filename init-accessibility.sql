@@ -22,7 +22,7 @@ UNION ALL
 SELECT 31, r.id FROM roles r WHERE r.name = 'Admin'
 ON CONFLICT DO NOTHING;
 
--- Two open sessions of user 2, so that the Sécurité tab shows a list and its revoke dialog.
+-- Two open sessions of user 2, so that the Sécurité tab shows a sessions table (criteria 5.4-5.7).
 INSERT INTO sessions (id, user_id, token_hash, device_info, ip_address, created_at, expires_at)
 VALUES
   ('3a0e6c1e-0000-4000-8000-000000000001', 2, 'rgaa-session-1', 'Firefox 140 sur Windows', '192.0.2.10', '2026-01-14T08:30:00+01:00', '2099-01-01T00:00:00+00:00'),

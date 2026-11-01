@@ -1,5 +1,25 @@
 # Settings_Web_Service — Documentation technique
 
+## Garde cookie et délégation du401 — MAIR-405
+
+Le middleware rétablit la présence/expiration décodée du prototype avant la CSP
+nonce des requêtes avec cookie. Il ne valide pas la signature : les jetons opaques
+sont transmis pour la vraie vérification du BFF inchangé. Les données `/settings/`
+et les chemins explicitement couverts `/openapi.json`/`/swagger.json` reçoivent
+un401JSON no-store sans appel amont si le cookie manque/est expiré. Les autres
+documents rejoignent `LOGIN_FRONT_URL` validée à l’exécution (307GET/HEAD,303sinon),
+ou un503 contrôlé si elle est absente/dangereuse. L’effacement du cookie respecte
+`COOKIE_DOMAIN` facultatif, sans prétendre révoquer le serveur. Les exclusions
+d’assets ne changent pas, sauf les deux entrées explicites de métadonnées.
+
+Le client contrôle AbortSignal avant/après la requête et délègue le vrai401 au
+flux Login `/logout` existant une fois par Location. Pas de PATCH rejoué, de401
+accepté comme succès, de jeton browser lu ni de navigation sur400/403/503/réseau.
+Une URL Login invalide produit un message contrôlé. Sa validation est partagée
+avec la navigation existante. Contrat/proxy, CSP, dépendances, contrôles CI,
+permissions et déploiements restent inchangés. Rôle admin, fuseau et session
+réelle restent des constats distincts ouverts dans l’audit.
+
 ## Pied de page partagé — MAIR-180
 
 L’audit CI inchangé a détecté la dépendance d’outillage transitive
@@ -29,7 +49,7 @@ flowchart LR
   Next --> BFF["BFF_Settings"]
 ```
 
-La page conserve le profil éditable et les données du bootstrap dans l’état React. `save` transmet `/settings/profile`, puis remplace le formulaire avec la réponse sauvegardée. Les autres onglets affichent leur état disponible ou indisponible sans simuler de sauvegarde.
+La page conserve le profil éditable et les données du bootstrap dans l’état React. `save` transmet `/settings/profile`, puis remplace le formulaire avec la réponse sauvegardée. `src/lib/profile-form.ts` porte les règles du formulaire reprises du schéma `SettingsProfilePatch` (`maxLength`, `pattern` HTML, textes d’aide, épinglés à `contracts/openapi.json` par un test), la comparaison d’e-mail du BFF, le `current_password` conditionnel et la formulation française d’un refus de sauvegarde (`saveErrorMessage` : `error.details[]` libellés par champ, 403, 409). `requestBff` lève une `BffRequestError` qui expose `status`, `error.code` et `error.details[]` à côté du `message` inchangé. Les autres onglets affichent leur état disponible ou indisponible sans simuler de sauvegarde.
 
 Le proxy générique lit le contrat OpenAPI versionné pour autoriser chemins et méthodes. Il conserve paramètres de requête, corps binaire, statuts et en-têtes utiles, filtre les en-têtes de transport, désactive le cache et n’effectue pas de suivi automatique des redirections. Son délai est de 15 secondes.
 
@@ -37,7 +57,7 @@ Le proxy générique lit le contrat OpenAPI versionné pour autoriser chemins et
 
 Les sources et limites suivantes concernent le BFF associé, dont dépend la sauvegarde des données affichées.
 
-Le profil vient de Core `/api/v1/user/me/`; les sessions viennent de `/api/v1/sessions/`. Les champs sont `first_name`, `last_name`, `email` et `phone`. Le schéma des sessions ne conserve que les informations affichables et retire les champs internes. Aucune préférence n’est stockée localement par le BFF.
+Le profil vient de Core `/api/v1/user/me/`; les sessions viennent de `/api/v1/sessions/`. Les champs sont `first_name`, `last_name`, `email` et `phone` (`phone_country` est lu mais non modifié ; un changement d’e-mail envoie aussi `current_password`). Le schéma des sessions ne conserve que les informations affichables et retire les champs internes. Aucune préférence n’est stockée localement par le BFF.
 
 Notifications, apparence et général restent indisponibles. Système propose uniquement une assistance locale. La sécurité affiche les sessions, sans gérer les autres réglages. Les routes de préférences ont actuellement des schémas de requête/réponse vides et le bootstrap ne fournit aucune préférence : leur présence ne constitue pas à elle seule un contrat utilisable.
 
@@ -45,7 +65,7 @@ Notifications, apparence et général restent indisponibles. Système propose un
 
 `src/components/settings-assistance.tsx` déclenche les exports dans les gestionnaires d’interaction, sans effet, boucle de timers, appel réseau ou persistance. `src/lib/local-assistance.ts` valide le texte saisi (non vide, au plus 5 000 caractères), construit les fichiers texte/JSON et demande un téléchargement Blob. Le lien temporairement ajouté est supprimé immédiatement ; son URL d’objet est révoquée après une seconde en cas de succès ou immédiatement en cas d’échec. L’interface confirme la demande de téléchargement, pas la sauvegarde du fichier ni l’envoi d’un message de support. Les erreurs brutes ne sont jamais affichées ni exportées.
 
-Seules les familles du navigateur et du système sont déduites de `navigator.userAgent` au clic sur le diagnostic. La chaîne brute n’est jamais exportée ; une famille inconnue reste non identifiée. Les seuls champs JSON sont `module`, `generatedAt`, `browser`, `operatingSystem`, `capabilities.objectUrls`. Aucun DTO métier n’est transmis au composant, aucun stockage n’est lu/effacé et aucune version/date de déploiement ni quota n’est inventé. Aucune nouvelle variable, dépendance, route, permission ou opération BFF.
+Seules les familles du navigateur et du système sont déduites de `navigator.userAgent` au clic sur le diagnostic. MAIR-471 affiche également ces familles dans `settings-browser-information.tsx` : `useSyncExternalStore` utilise des snapshots string stables, sans abonnement événementiel, et un placeholder serveur déterministe. Aucun accès navigateur pendant SSR ou le premier rendu d’hydratation ; famille inconnue non identifiée, getter inaccessible affiché indisponible sans erreur brute. Ni chaîne user-agent ni version navigateur affichée, stockée ou exportée. Les seuls champs JSON restent `module`, `generatedAt`, `browser`, `operatingSystem`, `capabilities.objectUrls`. Aucun DTO métier n’est transmis au composant, aucun stockage n’est lu/effacé et aucune version/date de déploiement ni quota n’est inventé. Aucune nouvelle variable, dépendance, route, permission ou opération BFF.
 
 Les tests Node couvrent validation/contenu/confidentialité des exports et nettoyage du téléchargement ; les tests de composants exercent la vraie page, le clavier, axe, les erreurs/reprises et l’absence de nouvel appel bootstrap. Le harness de contrat vérifie également que Système n’ajoute aucune opération amont.
 
@@ -88,6 +108,7 @@ Les valeurs ci-dessous sont des exemples locaux ou des comportements expliciteme
 | --- | --- | --- |
 | `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL` | http://localhost:4008 | Priorité de gauche à droite dans le proxy ; configurer explicitement une URL HTTP(S). Une configuration absente ou invalide renvoie un 503 non mis en cache, sans appel réseau. |
 | `LOGIN_FRONT_URL` | — | Origine Login validée à l’exécution pour ouvrir `/logout`. |
+| `KEYCLOAK_REALM_URL` | https://auth.mairie360.fr/realms/mairie360 | URL publique du realm (MAIR-357), lue côté serveur par `src/lib/keycloak-account.ts`. L’onglet Sécurité renvoie vers `<realm>/account` pour gérer le second facteur ; absente ou invalide, le lien est masqué : HTTPS uniquement (HTTP pour un hôte local en développement), chemin `…/realms/<realm>`, sans identifiants, requête ni fragment. |
 
 La navigation commune lit `DASHBOARD_FRONT_URL`, `PROJECT_FRONT_URL`,
 `MESSAGE_FRONT_URL`, `ELEARNING_FRONT_URL`, `CALENDAR_FRONT_URL` et
@@ -113,7 +134,7 @@ Ces chemins de données sont exposés à la même origine par le proxy; les page
 | GET | `/health` | — | 200 |
 | GET | `/check_apis` | — | 200, 502 |
 | GET | `/settings/bootstrap` | — | 200, 401, 502 |
-| PATCH | `/settings/profile` | application/json | 200, 400 |
+| PATCH | `/settings/profile` | application/json | 200, 400 (`details[]`), 403 (`current_password` incorrect), 409 (e-mail déjà utilisé) |
 | PATCH | `/settings/notifications` | application/json | 200, 404 |
 | PATCH | `/settings/appearance` | application/json | 200, 404 |
 | PATCH | `/settings/general` | application/json | 200, 404 |
@@ -134,14 +155,14 @@ Le menu de compte de l’AppShell valide `LOGIN_FRONT_URL` à l’exécution pui
 
 Le proxy générique répond 400 pour un chemin invalide, 404 pour un chemin hors contrat, 405 pour une méthode interdite et 502 si le service est injoignable ou dépasse le délai. Les réponses amont sont conservées, y compris les corps vides 204/205/304.
 
-Toutes les réponses portent `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` et `Cross-Origin-Resource-Policy`, `Cross-Origin-Embedder-Policy` et `Cross-Origin-Opener-Policy` (`next.config.ts`), et `X-Powered-By` est désactivé. [src/middleware.ts](../../src/middleware.ts) ajoute sur chaque page une `Content-Security-Policy` avec un nonce propre à chaque requête (il ne redirige pas les utilisateurs non authentifiés), que Next.js applique à ses scripts. Les pages sont donc rendues à la demande (`dynamic = "force-dynamic"` dans le layout). Les feuilles de style sont limitées à l'origine et au nonce ; seuls les attributs `style` rendus par les composants partagés passent par `style-src-attr 'unsafe-inline'`, et `next dev` autorise aussi `'unsafe-eval'`. Toute nouvelle ressource externe (image, police, API appelée depuis le navigateur) doit être ajoutée à la politique dans `src/lib/content-security-policy.ts`.
+Toutes les réponses portent `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` et `Cross-Origin-Resource-Policy`, `Cross-Origin-Embedder-Policy` et `Cross-Origin-Opener-Policy` (`next.config.ts`), et `X-Powered-By` est désactivé. [src/middleware.ts](../../src/middleware.ts) ajoute sur chaque page ayant passé la garde de session une `Content-Security-Policy` avec un nonce propre à chaque requête, que Next.js applique à ses scripts. Les pages sont donc rendues à la demande (`dynamic = "force-dynamic"` dans le layout). Les feuilles de style sont limitées à l'origine et au nonce ; seuls les attributs `style` rendus par les composants partagés passent par `style-src-attr 'unsafe-inline'`, et `next dev` autorise aussi `'unsafe-eval'`. Toute nouvelle ressource externe (image, police, API appelée depuis le navigateur) doit être ajoutée à la politique dans `src/lib/content-security-policy.ts`.
 
 ## Synchronisation et vérifications
 
-Le front utilise un seul contrat : celui que **BFF_Settings publie** dans le paquet `@mairie360/bff-settings-openapi`, épinglé à une version exacte `X.Y.Z` dans `package.json`. Il n’est jamais copié depuis un checkout du BFF, qui peut être en avance sur la dernière version publiée. Après une nouvelle version de BFF_Settings, exécuter dans ce dépôt:
+Le front utilise un seul contrat : celui que **BFF_Settings publie** dans le paquet `@mairie360/bff-settings-openapi`, épinglé à une version exacte dans `package.json` : une release `X.Y.Z`, ou, tant qu’aucune release n’est coupée, le paquet `0.0.0-dev.<sha>` publié par la CICD pour le commit courant de son `main` (MAIR-509 ; jamais une pré-version `staging`). Il n’est jamais copié depuis un checkout du BFF, qui peut être en avance sur ce qui est publié. Après une nouvelle release ou un nouveau paquet dev de BFF_Settings, exécuter dans ce dépôt:
 
 ```bash
-npm install --save-exact @mairie360/bff-settings-openapi@X.Y.Z
+npm install --save-exact @mairie360/bff-settings-openapi@<version>
 npm run contracts:sync
 npm run contracts:check
 npm run test:contracts
@@ -149,17 +170,17 @@ npm run lint
 npm run build
 ```
 
-Le paquet ne contient que la sortie orval (modèles et endpoints TypeScript). `contracts:sync` (alias `contracts:generate`) reconstruit `contracts/openapi.json` depuis le paquet installé avec `scripts/orval-contract.mjs` ; le proxy lit ce fichier et le code importe ses types depuis `@mairie360/bff-settings-openapi/model`. `contracts:check` échoue si la version n’est pas exacte, si le paquet installé diffère de `package.json`, si un second paquet `bff-*-openapi` existe ou si `contracts/openapi.json` n’est plus à jour. Ces commandes fonctionnent hors ligne. Après une montée de version, aligner aussi le tag d’image `bff-settings` des stacks de test. `test:contracts` exécute les tests Node sans couverture ; `npm test` les exécute avec un seuil de 60 % (lignes, branches, fonctions) sur tous les modules `src/**/*.ts`.
+Le paquet ne contient que la sortie orval (modèles et endpoints TypeScript). `contracts:sync` (alias `contracts:generate`) reconstruit `contracts/openapi.json` depuis le paquet installé avec `scripts/orval-contract.mjs` ; le proxy lit ce fichier et le code importe ses types depuis `@mairie360/bff-settings-openapi/model`. `contracts:check` échoue si la version n’est pas une version exacte acceptée (`scripts/contract-version.mjs`), si le paquet installé diffère de `package.json`, si un second paquet `bff-*-openapi` existe ou si `contracts/openapi.json` n’est plus à jour. Ces commandes fonctionnent hors ligne. Après une montée de version, aligner aussi le tag d’image `bff-settings` des stacks sur l’image construite depuis le même commit (`X.Y.Z` pour une release, `dev-<sha7>` pour un paquet dev). Les erreurs du BFF utilisent l’enveloppe commune `ErrorResponse` (`{ error: { code, message, details } }`). `test:contracts` exécute les tests Node sans couverture ; `npm test` les exécute avec un seuil de 60 % (lignes, branches, fonctions) sur tous les modules `src/**/*.ts`.
 
-Les tests vérifient que le front n’accède au réseau qu’à travers son contrat BFF publié. `tests/network-contract.test.cjs` analyse l’AST TypeScript de `src/` : seuls `src/lib/bff-client.ts` et `src/lib/bff-proxy.ts` appellent `fetch`, chaque appel `requestBff` (tous dans `src/lib/settings-api.ts`) vise une opération littérale de `contracts/openapi.json`, et le seul relais serveur est le proxy vers `configuredBffUrl()` (la seule URL de BFF lue dans l’environnement est `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL`). `tests/settings.bff-mocks.test.cjs` exerce la chaîne BFF contre un mock piloté par le contrat. `tests/logout.test.cjs` vérifie la redirection validée vers Login et les refus sûrs sans deuxième BFF. `tests/package-contract.test.cjs` vérifie l’épinglage du paquet et la reconstruction du contrat.
+Les tests vérifient que le front n’accède au réseau qu’à travers son contrat BFF publié. `tests/network-contract.test.cjs` analyse l’AST TypeScript de `src/` : seuls `src/lib/bff-client.ts` et `src/lib/bff-proxy.ts` appellent `fetch`, chaque requête métier est un appel `bffSettings.<operation>` généré (tous dans `src/lib/settings-api.ts`, aucun chemin en chaîne) qui nomme une opération du client généré et de `contracts/openapi.json`, acheminé par `requestBff` via un adaptateur axios, et le seul relais serveur est le proxy vers `configuredBffUrl()` (la seule URL de BFF lue dans l’environnement est `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL`). `tests/settings.bff-mocks.test.cjs` exerce la chaîne BFF contre un mock piloté par le contrat. `tests/logout.test.cjs` vérifie la redirection validée vers Login et les refus sûrs sans deuxième BFF. `tests/package-contract.test.cjs` vérifie l’épinglage du paquet et la reconstruction du contrat.
 
 Pour une modification uniquement documentaire, vérifier les liens, l’exactitude des deux langues et `git diff --check`; ne pas régénérer les contrats sans montée de version du paquet.
 
 ## CI/CD et exécution Docker
 
-Le job `contracts.yml` utilise Node.js 24 et des commits immuables pour `actions/checkout` et `actions/setup-node`. Il s’exécute sur push, pull request et lancement manuel; il installe avec `npm ci`, contrôle les contrats et lance les tests dédiés.
+Le job `contracts.yml` utilise Node.js 24.22.1 et des commits immuables pour `actions/checkout` et `actions/setup-node`. Il s’exécute sur pull request, lancement manuel et push vers `main` uniquement (MAIR-436); il installe avec `npm ci`, contrôle les contrats et lance les tests dédiés.
 
-`cicd.yml` appelle `mairie360/CICD/.github/workflows/frontend-cicd.yml@v4.0.1`, avec `cicd_version: v4.0.1` et `node_version: "24"`. Ce workflow partagé existant bloque build/tests sur les audits npm et Semgrep/Gitleaks. Sa publication Dev sur main est automatique ; Staging/Prod gardent des gates d’environnement distincts. Aucun pin ou accord de déploiement n’est changé ici.
+`cicd.yml` appelle `mairie360/CICD/.github/workflows/frontend-cicd.yml` épinglé sur un commit CICD, avec le même `cicd_version` et `node_version: "24.22.1"`. Il s’exécute sur les pull requests, au déclenchement manuel et sur les push vers `main` uniquement ; son jeton est en lecture seule par défaut et seul le job qui appelle le pipeline de release reçoit les droits d’écriture `contents`, `packages` et `id-token` (MAIR-436, `tests/workflow-permissions.test.cjs`). Ce workflow partagé existant bloque build/tests sur les audits npm et Semgrep/Gitleaks. Sa publication Dev sur main est automatique ; Staging/Prod gardent des gates d’environnement distincts. Aucun pin ou accord de déploiement n’est changé ici.
 
 MAIR-230 / issue #79 ajoute le job consommateur `required_security_scan` nommé
 `CICD / Code Security Audit (Semgrep)` : la protection attend encore ce nom
@@ -174,7 +195,7 @@ accès/ruleset/contrôle de sécurité n’est contourné. Le scan partagé et l
 gates restent actifs. Les tests de régression contrôlent ce câblage ; la CI doit
 prouver le succès du vrai scan avant une fusion normale.
 
-Le Dockerfile utilise par défaut `NODE_VERSION=23.1.0` et le build Next.js `standalone`; la commande de l’image est `["node", "server.js"]`. Le port de l’image et les mappings Compose peuvent différer du port local proposé plus haut.
+Le Dockerfile épingle `NODE_VERSION=24.22.1` (image officielle bookworm-slim épinglée par digest) et le build Next.js `standalone` ; la commande de l’image est `["node", "server.js"]`. Le port de l’image et les mappings Compose peuvent différer du port local proposé plus haut.
 
 Avant un lancement Docker, vérifier les variables de service, les secrets de build et les réseaux dans les fichiers du dépôt. Une CI verte valide ses jobs; elle ne prouve pas la disponibilité des services métier dans un environnement distant.
 
@@ -201,3 +222,5 @@ En cas d’erreur de proxy, comparer la route et la méthode à l’inventaire, 
 - [docker-compose.yml](../../docker-compose.yml)
 
 Compléments historiques: [BFF.md](../../BFF.md), [BACKEND.md](../../BACKEND.md). Les besoins proposés doivent rester distincts du comportement effectivement implémenté.
+
+Les contrôles de présentation montent la vraie page Paramètres, ses hooks React et UI publiée 0.6.12 avec la fixture bootstrap canonique existante à la frontière des fonctions API. Ils vérifient les styles calculés de la typographie, de la navigation/du tiroir, des onglets sélectionnés, des quatre champs du profil et de la fenêtre d’aide. Les politiques analysées conservent les associations de breakpoints, le token de police, le focus et le fond de la fenêtre. JSDOM ne compile pas Tailwind, ne calcule pas les media queries et ne prouve ni géométrie native, schémas des BFF déployés, persistance ni conformité RGAA. Les recettes natives et tests HTTP restent distincts ; le produit, les contrats et la configuration RGAA sont inchangés.

@@ -1,7 +1,7 @@
 import { frontUrl, type FrontUrlKey } from "./front-urls";
 
-function configuredFrontUrl(key: FrontUrlKey): string | undefined {
-  const value = frontUrl(key)?.trim();
+export function validatedFrontHref(input: string | undefined): string | undefined {
+  const value = input?.trim();
   if (!value) return undefined;
 
   try {
@@ -13,6 +13,10 @@ function configuredFrontUrl(key: FrontUrlKey): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function configuredFrontUrl(key: FrontUrlKey): string | undefined {
+  return validatedFrontHref(frontUrl(key));
 }
 
 export function getLoginFrontHref() {

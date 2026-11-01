@@ -1,30 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import {
-  buildContentSecurityPolicy,
-  createNonce,
-  NONCE_REQUEST_HEADER,
-} from "./lib/content-security-policy";
+import { createAuthGuard } from '@mairie360/lib-components/guard';
+import contract from '../contracts/openapi.json';
+export const middleware = createAuthGuard({
+  paths: contract.paths,
+  frontUrl: () => process.env.SETTINGS_FRONT_URL?.trim() ?? '',
+  loginUrl: () => process.env.LOGIN_FRONT_URL?.trim() ?? '',
 
-// Ce front ne redirige pas les utilisateurs non authentifiés : pas de garde ici.
-// Le middleware pose uniquement une Content-Security-Policy avec un nonce par
-// requête. Next.js lit la CSP de la requête pour poser le nonce sur ses propres
-// scripts : les pages doivent donc être rendues à la demande (voir src/app/layout.tsx).
-export function middleware(request: NextRequest) {
-  const nonce = createNonce();
-  const contentSecurityPolicy = buildContentSecurityPolicy(
-    nonce,
-    process.env.NODE_ENV === "development",
-  );
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set(NONCE_REQUEST_HEADER, nonce);
-  requestHeaders.set("Content-Security-Policy", contentSecurityPolicy);
-
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
-  response.headers.set("Content-Security-Policy", contentSecurityPolicy);
-
-  return response;
-}
-
+});
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)", "/openapi.json", "/swagger.json"],
 };

@@ -22,7 +22,7 @@ const front = createFront({
   upstreams: () => [bffSettings.url, unreachable],
 });
 
-const { loadSettings, saveProfile } = requireSrc('lib/settings-api.ts');
+const { loadSettings, saveProfile, saveAppearance, saveGeneral, saveNotifications } = requireSrc('lib/settings-api.ts');
 
 const BFF_URL_VARIABLES = ['SETTINGS_BFF_URL', 'BFF_SETTINGS_BASE_URL'];
 const savedEnv = Object.fromEntries(BFF_URL_VARIABLES.map((name) => [name, process.env[name]]));
@@ -98,6 +98,48 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
     assert.equal(received.headers.authorization, `Bearer ${fixtures.ACCESS_TOKEN}`);
   });
 
+  for (const [name, call, section, patch, saved] of [
+    ['appearance', saveAppearance, 'appearance', { theme: 'dark' }, fixtures.appearance({ theme: 'dark' })],
+    ['general', saveGeneral, 'general', { home_page: 'projects' }, fixtures.general({ home_page: 'projects' })],
+    ['notifications', saveNotifications, 'notifications', { messages: false }, fixtures.notifications({ messages: false })],
+  ]) {
+    test(`save ${name} uses the generated PATCH and returns its snapshot`, async () => {
+      bffSettings.on('PATCH', `/settings/${section}`, { body: saved });
+      assert.deepEqual(await call(patch), saved);
+      assert.deepEqual(front.browserCalls, [{ method: 'PATCH', path: `/settings/${section}` }]);
+      assert.deepEqual(bffSettings.requests[0].body, patch);
+    });
+  }
+
+  test('saveProfile forwards current_password with the new e-mail (MAIR-511)', async () => {
+    const saved = fixtures.profile({ email: 'anne.nouvelle@mairie.test' });
+    bffSettings.on('PATCH', '/settings/profile', { body: saved });
+
+    assert.deepEqual(await saveProfile({ email: 'anne.nouvelle@mairie.test', current_password: 'current-secret' }), saved);
+
+    const [received] = bffSettings.calls('/settings/profile', 'PATCH');
+    assert.deepEqual(received.body, { email: 'anne.nouvelle@mairie.test', current_password: 'current-secret' });
+  });
+
+  test('a refusal exposes the status, code and details of the ErrorResponse envelope without changing the message', async () => {
+    const { BffRequestError } = requireSrc('lib/bff-client.ts');
+    const details = [{ path: 'body.current_password', message: 'Required when email is changed' }, { message: 'Context only' }, { path: 'ignored' }, 'junk'];
+    bffSettings.on('PATCH', '/settings/profile', { status: 400, body: { error: { code: 'BAD_REQUEST', message: 'Validation failed', details } }, outOfContract: true });
+
+    const error = await saveProfile({ email: 'anne.nouvelle@mairie.test' }).catch((reason) => reason);
+    assert.ok(error instanceof BffRequestError);
+    assert.equal(error.name, 'BffRequestError');
+    assert.equal(error.message, 'Validation failed');
+    assert.equal(error.status, 400);
+    assert.equal(error.code, 'BAD_REQUEST');
+    assert.deepEqual(error.details, [{ path: 'body.current_password', message: 'Required when email is changed' }, { path: undefined, message: 'Context only' }]);
+
+    bffSettings.on('PATCH', '/settings/profile', { status: 503, raw: 'down', contentType: 'text/plain', outOfContract: true });
+    const unreadable = await saveProfile({ first_name: 'Anne' }).catch((reason) => reason);
+    assert.ok(unreadable instanceof BffRequestError);
+    assert.deepEqual([unreadable.status, unreadable.code, unreadable.details], [503, undefined, []]);
+  });
+
   // Statuts d'erreur renvoyés par BFF_Settings (session invalide, corps refusé, Core indisponible ou non configuré).
   for (const [name, call, method, template, statuses] of [
     ['loadSettings', () => loadSettings(), 'GET', '/settings/bootstrap', [401, 502, 503]],
@@ -107,7 +149,7 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
       test(`${name} rejects with the BFF message on a ${status}`, async () => {
         bffSettings.on(method, template, bffError(status, `Refus ${status} du BFF.`));
 
-        await assert.rejects(call(), { message: `Refus ${status} du BFF.` });
+        await assert.rejects(call(), { message: status === 401 ? 'La session est temporairement indisponible.' : `Refus ${status} du BFF.` });
         assert.equal(bffSettings.calls(template, method).length, 1);
       });
     }
@@ -200,22 +242,21 @@ describe('same-origin proxy exposes exactly the published BFF_Settings contract'
     assert.deepEqual(bffSettings.requests.map((received) => received.method), ['HEAD']);
   });
 
-  test('the BFF OpenAPI documents stay reachable', async () => {
+  test('undeclared BFF metadata documents never reach the backend', async () => {
     for (const document of ['/openapi.json', '/swagger.json']) {
       const response = await browser(document);
-      assert.equal(response.status, 200);
-      assert.equal((await response.json()).info.title, bffContract.title);
+      assert.equal(response.status, 404);
     }
-    assert.deepEqual(bffSettings.requests.map((received) => received.template), ['/openapi.json', '/swagger.json']);
+    assert.deepEqual(bffSettings.requests, []);
   });
-
   test('the 404 of a preference not yet supported by Core is relayed', async () => {
-    bffSettings.on('PATCH', '/settings/notifications', { status: 404, body: fixtures.error('Route absente du contrat') });
+    // The dev package references the shared ErrorResponse model: no error status is documented per operation.
+    bffSettings.on('PATCH', '/settings/notifications', { status: 404, body: fixtures.error('Route absente du contrat', 404), outOfContract: true });
 
-    const response = await browser('/settings/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"emailDigest":true}' });
+    const response = await browser('/settings/notifications', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: '{"email":true}' });
 
     assert.equal(response.status, 404);
-    assert.deepEqual(await response.json(), fixtures.error('Route absente du contrat'));
+    assert.deepEqual(await response.json(), fixtures.error('Route absente du contrat', 404));
   });
 
   for (const [label, pathname, method, status] of [
@@ -263,12 +304,17 @@ describe('the front talks to a single BFF', () => {
     });
   }
 
-  test('POST /api/auth/logout is not served by Settings', async () => {
-    const response = await browser('/api/auth/logout', { method: 'POST' });
-    assert.equal(response.status, 404);
-    assert.deepEqual(front.upstreamCalls, []);
-  });
-});
+  test('explicit logout with an unavailable Login configuration never contacts Settings', async () => {
+    const previous = process.env.LOGIN_FRONT_URL;
+    delete process.env.LOGIN_FRONT_URL;
+    try {
+      const response = await browser('/api/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      assert.equal(response.status, 503);
+      assert.deepEqual(front.upstreamCalls, []);
+    } finally {
+      if (previous === undefined) delete process.env.LOGIN_FRONT_URL; else process.env.LOGIN_FRONT_URL = previous;
+    }
+  });});
 
 describe('network guard of the test harness', () => {
   test('a browser call to another origin is reported', async () => {

@@ -1,8 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import Home from "@/app/page";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import Home from '@/components/SettingsPage';
 import { loadSettings } from "@/lib/settings-api";
 import { downloadLocalFile } from "@/lib/local-assistance";
 
@@ -29,6 +29,7 @@ beforeEach(() => {
   });
   vi.mocked(downloadLocalFile).mockReset();
 });
+afterEach(() => vi.restoreAllMocks());
 
 async function openSystem() {
   const user = userEvent.setup(); render(<Home />);
@@ -38,12 +39,50 @@ async function openSystem() {
 }
 
 describe("local Settings assistance", () => {
+  it("shows the reference browser information as coarse local estimates without account data", async () => {
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Macintosh Chrome/125 Safari/537 private-agent-token");
+    const user = await openSystem();
+    const region = screen.getByRole("region", { name: "Informations du navigateur actuel" });
+    expect(within(region).getByText("Chrome")).toBeTruthy();
+    expect(within(region).getByText("macOS")).toBeTruthy();
+    expect(region.textContent).toMatch(/estimées/);
+    expect(region.textContent).not.toMatch(/private-agent-token|Chrome\/125|Private|private@example|private-session|192\.0\.2/);
+    expect(screen.queryByText(/Mairie360 v2\.1\.0|10 septembre 2026|50 MB/)).toBeNull();
+    await user.click(screen.getByRole("tab", { name: "Profil", exact: true }));
+    await user.click(screen.getByRole("tab", { name: "Système", exact: true }));
+    expect(screen.getByRole("region", { name: "Informations du navigateur actuel" }).textContent).toContain("Chrome");
+    expect(loadSettings).toHaveBeenCalledTimes(1);
+    expect(downloadLocalFile).not.toHaveBeenCalled();
+  });
+
+  it("keeps unknown browser families unknown without copying the raw user-agent", async () => {
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue("unknown-private-agent-token");
+    await openSystem();
+    const region = screen.getByRole("region", { name: "Informations du navigateur actuel" });
+    expect(within(region).getAllByText("Non identifié")).toHaveLength(2);
+    expect(region.textContent).not.toContain("unknown-private-agent-token");
+    expect(loadSettings).toHaveBeenCalledTimes(1);
+    expect(downloadLocalFile).not.toHaveBeenCalled();
+  });
+
+  it("keeps assistance usable when local browser identification is unavailable", async () => {
+    vi.spyOn(navigator, "userAgent", "get").mockImplementation(() => { throw Error("private-browser-error"); });
+    const user = await openSystem();
+    const region = screen.getByRole("region", { name: "Informations du navigateur actuel" });
+    expect(within(region).getAllByText("Indisponible")).toHaveLength(2);
+    expect(region.textContent).not.toContain("private-browser-error");
+    await user.click(screen.getByRole("button", { name: "Centre d’aide", exact: true }));
+    expect(screen.getByRole("dialog", { name: "Centre d’aide" })).toBeTruthy();
+    expect(loadSettings).toHaveBeenCalledTimes(1);
+    expect(downloadLocalFile).not.toHaveBeenCalled();
+  });
+
   it("shows truthful help without deployment fixtures or extra business calls", async () => {
     const user = await openSystem();
     await user.click(screen.getByText("Centre d’aide"));
     expect(screen.getByRole("dialog", { name: "Centre d’aide" })).toBeTruthy();
     expect(screen.getByText(/Cette page ne permet pas encore de les révoquer/)).toBeTruthy();
-    expect(screen.getByText(/préférences Notifications, Apparence et Général ne sont pas encore disponibles/)).toBeTruthy();
+    expect(screen.getByText(/Notifications, Apparence et Général, préparez vos préférences/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Vider le cache" })).toBeNull();
     expect(loadSettings).toHaveBeenCalledTimes(1);
     expect(downloadLocalFile).not.toHaveBeenCalled();
@@ -59,7 +98,7 @@ describe("local Settings assistance", () => {
     expect(file.name).toBe(filename); expect(file.type).toBe("text/plain;charset=utf-8");
     expect(file.content).toContain("Une question <b>en texte</b>");
     expect(file.content).not.toMatch(/Private|private-session|private@example|192\.0\.2/);
-    expect(screen.getByRole("status").textContent).toContain("Aucun message n’a été envoyé");
+    expect(within(screen.getByRole("tabpanel")).getByRole("status").textContent).toContain("Aucun message n’a été envoyé");
     expect(screen.queryByRole("dialog")).toBeNull();
     const trigger = screen.getByRole("button", { name: action });
     expect(document.activeElement).toBe(trigger);
@@ -87,9 +126,9 @@ describe("local Settings assistance", () => {
     expect(screen.getByRole("textbox", { name: "Votre message" }).value).toBe("My draft");
     expect(screen.getByRole("dialog", { name: "Signalement" }).contains(screen.getByRole("alert"))).toBe(true);
     expect(screen.getByRole("alert").textContent).not.toContain("private error");
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(within(screen.getByRole("tabpanel")).getByRole("status").textContent).toBe("");
     await user.click(screen.getByRole("button", { name: "Télécharger la demande" }));
-    expect(screen.queryByRole("alert")).toBeNull(); expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull(); expect(within(screen.getByRole("tabpanel")).getByRole("status")).toBeTruthy();
   });
 
   it("exports only the allowlisted diagnostic fields, never the draft or profile", async () => {
@@ -106,7 +145,7 @@ describe("local Settings assistance", () => {
     const user = await openSystem();
     await user.click(screen.getByRole("button", { name: "Télécharger le diagnostic local" }));
     expect(screen.getByRole("alert").textContent).toMatch(/diagnostic local n’a pas pu/);
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(within(screen.getByRole("tabpanel")).getByRole("status").textContent).toBe("");
   });
 
   it("supports keyboard entry and has no serious accessibility violations", async () => {

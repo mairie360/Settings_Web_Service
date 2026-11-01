@@ -11,14 +11,19 @@
     "contracts:check": "node scripts/contracts.mjs --check",
     "contracts:sync": "node scripts/contracts.mjs --sync",
     "test:contracts": "node --test tests/*.test.cjs",
-    "test:node": "mkdir -p coverage && node --test --enable-source-maps --experimental-test-coverage --test-coverage-branches=60 --test-coverage-functions=60 --test-coverage-lines=60 --test-coverage-include='src/**' --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info tests/*.test.cjs",
-    "test:components": "vitest run",
-    "test": "npm run test:node && npm run test:components"
+    "test:node": "node scripts/test-node-coverage.cjs",
+    "test:components": "vitest run --coverage",
+    "test": "npm run test:node && node scripts/test-components-coverage.cjs",
+    "performance:report": "node scripts/frontend-performance.mjs",
+    "test:node:native": "mkdir -p coverage && node --test --test-concurrency=1 --enable-source-maps --experimental-test-coverage --test-coverage-branches=60 --test-coverage-functions=60 --test-coverage-lines=60 --test-coverage-include='src/**' --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info tests/*.test.cjs",
+    "test:bundle": "node --test tests/bundle/*.test.cjs"
   },
   "dependencies": {
-    "@mairie360/bff-settings-openapi": "1.1.0",
-    "@mairie360/lib-components": "0.6.8",
-    "next": "16.3.6",
+    "@mairie360/bff-settings-openapi": "2.1.0",
+    "@mairie360/lib-components": "1.0.3",
+    "axios": "1.20.0",
+    "lucide-react": "1.0.0",
+    "next": "16.4.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -30,15 +35,25 @@
     "@types/node": "^24.0.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "5.0.2",
+    "braces": "file:./vendor/braces",
+    "c8": "12.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.3.6",
+    "eslint-config-next": "16.4.2",
     "jest-axe": "11.0.0",
     "jsdom": "30.1.1",
+    "playwright-core": "1.64.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "5.0.2"
+    "vitest": "5.0.2",
+    "@types/jest-axe": "3.5.9"
   },
   "overrides": {
-    "postcss": "8.5.28"
+    "braces": "$braces",
+    "postcss": "8.5.28",
+    "next": {
+      ".": "$next",
+      "sharp": "^0.35.5"
+    }
   }
 }

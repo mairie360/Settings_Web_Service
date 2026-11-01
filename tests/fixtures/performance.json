@@ -1,0 +1,128 @@
+{
+  "module": "Settings",
+  "readySelector": "input[value=\"Anne Marie\"]",
+  "routes": {
+    "/settings/bootstrap": {
+      "profile": {
+        "first_name": "Anne Marie",
+        "last_name": "Le Gall",
+        "email": "anne.le-gall@mairie.test",
+        "phone": "+33123456789"
+      },
+      "sessions": [
+        {
+          "id": "s-1",
+          "device_info": "Firefox sur Linux",
+          "ip_address": "192.0.2.10",
+          "created_at": "2026-09-15T08:00:00Z",
+          "expires_at": "2026-09-22T08:00:00Z",
+          "revoked_at": null
+        }
+      ],
+      "appearance": {
+        "theme": "system",
+        "density": "normal",
+        "font_family": "Marianne",
+        "font_size": 16
+      },
+      "general": {
+        "language": "fr",
+        "timezone": "Europe/Paris",
+        "date_format": "DD/MM/YYYY",
+        "home_page": "dashboard",
+        "auto_open_notifications": false
+      },
+      "notifications": {
+        "email": true,
+        "push": false,
+        "desktop": true,
+        "messages": true,
+        "projects": true,
+        "calendar": false
+      },
+      "sources": {
+        "sessions": "available",
+        "preferences": "available",
+        "notifications": "available"
+      }
+    },
+    "/api/user/me": {
+      "user": {
+        "id": 1,
+        "first_name": "Alice",
+        "last_name": "Recette",
+        "email": "alice@example.invalid",
+        "phone": null,
+        "status": "active"
+      },
+      "groups": [
+        {
+          "id": 1,
+          "name": "Mairie",
+          "owner_id": 1,
+          "description": null
+        }
+      ],
+      "roles": [
+        {
+          "id": 1,
+          "name": "Admin"
+        }
+      ]
+    },
+    "/api/auth/me": {
+      "user": {
+        "id": 1,
+        "first_name": "Alice",
+        "last_name": "Recette",
+        "email": "alice@example.invalid",
+        "phone": null,
+        "status": "active"
+      },
+      "groups": [
+        {
+          "id": 1,
+          "name": "Mairie",
+          "owner_id": 1,
+          "description": null
+        }
+      ],
+      "roles": [
+        {
+          "id": 1,
+          "name": "Admin"
+        }
+      ]
+    },
+    "/api/auth/session": {
+      "user": {
+        "id": 1,
+        "first_name": "Alice",
+        "last_name": "Recette",
+        "email": "alice@example.invalid",
+        "phone": null,
+        "status": "active"
+      },
+      "groups": [
+        {
+          "id": 1,
+          "name": "Mairie",
+          "owner_id": 1,
+          "description": null
+        }
+      ],
+      "roles": [
+        {
+          "id": 1,
+          "name": "Admin"
+        }
+      ]
+    },
+    "/api/auth/role": {
+      "isAdmin": true
+    },
+    "/api/auth/current-user": {
+      "id": "1"
+    }
+  }
+}

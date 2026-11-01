@@ -6,15 +6,13 @@ const { ROOT, requireSrc } = require('./support/load-ts.cjs');
 const { OpenApiContract } = require('./support/openapi-contract.cjs');
 const { scanNetworkSurface } = require('./support/network-surface.cjs');
 const fixtures = require('./support/settings-fixtures.cjs');
+const policy = require('./support/source-policy.cjs');
 
 // Le contrat de référence du front est celui publié par BFF_Settings dans le paquet @mairie360/bff-settings-openapi,
 // à la version exacte épinglée dans package.json, reconstruit dans contracts/openapi.json.
-// Vérification statique (AST de tout src/, .ts et .tsx) que le front ne parle au réseau qu'à travers ce contrat :
-// - le navigateur n'appelle que sa propre origine, via `requestBff`, sur des opérations du paquet publié ;
-// - le serveur Next.js ne relaie que vers un seul BFF, BFF_Settings, à travers le proxy dont la liste blanche
-//   (contracts/openapi.json) expose exactement les opérations du paquet publié ;
-// - aucune autre API réseau, bibliothèque HTTP, URL absolue ou paquet OpenAPI d'un autre BFF n'est utilisé.
-// Les comportements correspondants sont exercés contre un mock dans settings.bff-mocks.test.cjs.
+// The browser uses its own Settings origin. Business operations use the exact
+// Settings SDK contract; the server delegates renewal/logout and the actual
+// User /me role read to the existing Login owner, without another SDK client.
 
 const PACKAGE = '@mairie360/bff-settings-openapi';
 // Reconstruction exacte du paquet publié à la version épinglée (vérifiée par package-contract.test.cjs).
@@ -26,24 +24,26 @@ const successSchema = (method, template) => contract.responseSchema(contract.mat
 
 describe('published BFF_Settings contract in src/', () => {
   test('the proxy allowlist is the snapshot rebuilt from the package', () => {
-    const source = fs.readFileSync(path.join(ROOT, 'src', 'lib', 'bff-proxy.ts'), 'utf8');
-    assert.match(source, /import contract from '\.\.\/\.\.\/contracts\/openapi\.json';/);
+    assert.ok(policy.imports(policy.parse('src/lib/bff-proxy.ts')).includes('../../contracts/openapi.json'));
     assert.equal(contract.document.info['x-source-package'].split('@').slice(0, 2).join('@'), PACKAGE);
   });
 
-  test('the package is the only OpenAPI package imported, for its types only (never its axios client)', () => {
+  test('the package is the only OpenAPI package imported: types from /model, the generated client only in src/lib/bff-client.ts', () => {
     assert.ok(surface.openapiPackages.length > 0);
     for (const entry of surface.openapiPackages) {
-      assert.ok(entry.typeOnly && entry.specifier === `${PACKAGE}/model`, `${entry.at} : importer uniquement \`import type … from '${PACKAGE}/model'\``);
+      const client = entry.file === 'lib/bff-client.ts' && entry.specifier === `${PACKAGE}/endpoints/bffSettings`;
+      assert.ok(client || (entry.typeOnly && entry.specifier === `${PACKAGE}/model`), `${entry.at} : import only types from '${PACKAGE}/model' (the generated client belongs to src/lib/bff-client.ts)`);
     }
   });
 });
 
 describe('network surface of src/', () => {
-  test('only the BFF client and the BFF proxy use a raw network API', () => {
+  test('only declared data, role and logout adapters use a raw network API', () => {
     assert.deepEqual(surface.raw.map(({ file, api }) => `${file} ${api}`), [
-      'lib/bff-client.ts fetch',
-      'lib/bff-proxy.ts fetch',
+      'lib/bff-client.ts sessionFetch',
+      'lib/logout.ts fetch',
+      'lib/session-role-proxy.ts fetch',
+      'lib/session-role.ts fetch',
     ]);
   });
 
@@ -51,44 +51,55 @@ describe('network surface of src/', () => {
     assert.deepEqual(surface.absoluteUrls.map(({ file, url }) => `${file} ${url}`), []);
   });
 
-  test('every browser call goes through requestBff from src/lib/settings-api.ts', () => {
-    assert.ok(surface.requestBff.length > 0);
-    assert.deepEqual([...new Set(surface.requestBff.map(({ file }) => file))], ['lib/settings-api.ts']);
+  test('browser facades and the access-only server read use generated operations', () => {
+    assert.ok(surface.bffOperations.length > 0);
+    assert.deepEqual([...new Set(surface.bffOperations.map(({ file }) => file))], ['lib/server-settings.ts', 'lib/settings-api.ts']);
+    assert.deepEqual(surface.bffOperations.filter(entry => entry.file === 'lib/server-settings.ts').map(entry => entry.operation), ['getSettingsBootstrap']);
+    // The factory binds either the browser transport or the tested access-only server relay.
+    // No consumer calls the raw browser transport or writes a business path.
+    assert.deepEqual(surface.requestBff.map(({ file }) => file), []);
+    assert.doesNotMatch(fs.readFileSync(path.join(ROOT, 'src/lib/settings-api.ts'), 'utf8'), /requestBff|["'`]\/(?:settings|api|bff)\b/);
   });
 
-  test('every requestBff call targets a literal operation of the published contract', () => {
-    for (const call of surface.requestBff) {
-      assert.ok(call.path && call.method, `${call.at} : chemin et méthode doivent être littéraux pour être vérifiables`);
-      assert.ok(contract.match(call.method, call.path), `${call.at} : ${call.method} ${call.path} absent de ${PACKAGE}`);
-    }
-    assert.deepEqual(surface.requestBff.map(({ method, path: pathname }) => `${method} ${pathname}`), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
+  test('every called operation exists in the generated client and in the published contract', () => {
+    const generated = fs.readFileSync(path.join(ROOT, 'node_modules', PACKAGE, 'endpoints', 'bffSettings.ts'), 'utf8');
+    const called = surface.bffOperations.map(({ operation }) => operation);
+    for (const name of called) assert.match(generated, new RegExp(`const ${name} = \\(`), `${name} is not a generated operation`);
+    const routes = called.map((name) => {
+      const [, method, template] = generated.match(new RegExp('const ' + name + ' = \\([^]*?axiosInstance\\.(\\w+)\\(\\s*\\x60([^\\x60]+)\\x60'));
+      assert.ok(contract.match(method.toUpperCase(), template), `${name}: ${method} ${template} absent de ${PACKAGE}`);
+      return `${method.toUpperCase()} ${template}`;
+    });
+    assert.deepEqual([...new Set(routes)], ['GET /settings/bootstrap', 'PATCH /settings/profile', 'PATCH /settings/appearance', 'PATCH /settings/general', 'PATCH /settings/notifications']);
   });
 
-  test('the front relays to a single BFF: only the contract proxy forwards, to configuredBffUrl()', () => {
-    assert.deepEqual(surface.forwardToBff.map(({ file, baseUrl }) => `${file} ${baseUrl}`), ['lib/bff-proxy.ts configuredBffUrl()']);
+  test('business requests use the Settings contract proxy and configured BFF URL', () => {
+    assert.deepEqual(surface.forwardToBff.map(({ file }) => file), ['lib/bff-proxy.ts', 'lib/server-settings.ts']);
+    for (const file of ['src/lib/bff-proxy.ts', 'src/lib/server-settings.ts']) assert.ok(policy.calls(policy.parse(file), 'forwardToBff').every(node => policy.configuredUrl(node.arguments[1])));
   });
 
-  test('the contract catch-all proxy is the only server route', () => {
-    assert.deepEqual(surface.routes, ['app/[...path]/route.ts']);
+  test('only the business relay and explicit Login owner adapters are server routes', () => {
+    assert.deepEqual(surface.routes, ['app/[...path]/route.ts', 'app/api/auth/logout/route.ts', 'app/api/auth/refresh/route.ts', 'app/api/auth/resume/route.ts', 'app/api/auth/role/route.ts']);
   });
 
   test('environment reads are limited to the BFF and explicit active-front navigation URLs', () => {
-    assert.deepEqual(surface.env.map(({ file, name }) => `${file} ${name}`), [
-      'lib/bff-proxy.ts SETTINGS_BFF_URL',
-      'lib/bff-proxy.ts BFF_SETTINGS_BASE_URL',
-      'lib/front-urls.ts LOGIN_FRONT_URL',
-      'lib/front-urls.ts DASHBOARD_FRONT_URL',
-      'lib/front-urls.ts PROJECT_FRONT_URL',
-      'lib/front-urls.ts CALENDAR_FRONT_URL',
-      'lib/front-urls.ts MESSAGE_FRONT_URL',
-      'lib/front-urls.ts ELEARNING_FRONT_URL',
-      'lib/front-urls.ts ADMINISTRATION_FRONT_URL',
-      'middleware.ts NODE_ENV',
-    ]);
+    const expected = {
+      'app/api/auth/logout/route.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL'],
+      'app/layout.tsx': ['COOKIE_DOMAIN', 'INSTANCE_TIMEZONE'],
+      'lib/bff-proxy.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL', 'SETTINGS_BFF_URL', 'BFF_SETTINGS_BASE_URL'],
+      // MAIR-357: public realm URL, only to link the account console (no call to Keycloak).
+      'lib/keycloak-account.ts': ['KEYCLOAK_REALM_URL'],
+      'lib/session-role-proxy.ts': ['SETTINGS_FRONT_URL', 'LOGIN_FRONT_URL', 'NODE_ENV'],
+      'lib/session-peer.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL'],
+      'lib/server-settings.ts': ['SETTINGS_FRONT_URL'],
+      'middleware.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL'],
+    };
+    assert.deepEqual(surface.env.map(({ file, name }) => `${file} ${name}`).sort(),
+      Object.entries(expected).flatMap(([file, names]) => names.map(name => `${file} ${name}`)).sort());
   });
 
   test('the browser Content-Security-Policy only allows same-origin connections', () => {
-    const { buildContentSecurityPolicy } = requireSrc('lib/content-security-policy.ts');
+    const { buildContentSecurityPolicy } = require('@mairie360/lib-components/shared');
     for (const isDevelopment of [false, true]) {
       const directives = buildContentSecurityPolicy('nonce', isDevelopment).split('; ');
       assert.ok(directives.includes("connect-src 'self'"));
@@ -111,12 +122,13 @@ describe('fixtures conform to the published contract', () => {
   test('bootstrap, profile and error fixtures', () => {
     assert.deepEqual(contract.validate(contract.schema('SettingsBootstrap'), fixtures.bootstrap({ sessions: [fixtures.session('s-2', { revoked_at: '2026-09-16T08:00:00Z' })], sources: { sessions: 'unavailable' } })), []);
     assert.deepEqual(contract.validate(contract.schema('SettingsProfilePatch'), fixtures.profile({ phone: null })), []);
-    // Error n'est rattaché à aucune opération par orval, mais le modèle est publié : c'est le corps des erreurs du BFF.
-    assert.deepEqual(contract.validate(contract.schema('Error'), fixtures.error('Refus')), []);
+    // ErrorResponse n'est rattaché à aucune opération par orval, mais le modèle est publié : c'est le corps des erreurs du BFF.
+    assert.deepEqual(contract.validate(contract.schema('ErrorResponse'), fixtures.error('Refus')), []);
+    assert.deepEqual(contract.validate(contract.schema('ErrorResponse'), fixtures.error('Refus', 404)), []);
   });
 
   test('the validator reports contract violations', () => {
-    assert.deepEqual(contract.validate(contract.schema('SettingsBootstrap'), { profile: { first_name: 42, email: 'anne@mairie.test' }, sessions: {}, sources: { sessions: 'maybe' } }), [
+    assert.deepEqual(contract.validate(contract.schema('SettingsBootstrap'), { profile: { first_name: 42, email: 'anne@mairie.test' }, sessions: {}, appearance: null, general: null, notifications: null, sources: { sessions: 'maybe', preferences: 'available', notifications: 'available' } }), [
       '$.profile.last_name: propriété requise manquante',
       '$.profile.first_name: type string attendu, reçu number',
       '$.sessions: type array attendu, reçu object',

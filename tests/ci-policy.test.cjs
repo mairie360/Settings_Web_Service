@@ -159,6 +159,16 @@ test('MAIR-316: the RGAA stack runs the image under test and the script builds i
   assert.doesNotMatch(shell, /--build-arg|up -d --build/);
 });
 
+test('MAIR-316: the RGAA seed users have no plaintext password (chk_users_password_hashed)', () => {
+  const seed = read('init-accessibility.sql');
+  const users = seed.split(/INSERT INTO users[^;]*VALUES/)[1]?.split('ON CONFLICT')[0];
+  assert.ok(users, 'init-accessibility.sql must insert its users');
+  for (const row of users.match(/\([^()]*\)/g) ?? []) {
+    const password = row.split(',')[4]?.trim();
+    assert.ok(password === 'NULL' || /^'\$argon2id\$/.test(password), `password must be NULL or an argon2id hash: ${row}`);
+  }
+});
+
 test('MAIR-316: accessibility_test.sh fetches the RGAA engine at a pinned commit SHA, not only a tag', () => {
   const shell = read('accessibility_test.sh');
   // `git clone --branch` refuses a SHA, and cicd.yml pins mairie360/CICD by SHA.

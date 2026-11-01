@@ -8,10 +8,12 @@ BEGIN;
 -- 30: only used by profile-saved, which changes the profile. The states run in parallel, and the
 -- ones played as user 2 must not see that change.
 -- 31: an Admin, whose Système tab also shows the instance updates.
+-- No password: the engine signs their session JWT, and chk_users_password_hashed refuses any
+-- plaintext value (NULL is allowed since Database v2.0.0, for accounts without a password).
 INSERT INTO users (id, first_name, last_name, email, password, status)
 VALUES
-  (30, 'Rgaa', 'Editor', 'rgaa-editor@mairie360.fr', 'dummy', 'active'),
-  (31, 'Rgaa', 'Admin', 'rgaa-admin@mairie360.fr', 'dummy', 'active')
+  (30, 'Rgaa', 'Editor', 'rgaa-editor@mairie360.fr', NULL, 'active'),
+  (31, 'Rgaa', 'Admin', 'rgaa-admin@mairie360.fr', NULL, 'active')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO user_roles (user_id, role_id)

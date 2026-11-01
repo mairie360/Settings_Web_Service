@@ -45,11 +45,11 @@ test('the legacy required security name runs real immutable blocking scanners', 
   }
   assert.match(job, /fetch-depth: 0/);
   assert.equal([...job.matchAll(/persist-credentials: false/g)].length, 2);
-  assert.match(job, /repository: mairie360\/CICD\s*\n          ref: 5b7d127d46f95d8951935b6209ca7c2ca857a21d/);
-  assert.match(job, /uses: \.\/cicd-repo\/actions\/frontend-semgrep-pypi/);
+  assert.match(job, /repository: mairie360\/CICD\s*\n          ref: e314bc0c41ed45157cdd928c25358fee82b0c4f6 # v5\.1\.0/);
+  assert.match(job, /uses: \.\/cicd-repo\/actions\/security\/semgrep-pypi/);
   assert.match(job, /config: p\/typescript p\/react p\/owasp-top-ten p\/secrets p\/dockerfile p\/github-actions/);
   assert.match(job, /artifact_name: semgrep-required-check-sarif/);
-  assert.match(job, /uses: \.\/cicd-repo\/actions\/frontend-gitleaks/);
+  assert.match(job, /uses: \.\/cicd-repo\/actions\/security\/gitleaks-binary/);
   assert.equal([...job.matchAll(/fail_on_findings: "true"/g)].length, 2);
 });
 
@@ -178,4 +178,13 @@ test('the standalone runtime removes unused global package managers, not applica
   assert.match(runner, /^CMD \["node", "server\.js"\]$/m);
   assert.doesNotMatch(runner, /npm|npx|yarn|corepack/);
   assert.doesNotMatch(read('.github/workflows/cicd.yml'), /image_scan_fail_on_findings:|scan_fail_on_findings:|continue-on-error:/);
+});
+
+test('MAIR-316: promote-prod passes the secrets of the RGAA AI pre-audit by name', () => {
+  const workflow = read('.github/workflows/promote-prod.yml');
+  assert.doesNotMatch(workflow, /secrets:\s*inherit/);
+  assert.match(workflow, /^\s+stack: fronts\s*$/m);
+  for (const name of ['ANTHROPIC_API_KEY', 'ANTHROPIC_WORKSPACE_ID']) {
+    assert.match(workflow, new RegExp(`^ {6}${name}: \\$\\{\\{ secrets\\.${name} \\}\\}\\s*$`, 'm'), name);
+  }
 });

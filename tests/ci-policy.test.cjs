@@ -120,32 +120,51 @@ test('Docker dependency installation requires ephemeral secret and policy mounts
 
 test('Docker excludes local environments and CI artifacts but keeps the tracked npm policy', () => {
   const ignored = read('.dockerignore').split(/\r?\n/).map((line) => line.trim());
-  for (const pattern of ['node_modules', '.next', '.git', '.env*', '.npmrc.*', 'cicd-repo', 'rgaa-report', '.rgaa-ai-cache', 'coverage', 'test-results', 'playwright-report']) {
+  for (const pattern of ['node_modules', '.next', '.git', '.env*', '.npmrc.*', 'cicd-repo', 'rgaa-report', '.rgaa-ai-cache', 'init-accessibility.sql', 'coverage', 'test-results', 'playwright-report']) {
     assert.ok(ignored.includes(pattern), `${pattern} must be excluded from the build context`);
   }
   assert.ok(!ignored.includes('.npmrc') && !ignored.includes('.npmrc*'),
     'the read-only npm policy mount requires the tracked placeholder-only .npmrc');
 });
 
-test('isolated test stacks run the published image, the scripts build it with a secret only', () => {
-  const stacks = {
-    'docker-compose-security.yml': 'security_test.sh',
-    'docker-compose-performance.yml': 'performance_test.sh',
-    'docker-compose-accessibility.yml': 'accessibility_test.sh',
-  };
-  for (const [file, script] of Object.entries(stacks)) {
+test('isolated test stacks pass only a build secret to the frontend Dockerfile', () => {
+  for (const file of ['docker-compose-security.yml', 'docker-compose-performance.yml']) {
     const compose = read(file);
-    const frontend = compose.split('  settings-front:\n')[1]?.split('\n  security-scan:')[0]?.split('\n  k6-perf-test:')[0]?.split('\n  a11y:')[0];
+    assert.match(compose, /^secrets:\n  node_auth_token:\n    environment: NODE_AUTH_TOKEN\n/m);
+    const frontend = compose.split('  settings-front:\n')[1]?.split('\n  security-scan:')[0]?.split('\n  k6-perf-test:')[0];
     assert.ok(frontend, `${file} must keep the isolated frontend service`);
-    // The CI exports IMAGE_REF (dev-<sha> for ZAP / k6, staging-<sha> for RGAA): never rebuilt.
-    assert.match(frontend, /image: \$\{IMAGE_REF:\?/);
-    assert.doesNotMatch(frontend, /build:|args:|NODE_AUTH_TOKEN|\/run\/secrets/);
-    const code = compose.split('\n').filter((line) => !line.trimStart().startsWith('#')).join('\n');
-    assert.doesNotMatch(code, /NODE_AUTH_TOKEN|\bbuild-arg\b/);
-    const shell = read(script);
-    assert.match(shell, /docker build -t settings-front:local --secret id=node_auth_token,env=NODE_AUTH_TOKEN \./);
-    assert.doesNotMatch(shell, /--build-arg|up -d --build/);
+    assert.match(frontend, /build:\n      context: \.\n      dockerfile: Dockerfile\n      secrets:\n        - node_auth_token\n/);
+    assert.doesNotMatch(compose, /NODE_AUTH_TOKEN:\s*\$\{|\bbuild-arg\b/);
+    assert.doesNotMatch(frontend, /args:|environment:[\s\S]*NODE_AUTH_TOKEN|\/run\/secrets/);
   }
+});
+
+test('MAIR-316: the RGAA stack runs the image under test and the script builds it with a secret only', () => {
+  const compose = read('docker-compose-accessibility.yml');
+  const frontend = compose.split('  settings-front:\n')[1]?.split('\n  a11y:')[0];
+  assert.ok(frontend, 'docker-compose-accessibility.yml must keep the frontend service');
+  // promote-prod.yml exports IMAGE_REF=<image>@<staging digest>: the stack never rebuilds it.
+  assert.match(frontend, /image: \$\{IMAGE_REF:\?/);
+  assert.doesNotMatch(frontend, /build:|args:|NODE_AUTH_TOKEN|\/run\/secrets/);
+  const code = compose.split('\n').filter((line) => !line.trimStart().startsWith('#')).join('\n');
+  assert.doesNotMatch(code, /NODE_AUTH_TOKEN|\bbuild-arg\b/);
+  // The ZAP / k6 data stay as they are: the RGAA states get their own seed, loaded after it.
+  assert.match(compose, /- \.\/init-test\.sql:\/init-test\.sql:ro/);
+  assert.match(compose, /- \.\/init-accessibility\.sql:\/init-accessibility\.sql:ro/);
+  for (const file of ['docker-compose-security.yml', 'docker-compose-performance.yml']) {
+    assert.doesNotMatch(read(file), /init-accessibility\.sql|IMAGE_REF/, file);
+  }
+  const shell = read('accessibility_test.sh');
+  assert.match(shell, /docker build -t settings-front:local --secret id=node_auth_token,env=NODE_AUTH_TOKEN \./);
+  assert.doesNotMatch(shell, /--build-arg|up -d --build/);
+});
+
+test('MAIR-316: accessibility_test.sh fetches the RGAA engine at a pinned commit SHA, not only a tag', () => {
+  const shell = read('accessibility_test.sh');
+  // `git clone --branch` refuses a SHA, and cicd.yml pins mairie360/CICD by SHA.
+  assert.doesNotMatch(shell, /git clone[^\n]*--branch/);
+  assert.match(shell, /git -C "\$CICD_DIR" fetch --quiet --depth 1 https:\/\/github\.com\/mairie360\/CICD "\$CICD_VERSION"/);
+  assert.match(shell, /checkout --quiet FETCH_HEAD/);
 });
 
 test('the standalone runtime removes unused global package managers, not application dependencies', () => {

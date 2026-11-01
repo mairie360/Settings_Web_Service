@@ -28,13 +28,15 @@ export const PROFILE_FIELDS: ReadonlyArray<ProfileFieldRule> = [
   { field: 'last_name', label: 'Nom', ...NAME_RULE },
   { field: 'email', label: 'E-mail', type: 'email', required: true, maxLength: 320 },
   {
+    // Decision of the mairie (MAIR-292, GDPR): the directory shows the phone to every agent, for work,
+    // so the form says who sees it before the format rule.
     field: 'phone',
     label: 'Téléphone',
     type: 'tel',
     required: false,
     maxLength: 32,
     pattern: '(\\+?[\\d\\s.\\(\\)\\-]+)?',
-    help: 'Chiffres, espaces, points, tirets et parenthèses, avec un + initial facultatif (32 caractères maximum).',
+    help: 'Visible par tous les agents de la mairie (usage professionnel). Chiffres, espaces, points, tirets et parenthèses, avec un + initial facultatif (32 caractères maximum).',
   },
 ];
 

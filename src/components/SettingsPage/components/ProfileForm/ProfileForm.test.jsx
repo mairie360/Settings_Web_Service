@@ -18,4 +18,11 @@ describe('ProfileForm', () => {
     rerender(<ProfileForm form={form({ hasChanges: true, emailChanged: true })} reading={false} />);
     expect(screen.getByRole('button', { name: 'Enregistrer le profil' }).disabled).toBe(false); expect(screen.getByLabelText(/Mot de passe actuel/)).toBeTruthy();
   });
+
+  it('says who sees the phone number (MAIR-292)', () => {
+    render(<ProfileForm form={form()} reading={false} />);
+    const phone = screen.getByRole('textbox', { name: /Téléphone/ });
+    const hint = document.getElementById(phone.getAttribute('aria-describedby').split(' ')[0]);
+    expect(hint.textContent).toMatch(/^Visible par tous les agents de la mairie \(usage professionnel\)\./);
+  });
 });

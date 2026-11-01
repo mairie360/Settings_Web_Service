@@ -625,7 +625,7 @@ test('the rendered inputs carry the contract constraints and their help text', a
   assert.match(html, /<input(?=[^>]*type="email")(?=[^>]*maxLength="320")[^>]*name="email"/);
   assert.doesNotMatch(html, /<input[^>]*type="email"[^>]*pattern=/);
   assert.match(html, /<input(?=[^>]*type="tel")(?=[^>]*maxLength="32")(?=[^>]*pattern="\(\\\+\?\[\\d\\s\.\\\(\\\)\\-\]\+\)\?")[^>]*aria-describedby="settings-phone-hint"[^>]*name="phone"/);
-  assert.match(html, /<p id="settings-phone-hint"[^>]*>Chiffres, espaces, points, tirets et parenthèses, avec un \+ initial facultatif \(32 caractères maximum\)\.<\/p>/);
+  assert.match(html, /<p id="settings-phone-hint"[^>]*>Visible par tous les agents de la mairie \(usage professionnel\)\. Chiffres, espaces, points, tirets et parenthèses, avec un \+ initial facultatif \(32 caractères maximum\)\.<\/p>/);
   assert.match(html, /<p id="settings-first_name-hint"[^>]*>64 caractères maximum, sans &lt; ni &gt;\.<\/p>/);
   assert.equal(passwordInputs().length, 0);
 });

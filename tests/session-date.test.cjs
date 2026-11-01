@@ -6,7 +6,7 @@ const { formatSessionDate } = requireSrc('lib/session-date.ts');
 
 test('formats valid BFF session timestamps for French users', () => {
   const value = '2026-09-15T08:00:00Z';
-  const expected = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })
+  const expected = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })
     .format(new Date(value));
   assert.equal(formatSessionDate(value), expected);
   assert.notEqual(formatSessionDate(value), value);

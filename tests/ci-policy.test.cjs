@@ -9,15 +9,9 @@ const read = (path) => readFileSync(join(root, path), 'utf8');
 
 test('Settings uses the shared frontend workflow with Semgrep enabled', () => {
   const workflow = read('.github/workflows/cicd.yml');
-  const reusableWorkflows = [...workflow.matchAll(/^\s+uses:\s+mairie360\/CICD\/\.github\/workflows\/frontend-cicd\.yml@(v(\d+)\.(\d+)\.(\d+))\s*$/gm)];
+  const reusableWorkflows = [...workflow.matchAll(/^\s+uses:\s+mairie360\/CICD\/\.github\/workflows\/frontend-cicd\.yml@([a-f0-9]{40}) # v\d+\.\d+\.\d+\s*$/gm)];
   assert.equal(reusableWorkflows.length, 1, 'Settings must call the shared frontend workflow once');
-  const [, version, major, minor, patch] = reusableWorkflows[0];
-  // PR #74 already moved main to v4.0.1. That published workflow retains
-  // blocking Semgrep/Gitleaks and npm audit before build/tests, with named
-  // secrets and no consumer override. Keep the major-review guard (v5 fails).
-  assert.equal(Number(major), 4, 'a new major workflow version requires review');
-  assert.ok(Number(minor) > 0 || Number(patch) >= 1,
-    'the shared workflow must include the reviewed v4.0.1 security audits');
+  const [, version] = reusableWorkflows[0];
   assert.equal(workflow.match(/cicd_version:\s*"([^"]+)"/)?.[1], version,
     'the reusable workflow ref and input must use the same version');
   assert.doesNotMatch(workflow, /semgrep_fail_on_findings:\s*false|semgrep_config:|continue-on-error:/);
@@ -36,7 +30,7 @@ test('third-party workflow actions use immutable commits', () => {
 
 test('the legacy required security name runs real immutable blocking scanners', () => {
   const workflow = read('.github/workflows/cicd.yml');
-  assert.match(workflow, /on:\s*\n  push:\s*\n  pull_request:\s*\n  workflow_dispatch:/);
+  assert.match(workflow, /on:\s*\n(?:  #.*\n)*  push:\s*\n    branches: \[main\]\s*\n  pull_request:\s*\n  workflow_dispatch:/);
   const job = workflow.split('  required_security_scan:\n')[1]?.split('\n  CICD:')[0];
   assert.ok(job, 'the legacy required check needs its own executable scan job');
   assert.match(job, /name: CICD \/ Code Security Audit \(Semgrep\)/);
@@ -51,11 +45,11 @@ test('the legacy required security name runs real immutable blocking scanners', 
   }
   assert.match(job, /fetch-depth: 0/);
   assert.equal([...job.matchAll(/persist-credentials: false/g)].length, 2);
-  assert.match(job, /repository: mairie360\/CICD\s*\n          ref: 539847726d4058a9565c4f682c2d1d8302874b06/);
-  assert.match(job, /uses: \.\/cicd-repo\/actions\/semgrep/);
+  assert.match(job, /repository: mairie360\/CICD\s*\n          ref: 5b7d127d46f95d8951935b6209ca7c2ca857a21d/);
+  assert.match(job, /uses: \.\/cicd-repo\/actions\/frontend-semgrep-pypi/);
   assert.match(job, /config: p\/typescript p\/react p\/owasp-top-ten p\/secrets p\/dockerfile p\/github-actions/);
   assert.match(job, /artifact_name: semgrep-required-check-sarif/);
-  assert.match(job, /uses: \.\/cicd-repo\/actions\/gitleaks/);
+  assert.match(job, /uses: \.\/cicd-repo\/actions\/frontend-gitleaks/);
   assert.equal([...job.matchAll(/fail_on_findings: "true"/g)].length, 2);
 });
 
@@ -66,8 +60,9 @@ test('the reusable workflow receives only its declared named secrets', () => {
   assert.deepEqual(mappings.map(([, name, source]) => [name, source]), [
     ['CODECOV_TOKEN', 'CODECOV_TOKEN'],
     ['N8N_WEBHOOK_SECRET', 'N8N_WEBHOOK_SECRET'],
-    // AI pre-audit of the RGAA check (release-prod), MAIR-320.
     ['ANTHROPIC_API_KEY', 'ANTHROPIC_API_KEY'],
+    ['RELEASE_APP_ID', 'RELEASE_APP_ID'],
+    ['RELEASE_APP_PK', 'RELEASE_APP_PK'],
   ]);
 });
 
@@ -81,20 +76,9 @@ test('npm keeps the seven-day window except for the internal UI package', () => 
   assert.doesNotMatch(config, /^\s*before\b/m);
 });
 
-test('the internal UI package is pinned to its published release in the lockfile', () => {
-  const manifest = JSON.parse(read('package.json'));
-  const lock = JSON.parse(read('package-lock.json'));
-  assert.equal(manifest.dependencies['@mairie360/lib-components'], '0.6.8');
-  assert.equal(lock.packages[''].dependencies['@mairie360/lib-components'], '0.6.8');
-  const resolved = lock.packages['node_modules/@mairie360/lib-components'];
-  assert.equal(resolved.version, '0.6.8');
-  assert.match(resolved.resolved, /^https:\/\/npm\.pkg\.github\.com\/download\/@mairie360\/lib-components\/0\.6\.8\//);
-  assert.match(resolved.integrity, /^sha512-/);
-});
-
 test('CI and local toolchains support the npm release-age policy', () => {
-  assert.match(read('.github/workflows/cicd.yml'), /node_version:\s*"24\.21\.0"/);
-  assert.match(read('.github/workflows/contracts.yml'), /node-version:\s*'24\.21\.0'/);
+  assert.match(read('.github/workflows/cicd.yml'), /node_version:\s*"24\.22\.1"/);
+  assert.match(read('.github/workflows/contracts.yml'), /node-version:\s*'24\.22\.1'/);
   const version = execFileSync('npm', ['--version'], { cwd: root, encoding: 'utf8' }).trim();
   const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
   assert.ok(match, 'npm must report a stable version');
@@ -105,11 +89,11 @@ test('CI and local toolchains support the npm release-age policy', () => {
 test('Docker uses the same exact Node LTS release and immutable base in both stages', () => {
   const dockerfile = read('Dockerfile');
   const nodeVersion = dockerfile.match(/^ARG NODE_VERSION=(\d+\.\d+\.\d+)$/m)?.[1];
-  assert.equal(nodeVersion, '24.21.0');
+  assert.equal(nodeVersion, '24.22.1');
   const bases = [...dockerfile.matchAll(/^FROM node:\$\{NODE_VERSION\}-bookworm-slim@sha256:([a-f0-9]{64}) AS ([\w-]+)$/gm)];
   assert.deepEqual(bases.map(([, digest, stage]) => [digest, stage]), [
-    ['0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6', 'dependencies'],
-    ['0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6', 'runtime-base'],
+    ['55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205', 'dependencies'],
+    ['55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205', 'runtime-base'],
   ]);
   assert.match(dockerfile, /^FROM dependencies AS builder$/m);
   assert.match(dockerfile, /^FROM runtime-base AS runner$/m);

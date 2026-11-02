@@ -125,7 +125,7 @@ services:
       retries: 5
 
   core-api:
-    image: ${CORE_API_IMAGE:-ghcr.io/mairie360/core-api:2.2.0}
+    image: ${CORE_API_IMAGE:-ghcr.io/mairie360/core-api:dev-7dfccfc}
     container_name: settings-front-a11y-core-api
     depends_on:
       liquibase:

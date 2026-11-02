@@ -303,3 +303,29 @@ test('GHSA-mrwp-f3q8-3g9p: the lock resolves follow-redirects to a patched relea
   }
 });
 
+
+test('MAIR-767: the RGAA run covers the session revoke dialog, on a Core that serves ISO 8601 dates', () => {
+  const yaml = require('js-yaml');
+  const states = yaml.load(read('rgaa.yaml')).states;
+  const revoke = states.find(state => state.id === 'session-revoke-dialog');
+  assert.ok(revoke, 'rgaa.yaml plays the session revoke confirmation');
+  assert.deepEqual(revoke.steps, [
+    { click: { role: 'button', name: 'Déconnecter la session Firefox 140 sur Windows' } },
+    { wait_for: { role: 'dialog' } },
+  ]);
+  // The clicked session is seeded as an open session of the RGAA agent.
+  assert.match(read('init-accessibility.sql'), /'Firefox 140 sur Windows', '[^']+', '[^']+', '2099-01-01T00:00:00\+00:00'\)/);
+  // Core <= 2.2.0 wrote session dates with DateTime::to_string ("… UTC"): the lib SessionList shows
+  // no "Déconnecter" action for them. Every stack runs the same fixed image.
+  const images = ['docker-compose.yml', 'docker-compose-security.yml', 'docker-compose-performance.yml', 'docker-compose-accessibility.yml']
+    .map(file => read(file).match(/\$\{CORE_API_IMAGE:-ghcr\.io\/mairie360\/core-api:([^}]+)\}/)?.[1]);
+  assert.equal(new Set(images).size, 1, `one Core image for every stack: ${images}`);
+  const [tag] = images;
+  const release = tag.match(/^(\d+)\.(\d+)\.(\d+)$/);
+  if (release) {
+    const [major, minor, patch] = release.slice(1).map(Number);
+    assert.ok(major > 2 || (major === 2 && (minor > 2 || (minor === 2 && patch > 0))), `core-api:${tag} predates MAIR-767`);
+  } else {
+    assert.match(tag, /^dev-[0-9a-f]{7}$/, `core-api:${tag}`);
+  }
+});

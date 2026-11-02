@@ -1,47 +1,43 @@
 # Journal des releases — Settings_Web_Service
 
-<!-- release-journal-state {"dev": "afc63f787de79fef0bc2d793d311cc788127137f", "prod": "a2bf3c68882e787a45e923d87f057b92bdde7553", "prod_tag": "v1.7.0", "staging": "a2bf3c68882e787a45e923d87f057b92bdde7553", "updated": {"dev": "2026-10-23 13:17 UTC", "prod": "2026-10-21 11:20 UTC", "staging": "2026-10-21 11:18 UTC"}} -->
+<!-- release-journal-state {"dev": "9ed8ea7f381a4762f4dde8d4ab2510864a43b99d", "prod": "a2bf3c68882e787a45e923d87f057b92bdde7553", "prod_tag": "v1.7.0", "staging": "a2bf3c68882e787a45e923d87f057b92bdde7553", "updated": {"dev": "2026-11-02 16:16 UTC", "prod": "2026-10-21 11:20 UTC", "staging": "2026-10-21 11:18 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v1.7.0 | `a2bf3c6` | 2026-10-21 11:20 UTC |
 | staging | — | `a2bf3c6` | 2026-10-21 11:18 UTC |
-| dev | — | `afc63f7` | 2026-10-23 13:17 UTC |
+| dev | — | `9ed8ea7` | 2026-11-02 16:16 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v1.7.0)
 
-#### Changements de comportement
+#### Nouveautés
+- Le champ Téléphone du formulaire de profil commence désormais son aide par « Visible par tous les agents de la mairie (usage professionnel). ». L'aide est reliée au champ par `aria-describedby`. (MAIR-292, [#100](https://github.com/mairie360/Settings_Web_Service/pull/100))
 
-- Shell de l'application : la barre latérale, la barre supérieure, le pied de page et la date viennent désormais de `AccessibleShell` et `CurrentDate` de `@mairie360/lib-components/shell`. Les composants locaux `desktop-navigation`, `accessible-shell`, `current-date` et `sidebar-preference` sont supprimés. (MAIR-578 et MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
-- Onglets de Réglages : les styles locaux (grille 2, 3 ou 6 colonnes, onglet sélectionné) sont retirés au profit du composant `Tabs` de la lib, dont les identifiants deviennent `settings-tab-<key>`. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
-- Onglet Sécurité : la liste des sessions est le `SessionList` de la lib (appareil, IP, création, expiration ou révocation, état, avec états de chargement, vide et indisponible). La révocation passe par une confirmation `ConfirmModal` ; sans port de révocation branché, un message d'attente s'affiche. (MAIR-607, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
-- Champs, boutons, toasts, pastilles de statut et titres rendus par la lib normalisée : tailles et charte modifiées à l'écran. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+#### Changements de comportement
+- Les onglets des paramètres sont rendus par le composant `Tabs` de la lib : leurs identifiants DOM deviennent `settings-tab-<clé>` et leur style local est retiré, donc l'apparence change et un sélecteur visant les anciennes classes `.settings-tab` ne trouve plus rien. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- L'en-tête de page passe par `PageHeader` et l'enveloppe de page ainsi que la barre latérale par `AccessibleShell` de la lib. Les composants locaux `desktop-navigation`, `current-date`, `accessible-shell` et `sidebar-preference` sont supprimés, et la mise en page visuelle de la page change. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- L'onglet Sécurité affiche les sessions avec le `SessionList` de la lib (appareil, IP, création, expiration ou révocation, état, avec les états chargement, vide et indisponible). (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- La révocation d'une session passe par une confirmation `ConfirmModal` de la lib ; la session n'est marquée révoquée qu'après confirmation, et un message d'attente s'affiche tant que le port de fonctionnalité n'est pas branché. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
 
 #### Technique
-
-- Pipeline CICD passé en v4.5.0 dans `cicd.yml`, `dev-dependency-exception.yml`, `promote-prod.yml` et `promote-staging.yml` (commit `fe5229c`). ([#163](https://github.com/mairie360/Settings_Web_Service/pull/163))
-- Node 24.21.0 → 24.22.1 (workflows, `Dockerfile`, `development.Dockerfile`, `package.json`), images `bookworm-slim` épinglées par nouveau digest, Next.js mis à jour vers le correctif GHSA-673q-mjm6-r5xr, lockfiles synchronisés. ([#164](https://github.com/mairie360/Settings_Web_Service/pull/164))
-- `@mairie360/lib-components` passe de 0.10.2 à 1.0.3 (version majeure), ajout de `@types/jest-axe`. La PR annonce un passage en brouillon jusqu'à la publication de la lib, mais le diff contient déjà ce pin. ([#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
-- Arborescence de `src/components` réorganisée en dossiers par composant sous `SettingsPage/`, tests co-localisés, contrôle par `tests/component-tree-convention.test.cjs`, couverture qui exclut les fichiers de test. ([#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
-- Diffs de #164 et #156 tronqués : seuls les fichiers visibles ont été analysés.
+- Dépendances et sécurité : zod remplacé par le backport vendorisé `vendor/zod` (3.25.76+mairie360.1) via l'override `$zod`, `follow-redirects` passé en 1.16.2, Node.js 24.22.1 et Next.js de maintenance corrigé, `@mairie360/lib-components` passé de 0.10.2 à 1.0.3 (version majeure), `cicd` épinglé en v4.5.0 puis v5.1.0. (MAIR-770 [#173](https://github.com/mairie360/Settings_Web_Service/pull/173), [#171](https://github.com/mairie360/Settings_Web_Service/pull/171), [#164](https://github.com/mairie360/Settings_Web_Service/pull/164), [#163](https://github.com/mairie360/Settings_Web_Service/pull/163), [#156](https://github.com/mairie360/Settings_Web_Service/pull/156), [#92](https://github.com/mairie360/Settings_Web_Service/pull/92))
+- CI et tests : stack d'accessibilité RGAA avec son script et son `rgaa.yaml` (MAIR-316, MAIR-768, [#92](https://github.com/mairie360/Settings_Web_Service/pull/92), [#169](https://github.com/mairie360/Settings_Web_Service/pull/169)), checklist RGPD sur les PR (MAIR-295, [#99](https://github.com/mairie360/Settings_Web_Service/pull/99)), preuve de bundle par source maps et vérifications d'intégrité hors ligne (MAIR-770, [#173](https://github.com/mairie360/Settings_Web_Service/pull/173)).
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
-#### Changements de comportement
+#### Nouveautés
+- Le champ Téléphone du formulaire de profil commence désormais son aide par « Visible par tous les agents de la mairie (usage professionnel). ». L'aide est reliée au champ par `aria-describedby`. (MAIR-292, [#100](https://github.com/mairie360/Settings_Web_Service/pull/100))
 
-- Shell de l'application : la barre latérale, la barre supérieure, le pied de page et la date viennent désormais de `AccessibleShell` et `CurrentDate` de `@mairie360/lib-components/shell`. Les composants locaux `desktop-navigation`, `accessible-shell`, `current-date` et `sidebar-preference` sont supprimés. (MAIR-578 et MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
-- Onglets de Réglages : les styles locaux (grille 2, 3 ou 6 colonnes, onglet sélectionné) sont retirés au profit du composant `Tabs` de la lib, dont les identifiants deviennent `settings-tab-<key>`. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
-- Onglet Sécurité : la liste des sessions est le `SessionList` de la lib (appareil, IP, création, expiration ou révocation, état, avec états de chargement, vide et indisponible). La révocation passe par une confirmation `ConfirmModal` ; sans port de révocation branché, un message d'attente s'affiche. (MAIR-607, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
-- Champs, boutons, toasts, pastilles de statut et titres rendus par la lib normalisée : tailles et charte modifiées à l'écran. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+#### Changements de comportement
+- Les onglets des paramètres sont rendus par le composant `Tabs` de la lib : leurs identifiants DOM deviennent `settings-tab-<clé>` et leur style local est retiré, donc l'apparence change et un sélecteur visant les anciennes classes `.settings-tab` ne trouve plus rien. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- L'en-tête de page passe par `PageHeader` et l'enveloppe de page ainsi que la barre latérale par `AccessibleShell` de la lib. Les composants locaux `desktop-navigation`, `current-date`, `accessible-shell` et `sidebar-preference` sont supprimés, et la mise en page visuelle de la page change. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- L'onglet Sécurité affiche les sessions avec le `SessionList` de la lib (appareil, IP, création, expiration ou révocation, état, avec les états chargement, vide et indisponible). (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- La révocation d'une session passe par une confirmation `ConfirmModal` de la lib ; la session n'est marquée révoquée qu'après confirmation, et un message d'attente s'affiche tant que le port de fonctionnalité n'est pas branché. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
 
 #### Technique
-
-- Pipeline CICD passé en v4.5.0 dans `cicd.yml`, `dev-dependency-exception.yml`, `promote-prod.yml` et `promote-staging.yml` (commit `fe5229c`). ([#163](https://github.com/mairie360/Settings_Web_Service/pull/163))
-- Node 24.21.0 → 24.22.1 (workflows, `Dockerfile`, `development.Dockerfile`, `package.json`), images `bookworm-slim` épinglées par nouveau digest, Next.js mis à jour vers le correctif GHSA-673q-mjm6-r5xr, lockfiles synchronisés. ([#164](https://github.com/mairie360/Settings_Web_Service/pull/164))
-- `@mairie360/lib-components` passe de 0.10.2 à 1.0.3 (version majeure), ajout de `@types/jest-axe`. La PR annonce un passage en brouillon jusqu'à la publication de la lib, mais le diff contient déjà ce pin. ([#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
-- Arborescence de `src/components` réorganisée en dossiers par composant sous `SettingsPage/`, tests co-localisés, contrôle par `tests/component-tree-convention.test.cjs`, couverture qui exclut les fichiers de test. ([#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
-- Diffs de #164 et #156 tronqués : seuls les fichiers visibles ont été analysés.
+- Dépendances et sécurité : zod remplacé par le backport vendorisé `vendor/zod` (3.25.76+mairie360.1) via l'override `$zod`, `follow-redirects` passé en 1.16.2, Node.js 24.22.1 et Next.js de maintenance corrigé, `@mairie360/lib-components` passé de 0.10.2 à 1.0.3 (version majeure), `cicd` épinglé en v4.5.0 puis v5.1.0. (MAIR-770 [#173](https://github.com/mairie360/Settings_Web_Service/pull/173), [#171](https://github.com/mairie360/Settings_Web_Service/pull/171), [#164](https://github.com/mairie360/Settings_Web_Service/pull/164), [#163](https://github.com/mairie360/Settings_Web_Service/pull/163), [#156](https://github.com/mairie360/Settings_Web_Service/pull/156), [#92](https://github.com/mairie360/Settings_Web_Service/pull/92))
+- CI et tests : stack d'accessibilité RGAA avec son script et son `rgaa.yaml` (MAIR-316, MAIR-768, [#92](https://github.com/mairie360/Settings_Web_Service/pull/92), [#169](https://github.com/mairie360/Settings_Web_Service/pull/169)), checklist RGPD sur les PR (MAIR-295, [#99](https://github.com/mairie360/Settings_Web_Service/pull/99)), preuve de bundle par source maps et vérifications d'intégrité hors ligne (MAIR-770, [#173](https://github.com/mairie360/Settings_Web_Service/pull/173)).
 
 ## Différence staging → prod (en staging, pas encore en prod)
 
@@ -52,6 +48,7 @@ _Rien._
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-11-02 16:16 UTC | dev | — | `9ed8ea7` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/41478365348) |
 | 2026-10-23 13:17 UTC | dev | — | `afc63f7` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/39958866694) |
 | 2026-10-23 13:13 UTC | dev | — | `48d7ee2` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/39958435256) |
 | 2026-10-21 17:59 UTC | dev | — | `5d8598e` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/39647798138) |

@@ -198,3 +198,63 @@ test('MAIR-316: promote-prod passes the secrets of the RGAA AI pre-audit by name
     assert.match(workflow, new RegExp(`^ {6}${name}: \\$\\{\\{ secrets\\.${name} \\}\\}\\s*$`, 'm'), name);
   }
 });
+
+test('MAIR-316 / MAIR-768: a local engine copy is fetched again when the cicd_version pin changes', () => {
+  const { mkdtempSync, mkdirSync, writeFileSync, readFileSync: readAbs, existsSync, rmSync } = require('node:fs');
+  const { execFileSync } = require('node:child_process');
+  const { tmpdir } = require('node:os');
+  const shell = read('accessibility_test.sh');
+  const block = shell.slice(shell.indexOf('CICD_DIR="cicd-repo"'), shell.indexOf('A11Y_RUNNER_IMAGE="$(cat'));
+  const run = (setup, githubActions = '') => {
+    const dir = mkdtempSync(join(tmpdir(), 'rgaa-ref-'));
+    try {
+      mkdirSync(join(dir, '.github/workflows'), { recursive: true });
+      writeFileSync(join(dir, '.github/workflows/cicd.yml'), '      cicd_version: "new-sha" # v9.9.9\n');
+      mkdirSync(join(dir, 'bin'));
+      // Fake git: records the calls; `checkout` lays out the engine like a real fetch would.
+      writeFileSync(join(dir, 'bin/git'), '#!/bin/sh\necho "$*" >> "$LOG"\ncase "$*" in *checkout*) mkdir -p cicd-repo/tests/a11y && touch cicd-repo/tests/a11y/run.sh;; esac\n', { mode: 0o755 });
+      setup(dir);
+      execFileSync('bash', ['-c', block], { cwd: dir, env: { ...process.env, PATH: `${join(dir, 'bin')}:${process.env.PATH}`, LOG: join(dir, 'git.log'), CICD_VERSION: '', GITHUB_ACTIONS: githubActions } });
+      const log = existsSync(join(dir, 'git.log')) ? readAbs(join(dir, 'git.log'), 'utf8') : '';
+      const ref = existsSync(join(dir, 'cicd-repo/.rgaa-ref')) ? readAbs(join(dir, 'cicd-repo/.rgaa-ref'), 'utf8').trim() : null;
+      return { log, ref };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+  const engine = (dir, ref) => {
+    mkdirSync(join(dir, 'cicd-repo/tests/a11y'), { recursive: true });
+    writeFileSync(join(dir, 'cicd-repo/tests/a11y/run.sh'), '');
+    if (ref) writeFileSync(join(dir, 'cicd-repo/.rgaa-ref'), `${ref}\n`);
+  };
+  // No copy: fetched at the pin, which is recorded.
+  assert.deepEqual(run(() => {}).ref, 'new-sha');
+  // A copy fetched for an older pin: fetched again.
+  const stale = run((dir) => engine(dir, 'old-sha'));
+  assert.match(stale.log, /fetch --quiet --depth 1 https:\/\/github\.com\/mairie360\/CICD new-sha/);
+  assert.equal(stale.ref, 'new-sha');
+  // Same pin: reused.
+  assert.equal(run((dir) => engine(dir, 'new-sha')).log, '');
+  // No marker: the CI's own checkout is reused in GitHub Actions; locally it is fetched again.
+  assert.equal(run((dir) => engine(dir, null), 'true').log, '');
+  assert.equal(run((dir) => engine(dir, null)).ref, 'new-sha');
+});
+
+test('MAIR-768: the RGAA stack has its own project name and bounded readiness loops', () => {
+  const compose = read('docker-compose-accessibility.yml');
+  // The default project name (the folder) is shared with docker-compose.yml: `down -v` would
+  // delete the dev stack's postgres-data / redis-data volumes.
+  assert.match(compose, /^name: settings-front-a11y$/m);
+  // An upstream that never starts must fail `up`, not hang it.
+  assert.doesNotMatch(compose, /sh -c 'until curl/);
+  for (const [, loop] of compose.matchAll(/sh -c '(i=0; until curl[\s\S]*?)'\n/g)) {
+    assert.match(loop, /if \[ \$\$i -ge \d+ \]; then echo "[^"]+"; exit 1; fi;/);
+  }
+});
+
+test('MAIR-768: each accessibility run starts from an empty report', () => {
+  const shell = read('accessibility_test.sh');
+  const clear = shell.indexOf('rm -rf rgaa-report\n');
+  assert.ok(clear >= 0, 'accessibility_test.sh clears rgaa-report/');
+  assert.ok(clear < shell.indexOf('docker compose -f "$COMPOSE_FILE" up'), 'before the stack starts');
+});

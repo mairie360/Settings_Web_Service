@@ -1,0 +1,24 @@
+# GDPR usage simulation of the settings front (MAIR-497), played by mairie360/CICD
+# tests/gdpr/simulation on the test stack only (docker-compose-gdpr-simulation.yml,
+# gdpr_simulation_test.sh; format: CICD README, "GDPR simulation").
+#
+# Fictitious personas with unique values go through gdpr-journey.yaml (BFF_Settings's journey) on the
+# front's origin: their names, e-mails and phone numbers are written in the profile of the session's
+# user and in deliberate errors. The profile and general tabs are then opened in the browser: the
+# browser console and storage, the requests and cookies of the pages, the logs of every container,
+# the Redis keys and the database after the purge are then checked and reviewed (CICD analyze.mjs).
+# The profile belongs to the session's user, which the front cannot erase: no persona is erased here
+# (Core's erasure is simulated by BFF_user).
+version: 1
+journey: gdpr-journey.yaml
+personas: 4
+erased: 0
+browser:
+  target: http://settings-front:5000
+  # Session of the journey: the front relays it to its BFF as a Bearer token.
+  cookies: {accessToken: "{{env.ADMIN_JWT}}"}
+  pages:
+    - name: profile
+      path: "/?tab=profile"
+    - name: general settings
+      path: "/?tab=general"

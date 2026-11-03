@@ -1,0 +1,77 @@
+# GDPR usage simulation journey of the settings front (MAIR-497), played by mairie360/CICD
+# tests/gdpr/simulation for every persona of gdpr-simulation.yaml (gdpr-marker.yaml format of
+# MAIR-290).
+#
+# The journey of BFF_Settings's log marker test, sent to the front's own origin: the same-origin proxy
+# (src/lib/bff-proxy.ts) relays it to the BFF with the accessToken cookie as a Bearer token, as for
+# the browser, so the logs of the front see the persona's values in the bodies, the query strings
+# and the deliberate errors. The proxy only forwards same-origin requests (Origin) and the paths of
+# contracts/openapi.json; the first step defines the session headers the next ones reuse
+# (*session).
+version: 1
+target: http://settings-front:5000
+wait: /
+# Session of the run (the seeded admin), signed by gdpr_simulation_test.sh.
+env: [ADMIN_JWT]
+steps:
+  - name: read the settings
+    request: {method: GET, path: /settings/bootstrap, headers: &session {Cookie: "accessToken={{env.ADMIN_JWT}}", Origin: "http://settings-front:5000"}}
+  - name: save the marker's names and phone in the profile
+    request:
+      method: PATCH
+      path: /settings/profile
+      headers: *session
+      # Core API (MAIR-480) parses a national number only with its country.
+      json: {first_name: "{{marker.first_name}}", last_name: "{{marker.last_name}}", phone: "{{marker.phone}}", phone_country: FR}
+  - name: change the e-mail with a wrong current password (deliberate error)
+    request:
+      method: PATCH
+      path: /settings/profile
+      headers: *session
+      json: {email: "{{marker.email}}", current_password: "{{marker.password}}"}
+    expect: [403]
+  - name: change the e-mail without the current password (deliberate error)
+    request:
+      method: PATCH
+      path: /settings/profile
+      headers: *session
+      json: {email: "{{marker.email}}"}
+    expect: [400]
+  - name: save a refused e-mail (deliberate error)
+    request:
+      method: PATCH
+      path: /settings/profile
+      headers: *session
+      json: {email: "{{marker.last_name}}", current_password: "{{marker.password}}"}
+    expect: [400]
+  - name: save a refused phone and name (deliberate error)
+    request:
+      method: PATCH
+      path: /settings/profile
+      headers: *session
+      json: {first_name: "<{{marker.first_name}}>", phone: "+{{marker.phone}}"}
+    expect: [400]
+  - name: save an unknown profile field (deliberate error)
+    request:
+      method: PATCH
+      path: /settings/profile
+      headers: *session
+      json: {address: "1 rue {{marker.last_name}}", phone: "{{marker.phone}}"}
+    expect: [400]
+  - name: save a general preference of the wrong type (deliberate error)
+    request:
+      method: PATCH
+      path: /settings/general
+      headers: *session
+      json: {home_page: "/{{marker.email}}", auto_open_notifications: "{{marker.phone}}"}
+    expect: [400]
+  - name: save a refused theme (deliberate error)
+    request:
+      method: PATCH
+      path: /settings/appearance
+      headers: *session
+      json: {theme: "{{marker.last_name}}"}
+    expect: [400]
+  - name: read the settings with an invalid token (deliberate error)
+    request: {method: GET, path: "/settings/bootstrap?email={{marker.email}}", headers: {Cookie: "accessToken={{marker.password}}", Origin: "http://settings-front:5000"}}
+    expect: [401]

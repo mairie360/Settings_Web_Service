@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/mairie360/CICD/9804aed718d436254e96a5d51cc23e8dd9dec1ca/tests/a11y/rgaa.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/mairie360/CICD/1ae67f5bca5dbde5946cfdd5d1a17e5a8c19f3f3/tests/a11y/rgaa.schema.json
 # RGAA 4.1.2 scope of the settings front (MAIR-316), checked by the rgaa job of mairie360/CICD
 # promote-prod.yml on <image>@<staging digest> (format: CICD README, "RGAA scope").
 version: 1

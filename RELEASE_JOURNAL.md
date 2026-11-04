@@ -1,47 +1,49 @@
 # Journal des releases — Settings_Web_Service
 
-<!-- release-journal-state {"dev": "828e84d050b9b6ca00815b97b687dfd07f3d34b9", "prod": "a2bf3c68882e787a45e923d87f057b92bdde7553", "prod_tag": "v1.7.0", "staging": "a2bf3c68882e787a45e923d87f057b92bdde7553", "updated": {"dev": "2026-11-03 14:58 UTC", "prod": "2026-10-21 11:20 UTC", "staging": "2026-10-21 11:18 UTC"}} -->
+<!-- release-journal-state {"dev": "6bf76b4fddfa0079f0301015ceb9206ab8639385", "prod": "a2bf3c68882e787a45e923d87f057b92bdde7553", "prod_tag": "v1.7.0", "staging": "a2bf3c68882e787a45e923d87f057b92bdde7553", "updated": {"dev": "2026-11-04 18:12 UTC", "prod": "2026-10-21 11:20 UTC", "staging": "2026-10-21 11:18 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v1.7.0 | `a2bf3c6` | 2026-10-21 11:20 UTC |
 | staging | — | `a2bf3c6` | 2026-10-21 11:18 UTC |
-| dev | — | `828e84d` | 2026-11-03 14:58 UTC |
+| dev | — | `6bf76b4` | 2026-11-04 18:12 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v1.7.0)
 
 #### Nouveautés
-- L'onglet Sécurité affiche les sessions avec le `SessionList` de la lib. L'action de révocation ouvre une confirmation (`ConfirmModal`) qui marque la session révoquée une fois confirmée. Tant que le port de fonctionnalité n'est pas branché, un message « en attente » s'affiche. (MAIR-607, MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
-- Le champ Téléphone du profil affiche d'abord « Visible par tous les agents de la mairie (usage professionnel). », relié au champ par `aria-describedby`, puis la règle de format. (MAIR-292, [#100](https://github.com/mairie360/Settings_Web_Service/pull/100))
+- Champ téléphone du profil : l'aide commence désormais par « Visible par tous les agents de la mairie (usage professionnel). », relié au champ par `aria-describedby`. (MAIR-292, [#100](https://github.com/mairie360/Settings_Web_Service/pull/100))
+- Onglet Sécurité : la liste des sessions est le `SessionList` de la lib. L'action de ligne ouvre une confirmation (`SessionRevokeDialog`, `ConfirmModal`) avant d'appeler le port `revokeSession`. Si le port n'est pas branché, un message d'attente s'affiche, d'après la description de la PR. (MAIR-607, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
 
 #### Changements de comportement
-- Les écrans de Settings sont normalisés sur la lib (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156)) : en-tête, onglets (identifiants stables `settings-tab-<key>`), champs, boutons, notifications par ton et badges de statut. La disposition des onglets suit désormais celle de la lib, et le shell (barre latérale, pied de page, date) vient de la lib : les composants locaux `accessible-shell`, `desktop-navigation` et `current-date` ont disparu.
+- Réglages refondus sur les composants normalisés de la lib (onglets, en-tête, champs, boutons, notifications). Les classes CSS locales `.settings-tab` sont retirées et les onglets portent les ids `settings-tab-<clé>`. Un sélecteur qui visait l'ancienne structure doit être mis à jour. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- Le shell (barre latérale, en-tête, pied de page, date) vient de `@mairie360/lib-components/shell`. Les composants locaux `desktop-navigation`, `accessible-shell` et `sidebar-preference` sont supprimés. (MAIR-578, MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
 
 #### Corrections
-- Sécurité, sessions : avant, Core renvoyait les dates au format « 2026-01-14 07:30:00 UTC », que la lib ne lit pas. Chaque session affichait « État indéterminé » sans action « Déconnecter ». Maintenant, Core renvoie des dates ISO 8601 et les sessions s'affichent actives avec leur action. Ce correctif dépend de l'image dev de Core API (`dev-7dfccfc`), car aucune release de Core ne l'inclut encore. (MAIR-767, [#175](https://github.com/mairie360/Settings_Web_Service/pull/175))
+- Sécurité, sessions : avant, les dates de session arrivaient au format « 2026-01-14 07:30:00 UTC », que la lib ne lisait pas. Chaque session affichait « État indéterminé » sans action « Déconnecter ». Maintenant, avec une Core API qui renvoie de l'ISO 8601, les sessions s'affichent actives avec leur action. Le front ne change pas de code pour cela : l'effet dépend de Core API, et l'image de test `core-api:dev-7dfccfc` n'est pas encore une release. (MAIR-767, [#175](https://github.com/mairie360/Settings_Web_Service/pull/175))
 
 #### Technique
-- Sécurité des dépendances : `follow-redirects` passe en 1.16.2 (GHSA-mrwp-f3q8-3g9p). `zod` est remplacé par le backport vendorisé 3.25.76+mairie360.1 (GHSA-mrhx-c7xc-m3w5), avec vérification d'intégrité à l'installation et au build. Les images Node (24.22.1) et Next.js sont mises à jour. (MAIR-770, MAIR-771, [#171](https://github.com/mairie360/Settings_Web_Service/pull/171), [#173](https://github.com/mairie360/Settings_Web_Service/pull/173))
-- CICD est épinglé d'abord en v5.2.2, puis en v5.3.0, dans les workflows `cicd.yml`, `promote-*.yml` et `dev-dependency-exception.yml`. Une checklist RGPD s'exécute désormais sur les PR (`gdpr-pr.yml`, MAIR-295). Une simulation RGPD est ajoutée aux stacks de test (MAIR-497, [#178](https://github.com/mairie360/Settings_Web_Service/pull/178)). Les sources maps ne sont produites que par le build de mesure CI.
-- Stacks de test RGAA (MAIR-316, MAIR-768) : scénario de révocation de session, verrou de run, projet Compose dédié et boucles d'attente bornées. Les fichiers de test sont exclus de la couverture des sources.
+- Dépendances : `@mairie360/lib-components` passe de 0.10.2 à 1.0.3 (version majeure, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156)). Zod est remplacé par le backport vendoré `vendor/zod` (3.25.76+mairie360.1), avec vérification d'intégrité au `postinstall`, `prebuild` et `pretest` ([#173](https://github.com/mairie360/Settings_Web_Service/pull/173)). `follow-redirects` passe en 1.16.2 ([#171](https://github.com/mairie360/Settings_Web_Service/pull/171)).
+- Runtime : Node.js 24.22.1 avec digest d'image officiel dans le Dockerfile et les workflows ([#164](https://github.com/mairie360/Settings_Web_Service/pull/164)). Pins mairie360/CICD montés en v4.5.0, v5.2.2, v5.3.0 puis v5.3.1 ([#163](https://github.com/mairie360/Settings_Web_Service/pull/163), [#177](https://github.com/mairie360/Settings_Web_Service/pull/177), [#178](https://github.com/mairie360/Settings_Web_Service/pull/178), [#179](https://github.com/mairie360/Settings_Web_Service/pull/179)).
+- Outillage de test et CI sans effet sur l'application : simulation RGPD et checklist des PR (`gdpr-pr.yml`, [#99](https://github.com/mairie360/Settings_Web_Service/pull/99), [#178](https://github.com/mairie360/Settings_Web_Service/pull/178), [#179](https://github.com/mairie360/Settings_Web_Service/pull/179)), stack RGAA et verrou de run ([#92](https://github.com/mairie360/Settings_Web_Service/pull/92), [#169](https://github.com/mairie360/Settings_Web_Service/pull/169)), tests Playwright RGPD ([#100](https://github.com/mairie360/Settings_Web_Service/pull/100)).
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
 #### Nouveautés
-- L'onglet Sécurité affiche les sessions avec le `SessionList` de la lib. L'action de révocation ouvre une confirmation (`ConfirmModal`) qui marque la session révoquée une fois confirmée. Tant que le port de fonctionnalité n'est pas branché, un message « en attente » s'affiche. (MAIR-607, MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
-- Le champ Téléphone du profil affiche d'abord « Visible par tous les agents de la mairie (usage professionnel). », relié au champ par `aria-describedby`, puis la règle de format. (MAIR-292, [#100](https://github.com/mairie360/Settings_Web_Service/pull/100))
+- Champ téléphone du profil : l'aide commence désormais par « Visible par tous les agents de la mairie (usage professionnel). », relié au champ par `aria-describedby`. (MAIR-292, [#100](https://github.com/mairie360/Settings_Web_Service/pull/100))
+- Onglet Sécurité : la liste des sessions est le `SessionList` de la lib. L'action de ligne ouvre une confirmation (`SessionRevokeDialog`, `ConfirmModal`) avant d'appeler le port `revokeSession`. Si le port n'est pas branché, un message d'attente s'affiche, d'après la description de la PR. (MAIR-607, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
 
 #### Changements de comportement
-- Les écrans de Settings sont normalisés sur la lib (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156)) : en-tête, onglets (identifiants stables `settings-tab-<key>`), champs, boutons, notifications par ton et badges de statut. La disposition des onglets suit désormais celle de la lib, et le shell (barre latérale, pied de page, date) vient de la lib : les composants locaux `accessible-shell`, `desktop-navigation` et `current-date` ont disparu.
+- Réglages refondus sur les composants normalisés de la lib (onglets, en-tête, champs, boutons, notifications). Les classes CSS locales `.settings-tab` sont retirées et les onglets portent les ids `settings-tab-<clé>`. Un sélecteur qui visait l'ancienne structure doit être mis à jour. (MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+- Le shell (barre latérale, en-tête, pied de page, date) vient de `@mairie360/lib-components/shell`. Les composants locaux `desktop-navigation`, `accessible-shell` et `sidebar-preference` sont supprimés. (MAIR-578, MAIR-608, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
 
 #### Corrections
-- Sécurité, sessions : avant, Core renvoyait les dates au format « 2026-01-14 07:30:00 UTC », que la lib ne lit pas. Chaque session affichait « État indéterminé » sans action « Déconnecter ». Maintenant, Core renvoie des dates ISO 8601 et les sessions s'affichent actives avec leur action. Ce correctif dépend de l'image dev de Core API (`dev-7dfccfc`), car aucune release de Core ne l'inclut encore. (MAIR-767, [#175](https://github.com/mairie360/Settings_Web_Service/pull/175))
+- Sécurité, sessions : avant, les dates de session arrivaient au format « 2026-01-14 07:30:00 UTC », que la lib ne lisait pas. Chaque session affichait « État indéterminé » sans action « Déconnecter ». Maintenant, avec une Core API qui renvoie de l'ISO 8601, les sessions s'affichent actives avec leur action. Le front ne change pas de code pour cela : l'effet dépend de Core API, et l'image de test `core-api:dev-7dfccfc` n'est pas encore une release. (MAIR-767, [#175](https://github.com/mairie360/Settings_Web_Service/pull/175))
 
 #### Technique
-- Sécurité des dépendances : `follow-redirects` passe en 1.16.2 (GHSA-mrwp-f3q8-3g9p). `zod` est remplacé par le backport vendorisé 3.25.76+mairie360.1 (GHSA-mrhx-c7xc-m3w5), avec vérification d'intégrité à l'installation et au build. Les images Node (24.22.1) et Next.js sont mises à jour. (MAIR-770, MAIR-771, [#171](https://github.com/mairie360/Settings_Web_Service/pull/171), [#173](https://github.com/mairie360/Settings_Web_Service/pull/173))
-- CICD est épinglé d'abord en v5.2.2, puis en v5.3.0, dans les workflows `cicd.yml`, `promote-*.yml` et `dev-dependency-exception.yml`. Une checklist RGPD s'exécute désormais sur les PR (`gdpr-pr.yml`, MAIR-295). Une simulation RGPD est ajoutée aux stacks de test (MAIR-497, [#178](https://github.com/mairie360/Settings_Web_Service/pull/178)). Les sources maps ne sont produites que par le build de mesure CI.
-- Stacks de test RGAA (MAIR-316, MAIR-768) : scénario de révocation de session, verrou de run, projet Compose dédié et boucles d'attente bornées. Les fichiers de test sont exclus de la couverture des sources.
+- Dépendances : `@mairie360/lib-components` passe de 0.10.2 à 1.0.3 (version majeure, [#156](https://github.com/mairie360/Settings_Web_Service/pull/156)). Zod est remplacé par le backport vendoré `vendor/zod` (3.25.76+mairie360.1), avec vérification d'intégrité au `postinstall`, `prebuild` et `pretest` ([#173](https://github.com/mairie360/Settings_Web_Service/pull/173)). `follow-redirects` passe en 1.16.2 ([#171](https://github.com/mairie360/Settings_Web_Service/pull/171)).
+- Runtime : Node.js 24.22.1 avec digest d'image officiel dans le Dockerfile et les workflows ([#164](https://github.com/mairie360/Settings_Web_Service/pull/164)). Pins mairie360/CICD montés en v4.5.0, v5.2.2, v5.3.0 puis v5.3.1 ([#163](https://github.com/mairie360/Settings_Web_Service/pull/163), [#177](https://github.com/mairie360/Settings_Web_Service/pull/177), [#178](https://github.com/mairie360/Settings_Web_Service/pull/178), [#179](https://github.com/mairie360/Settings_Web_Service/pull/179)).
+- Outillage de test et CI sans effet sur l'application : simulation RGPD et checklist des PR (`gdpr-pr.yml`, [#99](https://github.com/mairie360/Settings_Web_Service/pull/99), [#178](https://github.com/mairie360/Settings_Web_Service/pull/178), [#179](https://github.com/mairie360/Settings_Web_Service/pull/179)), stack RGAA et verrou de run ([#92](https://github.com/mairie360/Settings_Web_Service/pull/92), [#169](https://github.com/mairie360/Settings_Web_Service/pull/169)), tests Playwright RGPD ([#100](https://github.com/mairie360/Settings_Web_Service/pull/100)).
 
 ## Différence staging → prod (en staging, pas encore en prod)
 
@@ -52,6 +54,7 @@ _Rien._
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-11-04 18:12 UTC | dev | — | `6bf76b4` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/41882651874) |
 | 2026-11-03 14:58 UTC | dev | — | `828e84d` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/41656831270) |
 | 2026-11-02 23:04 UTC | dev | — | `cd67775` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/41540186391) |
 | 2026-11-02 22:55 UTC | dev | — | `21cd0a1` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/41539876958) |

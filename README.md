@@ -177,7 +177,7 @@ contrat, auth, dépendance, workflow, environnement ou pin de cluster modifié.
 
 ## Container packaging (MAIR-436)
 
-The Dockerfile and both Node CI inputs use Node `24.21.0`. The official
+The Dockerfile and both Node CI inputs use Node `24.22.1`. The official
 `bookworm-slim` base is pinned by digest in the dependency and runtime stages.
 The existing shared workflow supplies `node_auth_token` as a BuildKit secret;
 `npm ci` mounts it as a temporary environment variable alongside the read-only

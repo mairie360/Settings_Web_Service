@@ -12,7 +12,7 @@ Calendar caches at most six periods for 60 seconds per mounted, identified accou
 
 Run `npm ci`, `node node_modules/playwright-core/cli.js install --with-deps chromium --only-shell`, `npm run build -- --webpack`, then `npm run performance:report -- --output performance/candidate/report.json`.
 
-Node 24.21.0; exact locked Next/SDK versions; Playwright Core 1.64.0 pins the browser. Three fresh contexts use 390x844, CPU x4, 100 ms network latency, 200000 bytes/s download and 93750 bytes/s upload. The business date is fixed without changing performance clocks. The Next-supplied Web Vitals collector is identified by SHA-256. Missing measurements fail instead of becoming artificial zeroes.
+Node 24.22.1; exact locked Next/SDK versions; Playwright Core 1.64.0 pins the browser. Three fresh contexts use 390x844, CPU x4, 100 ms network latency, 200000 bytes/s download and 93750 bytes/s upload. The business date is fixed without changing performance clocks. The Next-supplied Web Vitals collector is identified by SHA-256. Missing measurements fail instead of becoming artificial zeroes.
 
 Only loopback servers and fictitious fixtures are used. `mairie360_lab_session` is translated by the laboratory proxy; actual session cookies are never forwarded. Writes are not simulated. Production frontend source, middleware and CSP are compiled unchanged; local build concurrency is limited to one worker. This measures the frontend under controlled data latency, not a deployed backend or real-user percentiles.
 

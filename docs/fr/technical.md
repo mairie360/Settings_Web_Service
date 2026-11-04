@@ -178,9 +178,9 @@ Pour une modification uniquement documentaire, vérifier les liens, l’exactitu
 
 ## CI/CD et exécution Docker
 
-Le job `contracts.yml` utilise Node.js 24.21.0 et des commits immuables pour `actions/checkout` et `actions/setup-node`. Il s’exécute sur pull request, lancement manuel et push vers `main` uniquement (MAIR-436); il installe avec `npm ci`, contrôle les contrats et lance les tests dédiés.
+Le job `contracts.yml` utilise Node.js 24.22.1 et des commits immuables pour `actions/checkout` et `actions/setup-node`. Il s’exécute sur pull request, lancement manuel et push vers `main` uniquement (MAIR-436); il installe avec `npm ci`, contrôle les contrats et lance les tests dédiés.
 
-`cicd.yml` appelle `mairie360/CICD/.github/workflows/frontend-cicd.yml` épinglé sur un commit CICD, avec le même `cicd_version` et `node_version: "24.21.0"`. Il s’exécute sur les pull requests, au déclenchement manuel et sur les push vers `main` uniquement ; son jeton est en lecture seule par défaut et seul le job qui appelle le pipeline de release reçoit les droits d’écriture `contents`, `packages` et `id-token` (MAIR-436, `tests/workflow-permissions.test.cjs`). Ce workflow partagé existant bloque build/tests sur les audits npm et Semgrep/Gitleaks. Sa publication Dev sur main est automatique ; Staging/Prod gardent des gates d’environnement distincts. Aucun pin ou accord de déploiement n’est changé ici.
+`cicd.yml` appelle `mairie360/CICD/.github/workflows/frontend-cicd.yml` épinglé sur un commit CICD, avec le même `cicd_version` et `node_version: "24.22.1"`. Il s’exécute sur les pull requests, au déclenchement manuel et sur les push vers `main` uniquement ; son jeton est en lecture seule par défaut et seul le job qui appelle le pipeline de release reçoit les droits d’écriture `contents`, `packages` et `id-token` (MAIR-436, `tests/workflow-permissions.test.cjs`). Ce workflow partagé existant bloque build/tests sur les audits npm et Semgrep/Gitleaks. Sa publication Dev sur main est automatique ; Staging/Prod gardent des gates d’environnement distincts. Aucun pin ou accord de déploiement n’est changé ici.
 
 MAIR-230 / issue #79 ajoute le job consommateur `required_security_scan` nommé
 `CICD / Code Security Audit (Semgrep)` : la protection attend encore ce nom
@@ -195,7 +195,7 @@ accès/ruleset/contrôle de sécurité n’est contourné. Le scan partagé et l
 gates restent actifs. Les tests de régression contrôlent ce câblage ; la CI doit
 prouver le succès du vrai scan avant une fusion normale.
 
-Le Dockerfile épingle `NODE_VERSION=24.21.0` (image officielle bookworm-slim épinglée par digest) et le build Next.js `standalone` ; la commande de l’image est `["node", "server.js"]`. Le port de l’image et les mappings Compose peuvent différer du port local proposé plus haut.
+Le Dockerfile épingle `NODE_VERSION=24.22.1` (image officielle bookworm-slim épinglée par digest) et le build Next.js `standalone` ; la commande de l’image est `["node", "server.js"]`. Le port de l’image et les mappings Compose peuvent différer du port local proposé plus haut.
 
 Avant un lancement Docker, vérifier les variables de service, les secrets de build et les réseaux dans les fichiers du dépôt. Une CI verte valide ses jobs; elle ne prouve pas la disponibilité des services métier dans un environnement distant.
 

@@ -8,7 +8,7 @@ const { ROOT, requireSrc } = require('./support/load-ts.cjs');
 const yaml = createRequire(require.resolve('@eslint/eslintrc'))('js-yaml');
 const { middleware } = requireSrc('middleware.ts');
 
-for (const file of ['docker-compose-security.yml', 'docker-compose-performance.yml']) {
+for (const file of ['docker-compose-security.yml', 'docker-compose-performance.yml', 'docker-compose-accessibility.yml']) {
   test(`${file} makes the anonymous frontend readiness probe redirect within test configuration`, () => {
     const service = yaml.load(readFileSync(join(ROOT, file), 'utf8')).services['settings-front'];
     const saved = Object.fromEntries(['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL', 'NODE_ENV'].map(key => [key, process.env[key]]));

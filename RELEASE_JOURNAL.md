@@ -1,12 +1,12 @@
 # Journal des releases — Settings_Web_Service
 
-<!-- release-journal-state {"dev": "86f6ee7ae1d11ac47410e5274835530d69b50468", "prod": "a2bf3c68882e787a45e923d87f057b92bdde7553", "prod_tag": "v1.7.0", "staging": "a2bf3c68882e787a45e923d87f057b92bdde7553", "updated": {"dev": "2026-11-12 17:11 UTC", "prod": "2026-10-21 11:20 UTC", "staging": "2026-10-21 11:18 UTC"}} -->
+<!-- release-journal-state {"dev": "86f6ee7ae1d11ac47410e5274835530d69b50468", "prod": "a2bf3c68882e787a45e923d87f057b92bdde7553", "prod_tag": "v1.7.0", "staging": "86f6ee7ae1d11ac47410e5274835530d69b50468", "updated": {"dev": "2026-11-12 17:11 UTC", "prod": "2026-10-21 11:20 UTC", "staging": "2026-11-12 20:50 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v1.7.0 | `a2bf3c6` | 2026-10-21 11:20 UTC |
-| staging | — | `a2bf3c6` | 2026-10-21 11:18 UTC |
+| staging | — | `86f6ee7` | 2026-11-12 20:50 UTC |
 | dev | — | `86f6ee7` | 2026-11-12 17:11 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v1.7.0)
@@ -31,6 +31,10 @@
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
+_Rien._
+
+## Différence staging → prod (en staging, pas encore en prod)
+
 - fix: MAIR-816 Release dev: align internal versions and deploy ([#187](https://github.com/mairie360/Settings_Web_Service/pull/187))
 - chore(deps): update dependency mairie360/cicd to v5.6.0 (#185) ([#185](https://github.com/mairie360/Settings_Web_Service/pull/185))
 - feat: MAIR-603 E2E - Parcours utilisateurs Playwright des fronts (#162) ([#162](https://github.com/mairie360/Settings_Web_Service/pull/162))
@@ -49,10 +53,6 @@
 - fix(security): patch Node.js and Next.js (#164) ([#164](https://github.com/mairie360/Settings_Web_Service/pull/164))
 - feat!: MAIR-608 Lib UI - Normaliser la charte, les tailles et les composants partagés des fronts ([#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
 
-## Différence staging → prod (en staging, pas encore en prod)
-
-_Rien._
-
 > Résumé Claude indisponible pour ce passage : listes brutes des commits.
 
 ## Historique des passages
@@ -60,6 +60,7 @@ _Rien._
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-11-12 20:50 UTC | staging | — | `86f6ee7` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/43285908644) |
 | 2026-11-12 17:11 UTC | dev | — | `86f6ee7` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/43264740056) |
 | 2026-11-04 21:15 UTC | dev | — | `df22d9d` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/41912462949) |
 | 2026-11-04 18:36 UTC | dev | — | `069c282` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/41887456140) |

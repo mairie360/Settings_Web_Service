@@ -1,33 +1,17 @@
 # Journal des releases — Settings_Web_Service
 
-<!-- release-journal-state {"dev": "86f6ee7ae1d11ac47410e5274835530d69b50468", "prod": "a2bf3c68882e787a45e923d87f057b92bdde7553", "prod_tag": "v1.7.0", "staging": "86f6ee7ae1d11ac47410e5274835530d69b50468", "updated": {"dev": "2026-11-12 17:11 UTC", "prod": "2026-10-21 11:20 UTC", "staging": "2026-11-12 20:50 UTC"}} -->
+<!-- release-journal-state {"dev": "86f6ee7ae1d11ac47410e5274835530d69b50468", "prod": "86f6ee7ae1d11ac47410e5274835530d69b50468", "prod_tag": "v1.8.0", "staging": "86f6ee7ae1d11ac47410e5274835530d69b50468", "updated": {"dev": "2026-11-12 17:11 UTC", "prod": "2026-11-13 01:40 UTC", "staging": "2026-11-12 20:50 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
-| prod | v1.7.0 | `a2bf3c6` | 2026-10-21 11:20 UTC |
+| prod | v1.8.0 | `86f6ee7` | 2026-11-13 01:40 UTC |
 | staging | — | `86f6ee7` | 2026-11-12 20:50 UTC |
 | dev | — | `86f6ee7` | 2026-11-12 17:11 UTC |
 
-## Ajouté sur main depuis la dernière release prod (v1.7.0)
+## Ajouté sur main depuis la dernière release prod (v1.8.0)
 
-- fix: MAIR-816 Release dev: align internal versions and deploy ([#187](https://github.com/mairie360/Settings_Web_Service/pull/187))
-- chore(deps): update dependency mairie360/cicd to v5.6.0 (#185) ([#185](https://github.com/mairie360/Settings_Web_Service/pull/185))
-- feat: MAIR-603 E2E - Parcours utilisateurs Playwright des fronts (#162) ([#162](https://github.com/mairie360/Settings_Web_Service/pull/162))
-- fix: MAIR-743 [Audit 30/10] Login, Calendars, Elearning, Projects: branch Gitleaks fingerprints invalid after squash, main likely red (N1) (#181) ([#181](https://github.com/mairie360/Settings_Web_Service/pull/181))
-- fix: MAIR-497 GDPR - Usage simulation and AI review of logs and database before prod ([#179](https://github.com/mairie360/Settings_Web_Service/pull/179))
-- feat: MAIR-497 RGPD - Simulation d'usage et revue IA des logs et de la base avant la prod ([#178](https://github.com/mairie360/Settings_Web_Service/pull/178))
-- ci: MAIR-771 APIs, BFFs, Database : monter CICD en v5.2.2 pour activer les contrôles RGPD (#177) ([#177](https://github.com/mairie360/Settings_Web_Service/pull/177))
-- fix: MAIR-767 Core API - Renvoyer les dates de session au format ISO 8601 (#175) ([#175](https://github.com/mairie360/Settings_Web_Service/pull/175))
-- fix(security): MAIR-770 Administrator, Dashboard, Messages, Settings : porter le correctif zod et la preuve de bundle par source maps ([#173](https://github.com/mairie360/Settings_Web_Service/pull/173))
-- fix(deps): bump follow-redirects to 1.16.2 (GHSA-mrwp-f3q8-3g9p) ([#171](https://github.com/mairie360/Settings_Web_Service/pull/171))
-- fix: MAIR-768 RGAA - Aligner les stacks d'accessibilité des fronts mergés en premier ([#169](https://github.com/mairie360/Settings_Web_Service/pull/169))
-- feat: MAIR-316 RGAA - Périmètre et états des pages par front (#92) ([#92](https://github.com/mairie360/Settings_Web_Service/pull/92))
-- feat: MAIR-292 Ajouter des tests Playwright RGPD et les pages légales aux fronts (#100) ([#100](https://github.com/mairie360/Settings_Web_Service/pull/100))
-- ci: MAIR-295 Ajouter une checklist RGPD aux PR et des rappels d'échéances automatiques (#99) ([#99](https://github.com/mairie360/Settings_Web_Service/pull/99))
-- chore(deps): update dependency mairie360/cicd to v4.5.0 (#163) ([#163](https://github.com/mairie360/Settings_Web_Service/pull/163))
-- fix(security): patch Node.js and Next.js (#164) ([#164](https://github.com/mairie360/Settings_Web_Service/pull/164))
-- feat!: MAIR-608 Lib UI - Normaliser la charte, les tailles et les composants partagés des fronts ([#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
+_Rien._
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
@@ -35,31 +19,14 @@ _Rien._
 
 ## Différence staging → prod (en staging, pas encore en prod)
 
-- fix: MAIR-816 Release dev: align internal versions and deploy ([#187](https://github.com/mairie360/Settings_Web_Service/pull/187))
-- chore(deps): update dependency mairie360/cicd to v5.6.0 (#185) ([#185](https://github.com/mairie360/Settings_Web_Service/pull/185))
-- feat: MAIR-603 E2E - Parcours utilisateurs Playwright des fronts (#162) ([#162](https://github.com/mairie360/Settings_Web_Service/pull/162))
-- fix: MAIR-743 [Audit 30/10] Login, Calendars, Elearning, Projects: branch Gitleaks fingerprints invalid after squash, main likely red (N1) (#181) ([#181](https://github.com/mairie360/Settings_Web_Service/pull/181))
-- fix: MAIR-497 GDPR - Usage simulation and AI review of logs and database before prod ([#179](https://github.com/mairie360/Settings_Web_Service/pull/179))
-- feat: MAIR-497 RGPD - Simulation d'usage et revue IA des logs et de la base avant la prod ([#178](https://github.com/mairie360/Settings_Web_Service/pull/178))
-- ci: MAIR-771 APIs, BFFs, Database : monter CICD en v5.2.2 pour activer les contrôles RGPD (#177) ([#177](https://github.com/mairie360/Settings_Web_Service/pull/177))
-- fix: MAIR-767 Core API - Renvoyer les dates de session au format ISO 8601 (#175) ([#175](https://github.com/mairie360/Settings_Web_Service/pull/175))
-- fix(security): MAIR-770 Administrator, Dashboard, Messages, Settings : porter le correctif zod et la preuve de bundle par source maps ([#173](https://github.com/mairie360/Settings_Web_Service/pull/173))
-- fix(deps): bump follow-redirects to 1.16.2 (GHSA-mrwp-f3q8-3g9p) ([#171](https://github.com/mairie360/Settings_Web_Service/pull/171))
-- fix: MAIR-768 RGAA - Aligner les stacks d'accessibilité des fronts mergés en premier ([#169](https://github.com/mairie360/Settings_Web_Service/pull/169))
-- feat: MAIR-316 RGAA - Périmètre et états des pages par front (#92) ([#92](https://github.com/mairie360/Settings_Web_Service/pull/92))
-- feat: MAIR-292 Ajouter des tests Playwright RGPD et les pages légales aux fronts (#100) ([#100](https://github.com/mairie360/Settings_Web_Service/pull/100))
-- ci: MAIR-295 Ajouter une checklist RGPD aux PR et des rappels d'échéances automatiques (#99) ([#99](https://github.com/mairie360/Settings_Web_Service/pull/99))
-- chore(deps): update dependency mairie360/cicd to v4.5.0 (#163) ([#163](https://github.com/mairie360/Settings_Web_Service/pull/163))
-- fix(security): patch Node.js and Next.js (#164) ([#164](https://github.com/mairie360/Settings_Web_Service/pull/164))
-- feat!: MAIR-608 Lib UI - Normaliser la charte, les tailles et les composants partagés des fronts ([#156](https://github.com/mairie360/Settings_Web_Service/pull/156))
-
-> Résumé Claude indisponible pour ce passage : listes brutes des commits.
+_Rien._
 
 ## Historique des passages
 
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-11-13 01:40 UTC | prod | v1.8.0 | `86f6ee7` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/43340564955) |
 | 2026-11-12 20:50 UTC | staging | — | `86f6ee7` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/43285908644) |
 | 2026-11-12 17:11 UTC | dev | — | `86f6ee7` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/43264740056) |
 | 2026-11-04 21:15 UTC | dev | — | `df22d9d` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/41912462949) |

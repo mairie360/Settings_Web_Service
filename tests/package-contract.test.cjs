@@ -35,21 +35,18 @@ test('contracts/openapi.json is exactly the contract rebuilt from the installed 
   assert.deepEqual(snapshot, buildOrvalOpenApi(PACKAGE_NAME, ROOT));
 });
 
-test('every Docker stack starts BFF_Settings only, in the image built from the contract package commit', async () => {
-  const { imageTagForContractVersion } = await import('../scripts/contract-version.mjs');
-  const expectedTag = imageTagForContractVersion(pinned);
+test('MAIR-998 every Docker stack starts BFF_Settings only, on the moving tag of the stage', () => {
+  const expectedTag = '${UPSTREAM_TAG:-dev}';
   for (const file of fs.readdirSync(ROOT).filter((name) => /^docker-compose.*\.ya?ml$/.test(name))) {
-    const images = [...fs.readFileSync(path.join(ROOT, file), 'utf8').matchAll(/ghcr\.io\/mairie360\/(bff-[\w-]+):([\w.-]+)/g)];
+    const images = [...fs.readFileSync(path.join(ROOT, file), 'utf8').matchAll(/ghcr\.io\/mairie360\/(bff-[\w-]+):(\$\{[^}]*\}|[\w.-]+)/g)];
     assert.deepEqual(images.map(([, name, tag]) => `${name}:${tag}`), [`bff-settings:${expectedTag}`], file);
   }
 });
 
-test('the contract version policy accepts releases and dev packages and maps them to image tags', async () => {
-  const { isAcceptedContractVersion, imageTagForContractVersion } = await import('../scripts/contract-version.mjs');
+test('the contract version policy accepts releases and dev packages', async () => {
+  const { isAcceptedContractVersion } = await import('../scripts/contract-version.mjs');
   assert.equal(isAcceptedContractVersion('1.1.0'), true);
-  assert.equal(imageTagForContractVersion('1.1.0'), '1.1.0');
   assert.equal(isAcceptedContractVersion('0.0.0-dev.eb4e17f930d957dbf5df6c58dc34b69916198d62'), true);
-  assert.equal(imageTagForContractVersion('0.0.0-dev.eb4e17f930d957dbf5df6c58dc34b69916198d62'), 'dev-eb4e17f');
   for (const rejected of ['^1.1.0', '1.1', '0.0.0-staging.eb4e17f930d957dbf5df6c58dc34b69916198d62', '0.0.0-dev.eb4e17f', 'latest']) {
     assert.equal(isAcceptedContractVersion(rejected), false, rejected);
   }

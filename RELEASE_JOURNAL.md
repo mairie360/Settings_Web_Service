@@ -1,16 +1,17 @@
 # Journal des releases — Settings_Web_Service
 
-<!-- release-journal-state {"dev": "d60ad56d0c88825527663246e6c739bd3d8798a1", "prod": "86f6ee7ae1d11ac47410e5274835530d69b50468", "prod_tag": "v1.8.0", "staging": "86f6ee7ae1d11ac47410e5274835530d69b50468", "updated": {"dev": "2026-11-17 12:43 UTC", "prod": "2026-11-13 01:40 UTC", "staging": "2026-11-12 20:50 UTC"}} -->
+<!-- release-journal-state {"dev": "a21f3303edc8cde766fcbe15faf76aec8a14e83f", "prod": "86f6ee7ae1d11ac47410e5274835530d69b50468", "prod_tag": "v1.8.0", "staging": "86f6ee7ae1d11ac47410e5274835530d69b50468", "updated": {"dev": "2026-11-17 19:18 UTC", "prod": "2026-11-13 01:40 UTC", "staging": "2026-11-12 20:50 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v1.8.0 | `86f6ee7` | 2026-11-13 01:40 UTC |
 | staging | — | `86f6ee7` | 2026-11-12 20:50 UTC |
-| dev | — | `d60ad56` | 2026-11-17 12:43 UTC |
+| dev | — | `a21f330` | 2026-11-17 19:18 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v1.8.0)
 
+- docs: MAIR-543 Correct the false test promises in the CLAUDE.md files ([#198](https://github.com/mairie360/Settings_Web_Service/pull/198))
 - ci: MAIR-1008 Nightly rehearsal of the promotion gates (#192) ([#192](https://github.com/mairie360/Settings_Web_Service/pull/192))
 - feat: MAIR-998 Test stacks follow the moving upstream tag of the stage (#194) ([#194](https://github.com/mairie360/Settings_Web_Service/pull/194))
 - chore(deps): update dependency mairie360/cicd to v5.6.1 (#195) ([#195](https://github.com/mairie360/Settings_Web_Service/pull/195))
@@ -19,6 +20,7 @@
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
+- docs: MAIR-543 Correct the false test promises in the CLAUDE.md files ([#198](https://github.com/mairie360/Settings_Web_Service/pull/198))
 - ci: MAIR-1008 Nightly rehearsal of the promotion gates (#192) ([#192](https://github.com/mairie360/Settings_Web_Service/pull/192))
 - feat: MAIR-998 Test stacks follow the moving upstream tag of the stage (#194) ([#194](https://github.com/mairie360/Settings_Web_Service/pull/194))
 - chore(deps): update dependency mairie360/cicd to v5.6.1 (#195) ([#195](https://github.com/mairie360/Settings_Web_Service/pull/195))
@@ -36,6 +38,7 @@ _Rien._
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 19:18 UTC | dev | — | `a21f330` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/44155577442) |
 | 2026-11-17 12:43 UTC | dev | — | `d60ad56` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/44084327118) |
 | 2026-11-17 11:10 UTC | dev | — | `41c4556` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/44069502536) |
 | 2026-11-17 09:22 UTC | dev | — | `101cf64` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/44053597527) |

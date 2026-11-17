@@ -1,21 +1,23 @@
 # Journal des releases — Settings_Web_Service
 
-<!-- release-journal-state {"dev": "ada3d8b52c0d830b5d137648580898fd4bc19741", "prod": "86f6ee7ae1d11ac47410e5274835530d69b50468", "prod_tag": "v1.8.0", "staging": "86f6ee7ae1d11ac47410e5274835530d69b50468", "updated": {"dev": "2026-11-13 20:18 UTC", "prod": "2026-11-13 01:40 UTC", "staging": "2026-11-12 20:50 UTC"}} -->
+<!-- release-journal-state {"dev": "101cf64a70dbb4fe19a972d9a9d1b80ec180d342", "prod": "86f6ee7ae1d11ac47410e5274835530d69b50468", "prod_tag": "v1.8.0", "staging": "86f6ee7ae1d11ac47410e5274835530d69b50468", "updated": {"dev": "2026-11-17 09:22 UTC", "prod": "2026-11-13 01:40 UTC", "staging": "2026-11-12 20:50 UTC"}} -->
 > Tenu à jour par la CI (`mairie360/CICD`, action `release/release-journal`) à chaque passage en dev, staging et prod. Ne pas modifier à la main : le fichier est réécrit au passage suivant.
 
 | Environnement | Version | Commit | Mis à jour |
 | --- | --- | --- | --- |
 | prod | v1.8.0 | `86f6ee7` | 2026-11-13 01:40 UTC |
 | staging | — | `86f6ee7` | 2026-11-12 20:50 UTC |
-| dev | — | `ada3d8b` | 2026-11-13 20:18 UTC |
+| dev | — | `101cf64` | 2026-11-17 09:22 UTC |
 
 ## Ajouté sur main depuis la dernière release prod (v1.8.0)
 
+- chore(deps): update dependency mairie360/cicd to v5.6.1 (#195) ([#195](https://github.com/mairie360/Settings_Web_Service/pull/195))
 - chore(deps): update mairie360 database schema to v3.4.0 (#190) ([#190](https://github.com/mairie360/Settings_Web_Service/pull/190))
 - chore(deps): update ghcr.io/mairie360/core-api docker tag to v2.3.0 (#189) ([#189](https://github.com/mairie360/Settings_Web_Service/pull/189))
 
 ## Différence dev → staging (en dev, pas encore en staging)
 
+- chore(deps): update dependency mairie360/cicd to v5.6.1 (#195) ([#195](https://github.com/mairie360/Settings_Web_Service/pull/195))
 - chore(deps): update mairie360 database schema to v3.4.0 (#190) ([#190](https://github.com/mairie360/Settings_Web_Service/pull/190))
 - chore(deps): update ghcr.io/mairie360/core-api docker tag to v2.3.0 (#189) ([#189](https://github.com/mairie360/Settings_Web_Service/pull/189))
 
@@ -30,6 +32,7 @@ _Rien._
 <!-- release-journal-history:start -->
 | Date | Environnement | Version | Commit | Run |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 09:22 UTC | dev | — | `101cf64` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/44053597527) |
 | 2026-11-13 20:18 UTC | dev | — | `ada3d8b` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/43499147344) |
 | 2026-11-13 09:22 UTC | dev | — | `fcfb277` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/43399653814) |
 | 2026-11-13 01:40 UTC | prod | v1.8.0 | `86f6ee7` | [run](https://github.com/mairie360/Settings_Web_Service/actions/runs/43340564955) |

@@ -15,13 +15,13 @@ npm ci
 npm run dev -- --port 5000         # needs the BFF(s) reachable, see "BFF URL" below
 npm run build && npm run start -- --port 5000
 npm run lint                             # next lint (next/core-web-vitals + next/typescript)
-npm test                                 # node:test on tests/*.test.cjs, then the Vitest component tests + lcov in coverage/lcov.info (what CI runs)
+npm test                                 # node:test on tests/*.test.cjs (lcov in coverage/lcov.info), then the Vitest component tests (what CI runs)
 npm run test:contracts                   # node:test files only, no coverage
 npm run test:components                  # Vitest + jsdom component tests only
 node --test --test-name-pattern="<name>" tests/proxy.test.cjs   # single test
 ```
 
-Tests are plain CommonJS `node:test` files (no Jest, no DOM in these files); new tests must match `tests/*.test.cjs`. Load source through `tests/support/load-ts.cjs` (`requireSrc('lib/x.ts')`): it transpiles `.ts`/`.tsx` with inline source maps and resolves the `@/*` alias. `npm test` passes `--enable-source-maps`, so coverage is reported on TypeScript lines; it counts erased imports/types/comments as uncovered, which makes it conservative. `tests/coverage-scope.test.cjs` loads every `src/**/*.ts` module so untested modules still count toward the 60% threshold; `src/app/page.tsx` is loaded and measured by `tests/settings-page.bff-mocks.test.cjs` only.
+Tests are plain CommonJS `node:test` files (no Jest, no DOM in these files); new node tests must match `tests/*.test.cjs`. Load source through `tests/support/load-ts.cjs` (`requireSrc('lib/x.ts')`): it transpiles `.ts`/`.tsx` with inline source maps and resolves the `@/*` alias. `npm test` passes `--enable-source-maps`, so coverage is reported on TypeScript lines; it counts erased imports/types/comments as uncovered, which makes it conservative. `tests/coverage-scope.test.cjs` loads every `src/**/*.ts` module so untested modules still count toward the 60% threshold; `src/app/page.tsx` is loaded and measured by `tests/settings-page.bff-mocks.test.cjs` only.
 
 Component tests are separate and run by `npm test` after the node tests (`npm run test:components`): Vitest + jsdom + Testing Library (`vitest run --coverage` driven by `scripts/test-components-coverage.cjs`, which composes it with the node coverage; thresholds 60% lines/branches/functions/statements and 60% lines per file), `.test.jsx` / `.test.tsx` files in `tests/component/` and co-located under `src/` (see *Component tree convention*), configured by `vitest.config.mjs` with `tests/component/setup.js`.
 

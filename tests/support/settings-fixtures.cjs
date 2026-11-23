@@ -28,7 +28,7 @@ function appearance(overrides = {}) {
 
 /** SettingsGeneral (BFF_Settings). */
 function general(overrides = {}) {
-  return { language: 'fr', timezone: 'Europe/Paris', date_format: 'DD/MM/YYYY', home_page: 'dashboard', auto_open_notifications: false, autosave: true, ...overrides };
+  return { language: 'fr', timezone: 'Europe/Paris', date_format: 'DD/MM/YYYY', home_page: '/dashboard', auto_open_notifications: false, autosave: true, ...overrides };
 }
 
 /** SettingsNotifications (BFF_Settings). */

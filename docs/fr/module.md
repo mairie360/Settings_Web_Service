@@ -105,3 +105,5 @@ DA claire option 1 : tokens et police communs, navigation accessible et contenu 
 - Les onglets sont une barre flottante qui reste en haut au défilement ; chaque panneau a son icône ; la barre « Annuler / Enregistrer » de Profil et de « Langue et région » reste visible.
 
 - Sessions V2.1 (MAIR-1126) : quatre cartes au-dessus des listes (« Connexions actives », autres appareils connectés, « Historique des sessions », localisation de cet appareil : « Non disponible », le BFF ne la fournit pas encore), et un clic sur une session ouvre son détail dans une fenêtre centrée, avec « Déconnecter cette session » pour une autre session active (confirmation au-dessus de la fenêtre).
+
+- Lora (MAIR-1128) : « Police de caractères » propose Police système, Geist, Atkinson Hyperlegible et Lora. Les quatre polices sont nommées par lib-components 2.3.1, un choix s’affiche donc de la même façon dans tous les fronts ; Atkinson Hyperlegible et Lora sont chargées par la page.

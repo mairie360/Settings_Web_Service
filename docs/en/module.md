@@ -102,3 +102,5 @@ Approved light option 1: shared tokens and font, accessible navigation, and pres
 - The tabs are a floating bar that stays at the top while scrolling; every panel has its icon; the « Annuler / Enregistrer » bar of Profil and « Langue et région » stays visible.
 
 - Sessions V2.1 (MAIR-1126): four cards above the lists (« Connexions actives », other connected devices, « Historique des sessions », location of this device: « Non disponible », the BFF has none yet), and a click on a session opens its detail in a centred window, with « Déconnecter cette session » for another active session (confirmed above the window).
+
+- Lora (MAIR-1128): « Police de caractères » offers Police système, Geist, Atkinson Hyperlegible and Lora. The four fonts are named by lib-components 2.3.1, so a choice looks the same in every front; Atkinson Hyperlegible and Lora are loaded by the page.

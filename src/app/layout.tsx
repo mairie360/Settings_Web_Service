@@ -5,7 +5,7 @@ import { InstanceProvider } from '@mairie360/lib-components/react';
 import type { Metadata } from "next";
 import { readFrontUrlsFromEnv } from "@/lib/front-urls";
 import { FrontUrlsProvider } from "@/lib/front-urls-provider";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Atkinson_Hyperlegible, Geist, Geist_Mono, Lora } from "next/font/google";
 import "@mairie360/lib-components/styles.css";
 import "./globals.css";
 
@@ -17,6 +17,21 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// MAIR-912 / MAIR-1128: the fonts of « Apparence » the lib names through these variables (`fontFamilies`).
+const atkinson = Atkinson_Hyperlegible({
+  variable: "--font-atkinson",
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  display: "swap",
+});
+
+const lora = Lora({
+  variable: "--font-lora",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 // Rendu à la demande obligatoire : une page prérendue au build ne porterait pas le
@@ -47,7 +62,7 @@ export default async function RootLayout({
   return (
     <html lang="fr" data-theme={appearance?.theme ?? "system"} data-density={appearance?.density ?? "normal"}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} mairie-ui antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${atkinson.variable} ${lora.variable} mairie-ui antialiased`}
       >
         <InstanceProvider role={role} timeZone={timeZone} appearance={appearance} appearanceCookieDomain={process.env.COOKIE_DOMAIN}><FrontUrlsProvider urls={readFrontUrlsFromEnv()} cookieDomain={process.env.COOKIE_DOMAIN}>{children}</FrontUrlsProvider></InstanceProvider>
       </body>

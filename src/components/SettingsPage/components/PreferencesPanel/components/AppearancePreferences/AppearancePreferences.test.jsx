@@ -32,6 +32,16 @@ describe('AppearancePreferences', () => {
     expect(save).toHaveBeenCalledTimes(3);
   });
 
+  it('MAIR-1128: offers Lora at the end of the list and saves it at once', async () => {
+    const user = userEvent.setup();
+    const save = vi.fn().mockResolvedValue(undefined);
+    render(<AppearancePreferences values={values} disabled={false} save={save} />);
+    const options = [...screen.getByLabelText('Police de caractères').options].map((option) => option.textContent);
+    expect(options).toEqual(['Police système', 'Geist', 'Atkinson Hyperlegible', 'Lora']);
+    await user.selectOptions(screen.getByLabelText('Police de caractères'), 'lora');
+    expect(save).toHaveBeenCalledWith({ font_family: 'lora' }, 'Police de caractères enregistrée');
+  });
+
   it('keeps a refused value out of the page (the confirmed one comes back)', async () => {
     const save = vi.fn().mockRejectedValue(new Error('refused'));
     render(<AppearancePreferences values={{ ...values, font_size: 18 }} disabled={false} save={save} />);

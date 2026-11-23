@@ -13,7 +13,7 @@ export const emptyPreferences: Values = {
 
 /** Closed lists of the V2 mock-up (MAIR-912, MAIR-921). The values are the ones BFF_Settings accepts. */
 export const choices = {
-  font_family: [{ value: 'system', label: 'Police système' }, { value: 'geist', label: 'Geist' }, { value: 'atkinson', label: 'Atkinson Hyperlegible' }],
+  font_family: [{ value: 'system', label: 'Police système' }, { value: 'geist', label: 'Geist' }, { value: 'atkinson', label: 'Atkinson Hyperlegible' }, { value: 'lora', label: 'Lora' }],
   density: [{ value: 'compact', label: 'Compacte' }, { value: 'normal', label: 'Normale' }, { value: 'comfortable', label: 'Confortable' }],
   language: [{ value: 'fr', label: 'Français' }, { value: 'en', label: 'English' }, { value: 'es', label: 'Español' }],
   timezone: [{ value: 'Europe/Paris', label: 'Paris (Europe/Paris)' }, { value: 'Indian/Reunion', label: 'La Réunion (Indian/Reunion)' }, { value: 'America/Cayenne', label: 'Cayenne (America/Cayenne)' }, { value: 'Pacific/Noumea', label: 'Nouméa (Pacific/Noumea)' }],

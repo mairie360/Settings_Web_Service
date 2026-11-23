@@ -1,4 +1,4 @@
-import type { SettingsBootstrap, SettingsProfile, SettingsProfilePatch, SettingsAppearancePatch, SettingsGeneralPatch, SettingsNotificationsPatch, SettingsPasskey, SettingsPasskeyRegister, SettingsTwoFactorDisable, SettingsTwoFactorSetup, SettingsTwoFactorStatus } from '@mairie360/bff-settings-openapi/model';
+import type { SettingsBootstrap, SettingsProfile, SettingsProfilePatch, SettingsAppearancePatch, SettingsGeneralPatch, SettingsNotificationsPatch, SettingsPasskey, SettingsPasskeyRegister, SettingsTwoFactorDisable, SettingsTwoFactorSetup, SettingsTwoFactorStatus, SettingsPasswordChange } from '@mairie360/bff-settings-openapi/model';
 import { bffSettings } from './bff-client';
 
 // Types of the published BFF_Settings contract (@mairie360/bff-settings-openapi, exact version pinned in package.json).
@@ -69,4 +69,19 @@ export async function registerPasskey(body: SettingsPasskeyRegister) {
 
 export async function deletePasskey(id: number) {
   await bffSettings.deleteSettingsPasskeysId(id);
+}
+
+// Settings V2 (MAIR-823): password change and session revocation, through BFF_Settings.
+export async function changePassword(body: SettingsPasswordChange) {
+  await bffSettings.postSettingsPassword(body);
+}
+
+/** Ends one session of the agent; answers the sessions and the history read again. */
+export async function revokeSession(id: string) {
+  return (await bffSettings.deleteSettingsSessionsId(id)).data;
+}
+
+/** Ends every session but the current one; answers the sessions, the history and how many were ended. */
+export async function revokeOtherSessions() {
+  return (await bffSettings.postSettingsSessionsRevokeOthers()).data;
 }

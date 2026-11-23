@@ -7,8 +7,8 @@ export type PreferenceSection = keyof Values;
 
 export const emptyPreferences: Values = {
   appearance: { theme: null, font_family: null, font_size: null, density: null },
-  general: { language: null, timezone: null, date_format: null, home_page: null, auto_open_notifications: null },
-  notifications: { email: null, push: null, desktop: null, messages: null, projects: null, calendar: null },
+  general: { language: null, timezone: null, date_format: null, home_page: null, auto_open_notifications: null, autosave: null },
+  notifications: { email: null, push: null, desktop: null, messages: null, projects: null, calendar: null, system_updates: null, login_alerts: null },
 };
 
 /** Closed lists of the V2 mock-up (MAIR-912, MAIR-921). The values are the ones BFF_Settings accepts. */
@@ -33,7 +33,7 @@ export function validPreferences<K extends PreferenceSection>(section: K, value:
   return Object.keys(emptyPreferences[section]).every(key => {
     if (record[key] === undefined) return !complete;
     if (record[key] === null) return true;
-    if (section === 'notifications' || key === 'auto_open_notifications') return typeof record[key] === 'boolean';
+    if (section === 'notifications' || key === 'auto_open_notifications' || key === 'autosave') return typeof record[key] === 'boolean';
     if (key === 'font_size') return typeof record[key] === 'number' && Number.isInteger(record[key]) && (record[key] as number) >= 1 && (record[key] as number) <= 32767;
     if (key === 'theme') return ['light', 'dark', 'system'].includes(record[key] as string);
     return typeof record[key] === 'string';

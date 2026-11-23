@@ -18,6 +18,7 @@ export const types: ReadonlyArray<{ field: Field; label: string; description: st
   { field: 'messages', label: 'Nouveaux messages', description: 'Quand une conversation reçoit un message.' },
   { field: 'projects', label: 'Tâches assignées', description: 'Quand une tâche vous est confiée.' },
   { field: 'calendar', label: 'Événements du calendrier', description: 'Invitations et rappels de vos événements.' },
+  { field: 'system_updates', label: 'Mises à jour de la plateforme', description: 'Les nouveautés et les maintenances prévues.' },
 ];
 
 // `null` is the account default, on for every notification.

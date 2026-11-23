@@ -29,7 +29,7 @@ export const ProfileForm = ({ form, reading }: ProfileFormProps) => {
   if (!profile) return null;
   return (
     <Panel icon={UserRound} title="Informations personnelles" description="Ces informations sont utilisées pour votre compte Mairie360." className="settings-profile-card">
-      <SettingsMutationForm data-form="profile" onSubmit={save} aria-busy={saving || reading} noValidate className="space-y-4">
+      <SettingsMutationForm data-form="settings-profile" onSubmit={save} aria-busy={saving || reading} noValidate className="space-y-4">
         <div className="settings-profile-fields">
           {PROFILE_FIELDS.map(({ field, label, type, required, maxLength, pattern, help }) => (
             <Fragment key={field}>

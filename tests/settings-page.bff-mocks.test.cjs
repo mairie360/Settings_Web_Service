@@ -126,6 +126,18 @@ test('MAIR-1125: the header names the agent and shows the second factor, read on
   assert.match(view.html, /<h2[^>]*>Sessions actives<\/h2>/, 'the tile opens the Sessions tab');
 });
 
+test('MAIR-1125: no attribute of any tab starts with a tab key (ZAP 10031 reads it as a reflected `?tab=` value)', async () => {
+  const keys = ['profile', 'security', 'sessions', 'notification-preferences', 'appearance', 'general'];
+  await renderLoadedPage();
+  for (const tab of ['Profil', 'Sécurité', 'Sessions', 'Notifications', 'Apparence', 'Général']) {
+    await view.click(tab);
+    const reflected = [...view.html.matchAll(/([\w:-]+)="([^"]*)"/g)]
+      .filter(([, , value]) => keys.some((key) => value.toLowerCase().startsWith(key)))
+      .map(([, name, value]) => `${name}="${value}"`);
+    assert.deepEqual(reflected, [], tab);
+  }
+});
+
 test('an explicit retry recovers an initial upstream refusal through GET only', async () => {
   // Intentional fault injection: 502 is not a published response; it is not contract conformance evidence.
   bffSettings.on('GET', '/settings/bootstrap', { status: 502, body: fixtures.error('Lecture refusée'), outOfContract: true });

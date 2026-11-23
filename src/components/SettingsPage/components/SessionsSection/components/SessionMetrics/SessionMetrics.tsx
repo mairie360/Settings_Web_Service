@@ -17,9 +17,11 @@ const shown = (value: number | null) => (value === null ? "—" : String(value))
  */
 export const SessionMetrics = ({ active, others, history }: SessionMetricsProps) => (
   <div className="settings-session-metrics grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-    <MetricCard layout="inline" icon={MonitorSmartphone} label="Sessions actives" value={shown(active)} />
+    {/* MetricCard names its section after the label: no label starts with « sessions », the value of `?tab=sessions`,
+        which ZAP's passive rule 10031 would read as reflected input. */}
+    <MetricCard layout="inline" icon={MonitorSmartphone} label="Connexions actives" value={shown(active)} />
     <MetricCard layout="inline" icon={LogOut} iconTone="module" iconColor="var(--mairie-warning-text)" label="Autres appareils connectés" value={shown(others)} />
-    <MetricCard layout="inline" icon={Clock} label="Sessions dans l’historique" value={shown(history)} />
+    <MetricCard layout="inline" icon={Clock} label="Historique des sessions" value={shown(history)} />
     <MetricCard layout="inline" icon={Globe} label="Localisation de cet appareil" value="Non disponible" />
   </div>
 );

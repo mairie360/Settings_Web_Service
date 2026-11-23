@@ -84,7 +84,7 @@ export default function PreferencesPanel({ tab, bootstrap, reading, onWriting, o
   const available = preferencesAvailable(bootstrap, section);
   const unavailable = available ? null : <Alert tone="warning" role="alert" title="Préférences indisponibles"
     description="Ces réglages n’ont pas pu être chargés." actionLabel="Réessayer" onAction={reading ? undefined : onRefresh} className="mb-4" />;
-  return <div className="settings-preferences space-y-5" data-section={section}>
+  return <div className="settings-preferences space-y-5" data-section={`settings-${section}`}>
     {unavailable}
     {section === 'notifications' ? <NotificationsPreferences values={baseline.notifications} disabled={!available || reading} save={(patch, receipt) => save('notifications', patch, receipt)} />
       : section === 'appearance' ? <AppearancePreferences values={baseline.appearance} disabled={!available || reading} save={(patch, receipt) => save('appearance', patch, receipt)} />

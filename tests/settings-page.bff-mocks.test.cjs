@@ -122,7 +122,7 @@ test('MAIR-1125: the header names the agent and shows the second factor, read on
   assert.match(view.html, /<h1[^>]*>Anne Marie Le Gall<\/h1>/);
   assert.match(view.text(), /Paramètres du compte/);
   assert.deepEqual(allUpstream(), ['GET /settings/bootstrap', 'GET /settings/2fa'], 'one read of the second factor, after the bootstrap');
-  await view.click((props, text) => props['aria-label'] === 'Sessions actives : 0' || text.includes('Sessions actives'));
+  await view.click((props) => props['aria-label'] === 'Nombre de sessions actives : 0');
   assert.match(view.html, /<h2[^>]*>Sessions actives<\/h2>/, 'the tile opens the Sessions tab');
 });
 

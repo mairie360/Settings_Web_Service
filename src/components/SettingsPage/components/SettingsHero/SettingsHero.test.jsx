@@ -18,7 +18,7 @@ describe('SettingsHero', () => {
     expect(screen.getByText('Paramètres du compte')).toBeTruthy();
     expect(screen.getByText('anne.le-gall@mairie.test')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Double authentification : Activée' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Sessions actives : 2' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Nombre de sessions actives : 2' })).toBeTruthy();
     // Fixture: e-mail, messages, projects and system updates on; push and calendar off.
     expect(screen.getByRole('button', { name: 'Notifications : 4 activées' })).toBeTruthy();
   });
@@ -28,10 +28,20 @@ describe('SettingsHero', () => {
     const onOpen = vi.fn();
     render(<SettingsHero data={data({ sources: { sessions: 'unavailable', notifications: 'unavailable' } })} twoFactorEnabled={null} onOpen={onOpen} />);
     expect(screen.getByRole('button', { name: 'Double authentification : —' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Sessions actives : —' }));
+    await user.click(screen.getByRole('button', { name: 'Nombre de sessions actives : inconnu' }));
     await user.click(screen.getByRole('button', { name: 'Notifications : —' }));
     await user.click(screen.getByRole('button', { name: 'Double authentification : —' }));
     expect(onOpen.mock.calls.map(([tab]) => tab)).toEqual(['sessions', 'notifications', 'security']);
+  });
+
+  it('names no attribute after a tab key, so ZAP 10031 reads no reflected `?tab=` value', () => {
+    const { container } = render(<SettingsHero data={data()} twoFactorEnabled onOpen={vi.fn()} />);
+    const keys = ['profile', 'security', 'sessions', 'notification-preferences', 'appearance', 'general'];
+    for (const element of container.querySelectorAll('*')) {
+      for (const { name, value } of element.attributes) {
+        expect(keys.some((key) => value.toLowerCase().startsWith(key)), `${name}="${value}"`).toBe(false);
+      }
+    }
   });
 
   it('counts `null` notifications as on (the account default)', () => {

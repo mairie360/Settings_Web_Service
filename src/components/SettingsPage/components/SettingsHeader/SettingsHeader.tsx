@@ -1,7 +1,7 @@
 "use client";
 import { PageHeader } from "@mairie360/lib-components/primitives";
 
-/** The page title row (Figma Base/PageHeader WithDate). */
+/** The page title row with today's date (Figma Base/PageHeader WithDate, MAIR-851). */
 export const SettingsHeader = () => (
-  <PageHeader title="Paramètres" subtitle="Gérez votre profil, votre sécurité et vos préférences." showDate className="page-title-row" />
+  <PageHeader title="Paramètres" showDate className="page-title-row" />
 );

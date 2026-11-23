@@ -6,21 +6,12 @@ export type SettingsPreferences = {
   homePage: 'dashboard' | 'projects' | 'calendar' | 'messages'; autoOpenNotifications: boolean;
 };
 export type ExtendedProfile = { service: string; position: string; biography: string };
-export interface InstanceUpdates {
-  currentVersion: string;
-  policy: 'automatic' | 'pinned';
-  pinnedVersion?: string;
-  maintenanceWindow: string;
-  releases: { version: string; notes: string; supported: boolean }[];
-}
 export interface SettingsFeaturePort {
   savePreferences?: (patch: Partial<SettingsPreferences>) => Promise<SettingsPreferences>;
   saveExtendedProfile?: (patch: Partial<ExtendedProfile>) => Promise<ExtendedProfile>;
   savePhoto?: (photo: File) => Promise<string>;
   changePassword?: (current: string, next: string) => Promise<void>;
   revokeSession?: (id: string) => Promise<void>;
-  loadUpdates?: (signal: AbortSignal) => Promise<InstanceUpdates>;
-  saveUpdates?: (choice: { policy: 'automatic' | 'pinned'; version?: string }) => Promise<InstanceUpdates>;
 }
 
 export const pendingSettingsPort: SettingsFeaturePort = {};

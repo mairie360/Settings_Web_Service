@@ -34,7 +34,7 @@ criteria:
   - "3.1"
   - "3.2"
   - "3.3"
-  # The sessions of the Sécurité tab are a simple data table (lib-components SessionList).
+  # The sessions of the Sessions tab are a simple data table (lib-components SessionList).
   # 5.1-5.3, 5.8: no complex or layout table.
   - "5.4"
   - "5.5"
@@ -43,7 +43,7 @@ criteria:
   # Links: the navigation of the shell (lib-components AppShell).
   - "6.1"
   - "6.2"
-  # Scripts: tabs, the assistance and session revoke dialogs (focus kept inside), status messages.
+  # Scripts: tabs, the session revoke dialog (focus kept inside), status messages and toasts.
   - "7.1"
   - "7.3"
   - "7.5"
@@ -71,7 +71,7 @@ criteria:
   - "10.10"
   - "10.11"
   - "10.12"
-  # Profile form and assistance message.
+  # Profile form.
   - "11.1"
   - "11.2"
   - "11.3"
@@ -122,11 +122,18 @@ states:
       - click: { role: button, name: Enregistrer le profil }
       - wait_for: { text: Votre profil a été enregistré. }
   - id: security
-    description: Password, second factor and the list of open sessions
+    description: Password form of the security tab
     as: agent
     route: /
     steps:
       - click: { role: tab, name: Sécurité }
+      - wait_for: { label: Mot de passe actuel }
+  - id: sessions
+    description: The list of open sessions (MAIR-851, own tab)
+    as: agent
+    route: /
+    steps:
+      - click: { role: tab, name: Sessions }
       - wait_for: { role: heading, name: Sessions }
       - wait_for: { role: table }
   # MAIR-767: Core_API serves ISO 8601 session dates, so the lib SessionList shows the seeded
@@ -134,7 +141,7 @@ states:
   - id: session-revoke-dialog
     description: Confirmation dialog before revoking another open session
     as: agent
-    route: /?tab=security
+    route: /?tab=sessions
     steps:
       - click: { role: button, name: Déconnecter la session Firefox 140 sur Windows }
       - wait_for: { role: dialog }
@@ -153,30 +160,3 @@ states:
     route: /?tab=general
     steps:
       - wait_for: { role: heading, name: Préférences générales }
-  - id: system
-    as: agent
-    route: /
-    steps:
-      - click: { role: tab, name: Système }
-      - wait_for: { role: heading, name: Système et assistance }
-  - id: system-admin
-    description: An Admin also sees the instance updates
-    as: admin
-    route: /?tab=system-assistance
-    steps:
-      - wait_for: { role: heading, name: Mises à jour de l’instance }
-  - id: help-dialog
-    as: agent
-    route: /?tab=system-assistance
-    steps:
-      - click: { role: button, name: Centre d’aide }
-      - wait_for: { role: dialog }
-  - id: support-dialog-error
-    description: Support request submitted empty (error message in the dialog)
-    as: agent
-    route: /?tab=system-assistance
-    steps:
-      - click: { role: button, name: Préparer une demande de support }
-      - wait_for: { label: Votre message }
-      - click: { role: button, name: Télécharger la demande }
-      - wait_for: { text: Décrivez votre demande }

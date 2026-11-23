@@ -47,6 +47,8 @@ afterEach(() => {
   assert.deepEqual([...front.violations, ...bffSettings.violations], []);
 });
 
+// The lib ToastProvider keeps two empty live regions (status and alert) mounted: page alerts are read without them.
+const pageHtml = (html) => html.replace(/<div data-m360-component="ToastProvider"[^>]*><\/div>/g, '');
 const upstream = () => bffSettings.requests.map((request) => `${request.method} ${request.template}`);
 const profileInputs = () => [...view.html.matchAll(/<input\b[^>]*>/g)].map(([html]) => html).filter(html => /name="(?:first_name|last_name|email|phone)"/.test(html));
 
@@ -68,7 +70,7 @@ for (const [label, reply] of [
     bffSettings.on('PATCH', '/settings/profile', { ...reply, outOfContract: true });
     await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
     assert.doesNotMatch(view.text(), /Votre profil a été enregistré/);
-    assert.match(view.html, /role="alert"/);
+    assert.match(pageHtml(view.html), /role="alert"/);
     assert.match(view.html, /value="Submitted draft"/);
     assert.match(view.html, /value="Le Gall"/);
     assert.match(view.html, /value="anne\.le-gall@mairie\.test"/);
@@ -95,7 +97,7 @@ for (const [label, phone] of [['absent', undefined], ['null', null], ['string', 
     await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
     assert.match(view.text(), /Votre profil a été enregistré/);
     assert.match(view.html, /value="OFFICIAL"/);
-    assert.doesNotMatch(view.html, /role="alert"/);
+    assert.doesNotMatch(pageHtml(view.html), /role="alert"/);
   });
 }
 
@@ -103,8 +105,8 @@ test('an explicit retry recovers an initial upstream refusal through GET only', 
   // Intentional fault injection: 502 is not a published response; it is not contract conformance evidence.
   bffSettings.on('GET', '/settings/bootstrap', { status: 502, body: fixtures.error('Lecture refusée'), outOfContract: true });
   view = mount(React.createElement(Home));
-  await view.waitFor(html => html.includes('Le profil est indisponible.'));
-  assert.match(view.html, /Lecture refusée/);
+  await view.waitFor(html => html.includes('Profil temporairement indisponible'));
+  assert.doesNotMatch(view.html, /Lecture refusée/, 'the upstream reason never reaches the page');
   assert.doesNotMatch(view.html, /role="tablist"/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
   bffSettings.on('GET', '/settings/bootstrap', { body: fixtures.bootstrap() });
@@ -145,8 +147,9 @@ for (const [name, body] of malformedBootstraps) {
       bffSettings.on('GET', '/settings/bootstrap', { body, outOfContract: true });
       if (mode === 'initial') view = mount(React.createElement(Home));
       else await view.click('Actualiser les paramètres');
-      await view.waitFor(html => html.includes(message));
-      assert.match(view.html, /role="alert"/);
+      // MAIR-851: before any confirmed profile the page shows « Profil temporairement indisponible », never the reason.
+      await view.waitFor(html => html.includes(mode === 'initial' ? 'Profil temporairement indisponible' : message));
+      assert.match(pageHtml(view.html), /role="alert"/);
       assert.doesNotMatch(view.text(), /Cannot read|TypeError|Votre profil a été enregistré/);
       assert.equal(bffSettings.requests.length, mode === 'initial' ? 1 : 2, 'no automatic retry');
       assert.equal(bffSettings.requests.filter(request => request.method !== 'GET').length, 0);
@@ -157,7 +160,7 @@ for (const [name, body] of malformedBootstraps) {
         assert.match(view.html, /value="anne\.le-gall@mairie\.test"/);
         assert.match(view.html, /value="\+33999999999"/);
         assert.doesNotMatch(view.text(), /Unverified/);
-        await view.click('Sécurité');
+        await view.click('Sessions');
         assert.match(view.text(), /Les sessions sont temporairement indisponibles/);
         assert.doesNotMatch(view.text(), /Aucune session à afficher/);
         await view.click('Profil');
@@ -186,7 +189,7 @@ for (const phone of [undefined, null, '+33123456789']) {
     const session = fixtures.session('s-1', { created_at: 'not-a-date', expires_at: '2026-02-30T08:00:00Z', revoked_at: undefined });
     delete session.revoked_at;
     await renderLoadedPage(fixtures.bootstrap({ profile, sessions: [session] }));
-    await view.click('Sécurité');
+    await view.click('Sessions');
     assert.match(view.text(), /Date indisponible/);
     assert.doesNotMatch(view.text(), /paramètres reçus sont incohérents/);
     assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
@@ -204,7 +207,7 @@ test('refreshing unavailable sessions keeps dirty fields and updates clean field
   assert.match(view.html, /value="Draft"/);
   assert.match(view.html, /value="Received surname"/);
   assert.doesNotMatch(view.html, /Votre profil a été enregistré/);
-  await view.click('Sécurité');
+  await view.click('Sessions');
   assert.doesNotMatch(view.text(), /Les sessions sont temporairement indisponibles/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap']);
   assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role'), [
@@ -262,7 +265,8 @@ test('the first pass renders the loading state, the next one the profile form fi
 
   assert.equal(view.passes, 1);
   assert.match(view.html, /<h1[^>]*>Paramètres<\/h1>/);
-  assert.match(view.html, /<p>Chargement des paramètres…<\/p>/);
+  // MAIR-851 (O1): the lib Panel in its loading state, titled « Chargement des paramètres… ».
+  assert.match(view.html, /data-m360-component="Panel"[^>]*data-state="loading"[^]*Chargement des paramètres…<\/h2>/);
   assert.doesNotMatch(view.html, /<form/);
 
   const html = await view.waitFor((current) => !current.includes('Chargement des paramètres'));
@@ -271,7 +275,7 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role'), [{ method: 'GET', path: '/settings/bootstrap' }]);
   assert.equal(view.find('AppShell').length, 1);
   assert.doesNotMatch(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
-  assert.match(html, /<\/main>\s*<footer\b/);
+  assert.match(html, /<\/main>(?:<\/div>)*<div class="app-shell-footer[^"]*"><footer\b/);
   assert.equal(view.props('AppShell').activeItem, 'settings');
   assert.deepEqual(view.props('AppShell').user, {
     first_name: 'Anne Marie',
@@ -291,7 +295,7 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.match(html, /<input[^>]*type="tel"[^>]*value="\+33123456789"/);
   assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>(?:<svg[^]*?<\/svg>)?Enregistrer le profil<\/button>/);
   assert.match(html, /Aucune modification à enregistrer\./);
-  assert.doesNotMatch(html, /role="alert"/);
+  assert.doesNotMatch(pageHtml(html), /role="alert"/);
 });
 
 test('unconfirmed account-menu logout retains the draft until explicit canonical Login return', async () => {
@@ -314,12 +318,12 @@ test('unconfirmed account-menu logout retains the draft until explicit canonical
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
 });
 
-test('the security tab lists the sessions of the bootstrap, or their unavailability', async () => {
+test('MAIR-851: the sessions tab lists the sessions of the bootstrap, or their unavailability', async () => {
   await renderLoadedPage(fixtures.bootstrap({ sessions: [fixtures.session('s-1'), fixtures.session('s-2', { device_info: 'Chrome sur Android', ip_address: '198.51.100.7' })] }));
 
-  await view.click('Sécurité');
+  await view.click('Sessions');
 
-  assert.match(view.html, /<button id="settings-tab-security" role="tab" type="button" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg[^>]*aria-hidden="true"[^]*?Sécurité<\/button>/);
+  assert.match(view.html, /<button id="settings-tab-sessions" role="tab" type="button" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg[^>]*aria-hidden="true"[^]*?Sessions<\/button>/);
   assert.match(view.html, /<h2[^>]*>Sessions<\/h2>/);
   const createdAt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })
     .format(new Date('2026-09-15T08:00:00Z'));
@@ -329,12 +333,12 @@ test('the security tab lists the sessions of the bootstrap, or their unavailabil
   assert.match(view.html, /<time dateTime="2026-09-15T08:00:00Z">/);
   assert.doesNotMatch(view.text(), /2026-09-15T08:00:00Z/);
   assert.match(view.text(), /Chrome sur Android/); assert.match(view.text(), /198\.51\.100\.7/);
-  assert.match(view.text(), /Mot de passe actuel/);
+  assert.doesNotMatch(view.text(), /Mot de passe actuel/, 'the sessions left the security tab');
   assert.deepEqual(upstream(), ['GET /settings/bootstrap'], 'changing tab does not call the BFF');
 
   view.unmount();
   await renderLoadedPage(fixtures.bootstrap({ sessions: [], sources: { sessions: 'unavailable' } }));
-  await view.click('Sécurité');
+  await view.click('Sessions');
   assert.match(view.text(), /Les sessions sont temporairement indisponibles\./);
 
   await view.click('Notifications');
@@ -354,7 +358,7 @@ test('arrow, Home and End keys select and focus Settings tabs without a BFF call
   await renderLoadedPage();
   const focused = [];
   // MAIR-608: the lib Tabs focus the next tab by id (settings-tab-<key>); the runner has no DOM, so the ids resolve here.
-  const ids = ['profile', 'security', 'notifications', 'appearance', 'general', 'system'];
+  const ids = ['profile', 'security', 'sessions', 'notifications', 'appearance', 'general'];
   const previousGetElementById = global.document?.getElementById;
   global.document.getElementById = (id) => { const index = ids.indexOf(String(id).replace('settings-tab-', '')); return index === -1 ? null : { focus() { focused.push(index); } }; };
   try {
@@ -368,102 +372,15 @@ test('arrow, Home and End keys select and focus Settings tabs without a BFF call
   assert.match(view.html, /id="settings-panel-security"/);
   assert.deepEqual(focused, [1]);
   await key('Sécurité', 'End');
-  assert.match(view.html, /id="settings-panel-system"/);
+  assert.match(view.html, /id="settings-panel-general"/);
   assert.deepEqual(focused, [1, 5]);
-  await key('Système', 'ArrowRight');
+  await key('Général', 'ArrowRight');
   assert.match(view.html, /id="settings-panel-profile"/);
   assert.deepEqual(focused, [1, 5, 0]);
   await key('Profil', 'Home');
   assert.deepEqual(focused, [1, 5, 0, 0]);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
   } finally { global.document.getElementById = previousGetElementById; }
-});
-
-test('system assistance is local and does not fetch unsupported settings', async () => {
-  await renderLoadedPage();
-  await view.click('Système');
-  assert.match(view.text(), /Système et assistance/);
-  assert.match(view.text(), /Centre d’aide/);
-  assert.match(view.text(), /Aucune donnée n’est transmise/);
-  assert.doesNotMatch(view.html, /Vider le cache|v2\.1\.0|10 septembre 2026|50 MB/);
-  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
-});
-
-test('reference help opens a named dialog and closes without another settings read', async () => {
-  await renderLoadedPage(); await view.click('Système'); await view.click('Centre d’aide');
-  assert.match(view.html, /<dialog[^>]*aria-labelledby="settings-assistance-title"/);
-  assert.match(view.html, /id="settings-assistance-title"[^>]*>Centre d’aide/);
-  assert.match(view.text(), /Cette page ne permet pas encore de les révoquer/);
-  await view.click('Fermer');
-  assert.doesNotMatch(view.html, /Cette page ne permet pas encore de les révoquer/);
-  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
-});
-
-test('dismissing and reopening a reference request clears its draft, not the profile', async () => {
-  await renderLoadedPage(); await view.click('Système'); await view.click('Signaler un problème');
-  await view.fire((props) => props.id === 'settings-assistance-message', 'onChange', { target: { value: 'Discarded request' } });
-  await view.click('Fermer'); await view.click('Signaler un problème');
-  assert.doesNotMatch(view.html, /Discarded request/);
-  await view.click('Fermer'); await view.click('Profil');
-  assert.match(view.html, /Anne Marie/);
-  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
-});
-
-for (const [action, name] of [['Préparer une demande de support', 'demande-support-settings.txt'], ['Signaler un problème', 'signalement-settings.txt']]) {
-  test(`local assistance exports ${name} without calling the BFF`, async (t) => {
-    const exports = [];
-    t.mock.method(requireSrc('lib/local-assistance.ts'), 'downloadLocalFile', (file) => exports.push(file));
-    await renderLoadedPage(); await view.click('Système'); await view.click(action);
-    await view.fire((props) => props.id === 'settings-assistance-message', 'onChange', { target: { value: 'Une question <b>texte</b>' } });
-    await view.fire((props, text, tag) => tag === 'form' && props['aria-labelledby'] === 'settings-assistance-title', 'onSubmit');
-    assert.equal(exports.length, 1); assert.equal(exports[0].name, name);
-    assert.match(exports[0].content, /Une question <b>texte<\/b>/);
-    assert.doesNotMatch(exports[0].content, /anne\.le-gall|192\.0\.2|Anne Marie/);
-    assert.match(view.text(), /Aucun message n’a été envoyé/);
-    assert.doesNotMatch(view.html, /id="settings-assistance-message"/);
-    assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
-  });
-}
-
-test('a failed local export retains its draft, hides raw errors and allows retry', async (t) => {
-  let fail = true;
-  t.mock.method(requireSrc('lib/local-assistance.ts'), 'downloadLocalFile', () => { if (fail) throw new Error('private detail'); });
-  await renderLoadedPage(); await view.click('Système'); await view.click('Signaler un problème');
-  await view.fire((props) => props.id === 'settings-assistance-message', 'onChange', { target: { value: 'Mon brouillon' } });
-  await view.fire((props, text, tag) => tag === 'form' && props['aria-labelledby'] === 'settings-assistance-title', 'onSubmit');
-  assert.match(view.text(), /Votre message est conservé/); assert.match(view.html, /Mon brouillon/);
-  assert.doesNotMatch(view.text(), /private detail|Téléchargement de la demande lancé/);
-  fail = false;
-  await view.fire((props, text, tag) => tag === 'form' && props['aria-labelledby'] === 'settings-assistance-title', 'onSubmit');
-  assert.match(view.text(), /Téléchargement de la demande lancé/); assert.doesNotMatch(view.html, /role="alert"/);
-  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
-});
-
-test('local assistance rejects blank and oversized text before requesting a download', async (t) => {
-  const download = t.mock.method(requireSrc('lib/local-assistance.ts'), 'downloadLocalFile', () => {});
-  await renderLoadedPage(); await view.click('Système'); await view.click('Signaler un problème');
-  for (const value of [' \n ', 'a'.repeat(5001)]) {
-    await view.fire((props) => props.id === 'settings-assistance-message', 'onChange', { target: { value } });
-    await view.fire((props, text, tag) => tag === 'form' && props['aria-labelledby'] === 'settings-assistance-title', 'onSubmit');
-    assert.match(view.text(), /1 à 5 000 caractères/);
-  }
-  assert.equal(download.mock.callCount(), 0);
-});
-
-test('diagnostic exports use only allowlisted device information and report download errors', async (t) => {
-  const exports = [];
-  let fail = false;
-  t.mock.method(requireSrc('lib/local-assistance.ts'), 'downloadLocalFile', (file) => { if (fail) throw new Error('private detail'); exports.push(file); });
-  await renderLoadedPage(); await view.click('Système');
-  await view.click('Télécharger le diagnostic local');
-  const report = JSON.parse(exports[0].content);
-  assert.deepEqual(Object.keys(report).sort(), ['browser', 'capabilities', 'generatedAt', 'module', 'operatingSystem']);
-  assert.doesNotMatch(exports[0].content, /anne\.le-gall|192\.0\.2|Anne Marie/);
-  assert.match(view.text(), /Aucun fichier n’a été envoyé/);
-  fail = true; await view.click('Télécharger le diagnostic local');
-  assert.match(view.text(), /diagnostic local n’a pas pu être préparé/);
-  assert.doesNotMatch(view.text(), /private detail|Téléchargement du diagnostic local lancé/);
-  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
 });
 
 for (const refused of [false, true]) {
@@ -520,7 +437,6 @@ for (const refused of [false, true]) {
     assert.match(view.text(), /Votre profil a été enregistré/);
     await view.fire((props) => props.type === 'text' && props.value === 'ANNE', 'onChange', { target: { value: 'Another draft' } });
     assert.match(view.html, /value="Another draft"/);
-    assert.doesNotMatch(view.text(), /Votre profil a été enregistré/);
     assert.equal(view.hostElements((props) => props.type === 'submit')[0].props.disabled, false);
   });
 }
@@ -559,7 +475,7 @@ test('a refused save keeps the form and shows the BFF message', async () => {
   // the refusal comes from the BFF's own validation, not from the mock's contract check.
   await view.fire((props) => props.type === 'tel', 'onChange', { target: { value: '12' } });
   await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
-  const html = await view.waitFor((current) => current.includes('role="alert"'));
+  const html = await view.waitFor((current) => pageHtml(current).includes('role="alert"'));
 
   assert.match(html, /<div role="alert"[^>]*><p>Numéro de téléphone invalide<\/p><\/div>/);
   assert.match(html, /value="Anne Marie"/);
@@ -581,10 +497,12 @@ test('a bootstrap failure renders an alert instead of the form', async () => {
   bffSettings.on('GET', '/settings/bootstrap', { status: 502, body: fixtures.error('Core API indisponible'), outOfContract: true });
   view = mount(React.createElement(Home));
 
-  const html = await view.waitFor((current) => current.includes('role="alert"'));
+  const html = await view.waitFor((current) => pageHtml(current).includes('role="alert"'));
 
-  assert.match(html, /<p role="alert"[^>]*>Core API indisponible<\/p>/);
-  assert.match(html, /<p>Le profil est indisponible\.<\/p>/);
+  // MAIR-851 (O1): a warning with « Réessayer », the upstream reason stays out of the page.
+  assert.match(html, /Profil temporairement indisponible/);
+  assert.doesNotMatch(html, /Core API indisponible/);
+  assert.match(view.text(), /Réessayer/);
   assert.doesNotMatch(html, /<form/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
 });
@@ -659,7 +577,7 @@ test('an e-mail change without the current password is refused locally, then sen
   assert.match(passwordInputs()[0], /required=""/);
 
   await view.fire((props) => props.type === 'password', 'onChange', { target: { value: 'current-secret' } });
-  assert.doesNotMatch(view.html, /role="alert"/);
+  assert.doesNotMatch(pageHtml(view.html), /role="alert"/);
   const saved = fixtures.profile({ email: 'anne.nouvelle@mairie.test' });
   bffSettings.on('PATCH', '/settings/profile', { body: saved });
   await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
@@ -723,7 +641,7 @@ for (const [label, reply, expected] of [
     await view.fire((props) => props.type === 'password', 'onChange', { target: { value: 'current-secret' } });
     bffSettings.on('PATCH', '/settings/profile', { ...reply, outOfContract: true });
     await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
-    const html = await view.waitFor((current) => current.includes('role="alert"'));
+    const html = await view.waitFor((current) => pageHtml(current).includes('role="alert"'));
 
     assert.match(html, new RegExp(`<div role="alert"[^>]*><p>${expected.message.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</p>`));
     const items = [...html.matchAll(/<li>([^<]*)<\/li>/g)].map(([, text]) => text);
@@ -741,7 +659,7 @@ test('a 403 on a save without password keeps the BFF message', async () => {
   await view.fire((props) => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Anne' } });
   bffSettings.on('PATCH', '/settings/profile', { status: 403, body: fixtures.error('Accès refusé', 403), outOfContract: true });
   await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
-  const html = await view.waitFor((current) => current.includes('role="alert"'));
+  const html = await view.waitFor((current) => pageHtml(current).includes('role="alert"'));
   assert.match(html, /<div role="alert"[^>]*><p>Accès refusé<\/p><\/div>/);
 });
 

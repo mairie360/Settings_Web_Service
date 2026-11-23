@@ -59,17 +59,7 @@ Les sources et limites suivantes concernent le BFF associé, dont dépend la sau
 
 Le profil vient de Core `/api/v1/user/me/`; les sessions viennent de `/api/v1/sessions/`. Les champs sont `first_name`, `last_name`, `email` et `phone` (`phone_country` est lu mais non modifié ; un changement d’e-mail envoie aussi `current_password`). Le schéma des sessions ne conserve que les informations affichables et retire les champs internes. Aucune préférence n’est stockée localement par le BFF.
 
-Notifications, apparence et général restent indisponibles. Système propose uniquement une assistance locale. La sécurité affiche les sessions, sans gérer les autres réglages. Les routes de préférences ont actuellement des schémas de requête/réponse vides et le bootstrap ne fournit aucune préférence : leur présence ne constitue pas à elle seule un contrat utilisable.
-
-### Assistance locale (MAIR-304)
-
-`src/components/settings-assistance.tsx` déclenche les exports dans les gestionnaires d’interaction, sans effet, boucle de timers, appel réseau ou persistance. `src/lib/local-assistance.ts` valide le texte saisi (non vide, au plus 5 000 caractères), construit les fichiers texte/JSON et demande un téléchargement Blob. Le lien temporairement ajouté est supprimé immédiatement ; son URL d’objet est révoquée après une seconde en cas de succès ou immédiatement en cas d’échec. L’interface confirme la demande de téléchargement, pas la sauvegarde du fichier ni l’envoi d’un message de support. Les erreurs brutes ne sont jamais affichées ni exportées.
-
-Seules les familles du navigateur et du système sont déduites de `navigator.userAgent` au clic sur le diagnostic. MAIR-471 affiche également ces familles dans `settings-browser-information.tsx` : `useSyncExternalStore` utilise des snapshots string stables, sans abonnement événementiel, et un placeholder serveur déterministe. Aucun accès navigateur pendant SSR ou le premier rendu d’hydratation ; famille inconnue non identifiée, getter inaccessible affiché indisponible sans erreur brute. Ni chaîne user-agent ni version navigateur affichée, stockée ou exportée. Les seuls champs JSON restent `module`, `generatedAt`, `browser`, `operatingSystem`, `capabilities.objectUrls`. Aucun DTO métier n’est transmis au composant, aucun stockage n’est lu/effacé et aucune version/date de déploiement ni quota n’est inventé. Aucune nouvelle variable, dépendance, route, permission ou opération BFF.
-
-Les tests Node couvrent validation/contenu/confidentialité des exports et nettoyage du téléchargement ; les tests de composants exercent la vraie page, le clavier, axe, les erreurs/reprises et l’absence de nouvel appel bootstrap. Le harness de contrat vérifie également que Système n’ajoute aucune opération amont.
-
-L’état React gère l’affichage et les opérations en cours. Ce dépôt ne définit pas de base métier propre; les garanties de sauvegarde sont celles du BFF et de ses sources décrites ci-dessus.
+Notifications, apparence et général restent indisponibles. L’onglet Système a été retiré (MAIR-851) ; les sessions ont leur propre onglet Sessions. Les routes de préférences ont actuellement des schémas de requête/réponse vides et le bootstrap ne fournit aucune préférence : leur présence ne constitue pas à elle seule un contrat utilisable.
 
 ## Installation et lancement local
 
@@ -108,7 +98,6 @@ Les valeurs ci-dessous sont des exemples locaux ou des comportements expliciteme
 | --- | --- | --- |
 | `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL` | http://localhost:4008 | Priorité de gauche à droite dans le proxy ; configurer explicitement une URL HTTP(S). Une configuration absente ou invalide renvoie un 503 non mis en cache, sans appel réseau. |
 | `LOGIN_FRONT_URL` | — | Origine Login validée à l’exécution pour ouvrir `/logout`. |
-| `KEYCLOAK_REALM_URL` | https://auth.mairie360.fr/realms/mairie360 | URL publique du realm (MAIR-357), lue côté serveur par `src/lib/keycloak-account.ts`. L’onglet Sécurité renvoie vers `<realm>/account` pour gérer le second facteur ; absente ou invalide, le lien est masqué : HTTPS uniquement (HTTP pour un hôte local en développement), chemin `…/realms/<realm>`, sans identifiants, requête ni fragment. |
 
 La navigation commune lit `DASHBOARD_FRONT_URL`, `PROJECT_FRONT_URL`,
 `MESSAGE_FRONT_URL`, `ELEARNING_FRONT_URL`, `CALENDAR_FRONT_URL` et

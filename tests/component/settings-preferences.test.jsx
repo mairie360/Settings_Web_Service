@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import Home from '@/components/SettingsPage';
 import * as api from '@/lib/settings-api';
 import fixtures from '../support/settings-fixtures.cjs';
+import { findPageAlert } from './page-alerts';
 
 vi.mock('@/lib/settings-api', () => ({ loadSettings: vi.fn(), saveProfile: vi.fn(), saveAppearance: vi.fn(), saveGeneral: vi.fn(), saveNotifications: vi.fn() }));
 const deferred = () => { let resolve; let reject; const promise = new Promise((ok, fail) => { resolve = ok; reject = fail; }); return { promise, resolve, reject }; };
@@ -58,7 +59,7 @@ it('retains dirty edits across a foreground read and refuses malformed save snap
   await refresh(fixtures.bootstrap({ appearance: fixtures.appearance({ font_family: 'Arial', theme: 'light' }) }));
   expect(screen.getByLabelText('Thème').value).toBe('dark'); expect(screen.getByLabelText('Police de caractères').value).toBe('Arial');
   api.saveAppearance.mockResolvedValueOnce({ theme: 'light', font_family: 'Arial', font_size: 16, density: {} }); save();
-  expect((await screen.findByRole('alert')).textContent).toContain('n’a pas été confirmé');
+  expect((await findPageAlert()).textContent).toContain('n’a pas été confirmé');
   expect(screen.getByLabelText('Thème').value).toBe('dark'); expect(screen.queryByText('Préférences enregistrées.')).toBeNull();
   api.saveAppearance.mockRejectedValueOnce(new Error('Validation refusée')); save();
   await screen.findByText('Validation refusée'); expect(screen.getByLabelText('Thème').value).toBe('dark');

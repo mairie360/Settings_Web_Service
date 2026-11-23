@@ -1,7 +1,21 @@
 "use client";
-import { Skeleton } from "@mairie360/lib-components/primitives";
+import { Alert, Panel } from "@mairie360/lib-components/primitives";
 
-/** Before any confirmed profile: status line and a skeleton card (Figma 07 « Chargement », 08 « Profil indisponible »). */
-export const SettingsLoading = ({ reading, failed }: { reading: boolean; failed: boolean }) => (
-  <div aria-busy={reading}><p>{!reading && failed ? "Le profil est indisponible." : "Chargement des paramètres…"}</p>{reading ? <Skeleton.Card className="mt-4" /> : null}</div>
+export interface SettingsLoadingProps {
+  reading: boolean;
+  failed: boolean;
+  /** Explicit recovery read (« Réessayer »). */
+  onRetry: () => void;
+}
+
+/**
+ * Before any confirmed profile (MAIR-851, Figma « Chargement » and « Profil indisponible »):
+ * the loading panel while the first read runs, then a warning with « Réessayer » when it failed.
+ */
+export const SettingsLoading = ({ reading, failed, onRetry }: SettingsLoadingProps) => (
+  !reading && failed
+    ? <Alert tone="warning" role="alert" title="Profil temporairement indisponible"
+      description="Vos paramètres n’ont pas pu être chargés. Vérifiez votre connexion puis réessayez."
+      actionLabel="Réessayer" onAction={onRetry} className="settings-unavailable" />
+    : <Panel title="Chargement des paramètres…" state="loading" className="settings-loading" />
 );

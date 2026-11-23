@@ -17,6 +17,8 @@ import { SettingsHeader } from './components/SettingsHeader';
 import { SettingsLoading } from './components/SettingsLoading';
 import { SettingsNotices } from './components/SettingsNotices';
 import { StatusToast } from './components/StatusToast';
+import { TwoFactorSection } from './components/TwoFactorSection';
+import { PasskeysSection } from './components/PasskeysSection';
 import { useProfileForm } from './use-profile-form';
 import { useSettingsData } from './use-settings-data';
 
@@ -32,6 +34,8 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
   const activeTab = tabFromUrl(pageUrl.state.tab);
   const setActiveTab = (tab: typeof activeTab) => pageUrl.update({ tab: tabToUrl(tab) });
   const [logoutError, setLogoutError] = useState("");
+  // Receipts of the security sections (MAIR-807, MAIR-811), shown as toasts like the profile ones.
+  const [notice, setNotice] = useState<{ message: string; tone: "success" | "error" } | null>(null);
   const logoutPending = useRef(false);
   const requestLogout = async () => {
     if (logoutPending.current) return;
@@ -56,6 +60,7 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
           <SettingsNotices readError={data ? readError : ""} logoutError={logoutError} recoverable={Boolean(data) && recoverable} hasData={Boolean(data)} reading={reading} saving={form.saving} onReload={reload} />
           <StatusToast message={form.status} title="Profil enregistré" onShown={form.clearStatus} />
           <StatusToast message={form.failure?.message ?? ""} title={form.failure?.title} tone="error" onShown={form.clearFailure} dismiss={form.saving} />
+          <StatusToast message={notice?.message ?? ""} tone={notice?.tone} onShown={() => setNotice(null)} />
           <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{readAnnouncement}</p>
           {!data || !profile ? (
             <SettingsLoading reading={reading} failed={Boolean(readError)} onRetry={reload} />
@@ -66,6 +71,10 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
                 <SettingsPendingFeatures tab={activeTab}
                   preferencesContent={<PreferencesPanel key={accountScope} tab={activeTab} bootstrap={data} reading={reading || form.saving} onWriting={setPreferencesWriting} onRefresh={() => void readSettings()} />}
                   profileContent={<ProfileForm form={form} reading={reading} />}
+                  securityContent={<>
+                    <TwoFactorSection onNotify={(message) => setNotice({ message, tone: "success" })} />
+                    <PasskeysSection onNotify={(message) => setNotice({ message, tone: "success" })} onFailure={(message) => setNotice({ message, tone: "error" })} />
+                  </>}
                   sessionsContent={<SessionsSection data={data} onRevoked={(id, revokedAt) => setData((current) => current ? { ...current, sessions: current.sessions.map((session) => session.id === id ? { ...session, revoked_at: revokedAt } : session) } : current)} />} />
               </div>
             </>

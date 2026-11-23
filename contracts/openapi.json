@@ -207,6 +207,20 @@
           "null"
         ]
       },
+      "SettingsBackupCodes": {
+        "properties": {
+          "backup_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "backup_codes"
+        ],
+        "type": "object"
+      },
       "SettingsBootstrap": {
         "properties": {
           "appearance": {
@@ -518,6 +532,78 @@
         "required": [],
         "type": "object"
       },
+      "SettingsPasskey": {
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "number"
+          },
+          "label": {
+            "type": "string"
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "provider",
+          "created_at",
+          "last_used_at"
+        ],
+        "type": "object"
+      },
+      "SettingsPasskeyRegister": {
+        "properties": {
+          "credential": {
+            "$ref": "#/components/schemas/SettingsPasskeyRegisterCredential"
+          },
+          "label": {
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[^<>]*$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "credential"
+        ],
+        "type": "object"
+      },
+      "SettingsPasskeyRegisterCredential": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "SettingsPasskeyRegisterOptions": {
+        "properties": {
+          "options": {
+            "$ref": "#/components/schemas/SettingsPasskeyRegisterOptionsOptions"
+          }
+        },
+        "required": [
+          "options"
+        ],
+        "type": "object"
+      },
+      "SettingsPasskeyRegisterOptionsOptions": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
       "SettingsProfile": {
         "properties": {
           "email": {
@@ -528,6 +614,12 @@
           },
           "last_name": {
             "type": "string"
+          },
+          "pending_email": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "phone": {
             "type": [
@@ -590,13 +682,75 @@
         },
         "required": [],
         "type": "object"
+      },
+      "SettingsTwoFactorCode": {
+        "properties": {
+          "code": {
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
+      "SettingsTwoFactorDisable": {
+        "properties": {
+          "code": {
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "code"
+        ],
+        "type": "object"
+      },
+      "SettingsTwoFactorSetup": {
+        "properties": {
+          "otpauth_uri": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "secret",
+          "otpauth_uri"
+        ],
+        "type": "object"
+      },
+      "SettingsTwoFactorStatus": {
+        "properties": {
+          "backup_codes_remaining": {
+            "type": "number"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "backup_codes_remaining"
+        ],
+        "type": "object"
       }
     }
   },
   "info": {
     "title": "bff_settings",
     "version": "1.0.0",
-    "x-source-package": "@mairie360/bff-settings-openapi@2.2.0"
+    "x-source-package": "@mairie360/bff-settings-openapi@0.0.0-dev.668dec668302f27caa8d0351bcd218883031866c"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -628,6 +782,119 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GetHealth200"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/settings/2fa": {
+      "get": {
+        "operationId": "getSettings2fa",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsTwoFactorStatus"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/settings/2fa/backup-codes": {
+      "post": {
+        "operationId": "postSettings2faBackupCodes",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsTwoFactorCode"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsBackupCodes"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/settings/2fa/confirm": {
+      "post": {
+        "operationId": "postSettings2faConfirm",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsTwoFactorCode"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsBackupCodes"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/settings/2fa/disable": {
+      "post": {
+        "operationId": "postSettings2faDisable",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsTwoFactorDisable"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "2XX": {
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/settings/2fa/setup": {
+      "post": {
+        "operationId": "postSettings2faSetup",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsTwoFactorSetup"
                 }
               }
             },
@@ -733,6 +1000,91 @@
                 }
               }
             },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/settings/passkeys": {
+      "get": {
+        "operationId": "getSettingsPasskeys",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SettingsPasskey"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      },
+      "post": {
+        "operationId": "postSettingsPasskeys",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsPasskeyRegister"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsPasskey"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/settings/passkeys/options": {
+      "post": {
+        "operationId": "postSettingsPasskeysOptions",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsPasskeyRegisterOptions"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/settings/passkeys/{id}": {
+      "delete": {
+        "operationId": "deleteSettingsPasskeysId",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
             "description": "Succès (seul statut typé par orval)"
           }
         }

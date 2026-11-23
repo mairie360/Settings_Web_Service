@@ -22,7 +22,7 @@ const front = createFront({
   upstreams: () => [bffSettings.url, unreachable],
 });
 
-const { loadSettings, saveProfile, saveAppearance, saveGeneral, saveNotifications } = requireSrc('lib/settings-api.ts');
+const { loadSettings, saveProfile, saveAppearance, saveGeneral, saveNotifications, loadTwoFactor, startTwoFactor, confirmTwoFactor, regenerateBackupCodes, disableTwoFactor, loadPasskeys, passkeyOptions, registerPasskey, deletePasskey } = requireSrc('lib/settings-api.ts');
 
 const BFF_URL_VARIABLES = ['SETTINGS_BFF_URL', 'BFF_SETTINGS_BASE_URL'];
 const savedEnv = Object.fromEntries(BFF_URL_VARIABLES.map((name) => [name, process.env[name]]));
@@ -75,6 +75,35 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
     assert.equal(received.headers.cookie, undefined);
     assert.deepEqual(received.undeclaredQuery, []);
     assert.equal(received.body, undefined);
+  });
+
+  test('MAIR-807: the second factor calls reach their BFF_Settings operations with the agent session', async () => {
+    const ops = fixtures.SETTINGS_OPERATIONS;
+    for (const key of ['GET /settings/2fa', 'POST /settings/2fa/setup', 'POST /settings/2fa/confirm', 'POST /settings/2fa/backup-codes', 'POST /settings/2fa/disable']) {
+      const [method, template] = key.split(' ');
+      bffSettings.on(method, template, ops[key].reply);
+    }
+    assert.deepEqual(await loadTwoFactor(), ops['GET /settings/2fa'].reply.body);
+    assert.deepEqual(await startTwoFactor(), ops['POST /settings/2fa/setup'].reply.body);
+    assert.deepEqual(await confirmTwoFactor('123456'), ops['POST /settings/2fa/confirm'].reply.body);
+    assert.deepEqual(await regenerateBackupCodes('123456'), ops['POST /settings/2fa/backup-codes'].reply.body);
+    assert.equal(await disableTwoFactor({ password: 'secret', code: '123456' }), undefined);
+    assert.deepEqual(front.browserCalls.map(call => `${call.method} ${call.path}`), ['GET /settings/2fa', 'POST /settings/2fa/setup', 'POST /settings/2fa/confirm', 'POST /settings/2fa/backup-codes', 'POST /settings/2fa/disable']);
+    assert.deepEqual(bffSettings.calls('/settings/2fa/disable', 'POST')[0].body, { password: 'secret', code: '123456' });
+    assert.ok(bffSettings.requests.every(request => request.headers.authorization === `Bearer ${fixtures.ACCESS_TOKEN}`));
+  });
+
+  test('MAIR-811: the passkey calls reach their BFF_Settings operations', async () => {
+    const ops = fixtures.SETTINGS_OPERATIONS;
+    bffSettings.on('GET', '/settings/passkeys', ops['GET /settings/passkeys'].reply);
+    bffSettings.on('POST', '/settings/passkeys/options', ops['POST /settings/passkeys/options'].reply);
+    bffSettings.on('POST', '/settings/passkeys', ops['POST /settings/passkeys'].reply);
+    bffSettings.on('DELETE', '/settings/passkeys/{id}', ops['DELETE /settings/passkeys/{id}'].reply);
+    assert.deepEqual(await loadPasskeys(), ops['GET /settings/passkeys'].reply.body);
+    assert.deepEqual(await passkeyOptions(), ops['POST /settings/passkeys/options'].reply.body);
+    assert.deepEqual(await registerPasskey({ label: 'Téléphone', credential: { id: 'cred' } }), ops['POST /settings/passkeys'].reply.body);
+    assert.equal(await deletePasskey(12), undefined);
+    assert.deepEqual(front.browserCalls.map(call => `${call.method} ${call.path}`), ['GET /settings/passkeys', 'POST /settings/passkeys/options', 'POST /settings/passkeys', 'DELETE /settings/passkeys/12']);
   });
 
   test('loadSettings keeps sessions marked unavailable by the BFF', async () => {
@@ -220,13 +249,15 @@ describe('same-origin proxy exposes exactly the published BFF_Settings contract'
       assert.ok(operation, `ajouter ${method} ${template} à SETTINGS_OPERATIONS (tests/support/settings-fixtures.cjs)`);
       bffSettings.on(method, template, operation.reply);
 
-      const response = await browser(template, operation.send
+      // A path parameter gets a concrete value (`path`); a 201 / 204 answer keeps its status and (empty) body.
+      const response = await browser(operation.path ?? template, operation.send
         ? { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(operation.send) }
         : { method });
 
-      assert.equal(response.status, 200);
+      assert.equal(response.status, operation.reply.status ?? 200);
       assert.equal(response.headers.get('cache-control'), 'no-store');
-      assert.deepEqual(await response.json(), operation.reply.body);
+      if (operation.reply.body === undefined) assert.equal(await response.text(), '');
+      else assert.deepEqual(await response.json(), operation.reply.body);
       assert.deepEqual(bffSettings.requests.map((received) => `${received.method} ${received.template}`), [`${method} ${template}`]);
       assert.deepEqual(bffSettings.requests[0].body, operation.send);
     });

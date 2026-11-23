@@ -275,7 +275,8 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role'), [{ method: 'GET', path: '/settings/bootstrap' }]);
   assert.equal(view.find('AppShell').length, 1);
   assert.doesNotMatch(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
-  assert.match(html, /<\/main>(?:<\/div>)*<div class="app-shell-footer[^"]*"><footer\b/);
+  // MAIR-1125 / lib-components 2.3: the V2 Settings page has no footer.
+  assert.doesNotMatch(html, /<footer\b/);
   assert.equal(view.props('AppShell').activeItem, 'settings');
   assert.deepEqual(view.props('AppShell').user, {
     first_name: 'Anne Marie',

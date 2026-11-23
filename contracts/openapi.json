@@ -183,6 +183,7 @@
           "system",
           "geist",
           "atkinson",
+          "lora",
           null
         ],
         "type": [
@@ -879,7 +880,7 @@
   "info": {
     "title": "bff_settings",
     "version": "1.0.0",
-    "x-source-package": "@mairie360/bff-settings-openapi@0.0.0-dev.d4cb1387edf769c83e2e9d589af37114a6e34885"
+    "x-source-package": "@mairie360/bff-settings-openapi@0.0.0-dev.4c3bad1d4e78a3b876f2ba1f7a4276750ed00858"
   },
   "openapi": "3.1.0",
   "paths": {

@@ -95,3 +95,5 @@ Approved light option 1: shared tokens and font, accessible navigation, and pres
 - Sessions: « Sessions actives » marks this device (« Cet appareil », never revocable). Any other active session is ended after a confirmation; « Déconnecter les autres appareils » ends them all but this one and says how many. « Historique des connexions » lists the ended or expired sessions. A session already ended (404) or the session of the page (409) is explained in French.
 - Security: the password is changed through BFF_Settings (8 to 255 characters, different from the current one); a wrong current password, too many attempts or a refused new password are explained in French, and the other sessions are closed by Core. « Alertes de connexion » sends an e-mail at every new sign-in.
 - Notifications gains « Mises à jour de la plateforme »; Général gains « Sauvegarde automatique des brouillons » (on by default).
+
+- Lora (MAIR-1128): « Police de caractères » offers Police système, Geist, Atkinson Hyperlegible and Lora. The four fonts are named by lib-components 2.3.1, so a choice looks the same in every front; Atkinson Hyperlegible and Lora are loaded by the page.

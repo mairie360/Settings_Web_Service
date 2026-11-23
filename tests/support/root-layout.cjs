@@ -11,7 +11,7 @@ function loadRootLayout(load, cookieValues = {}) {
   require.extensions['.css'] = () => {};
   Module._load = function (request, ...rest) {
     if (request === 'next/headers') return { cookies: async () => ({ get: name => cookieValues[name] === undefined ? undefined : {value:cookieValues[name]} }) };
-    if (request === 'next/font/google') return { Geist: font, Geist_Mono: font };
+    if (request === 'next/font/google') return { Geist: font, Geist_Mono: font, Atkinson_Hyperlegible: font, Lora: font };
     return previousLoad.call(this, request, ...rest);
   };
   try {

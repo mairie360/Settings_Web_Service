@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import Home from '@/components/SettingsPage';
+import { findPageAlert, pageAlerts, UNAVAILABLE } from './page-alerts';
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { logoutAndRedirect, navigateToLogin } from "@/lib/logout";
 
@@ -35,16 +36,17 @@ beforeEach(() => {
 it("recovers an initial refusal explicitly by keyboard, without an automatic read or save", async () => {
   vi.mocked(loadSettings).mockRejectedValueOnce(new Error("Lecture refusée"));
   render(<Home />);
-  expect((await screen.findByRole("alert")).textContent).toBe("Lecture refusée");
+  // MAIR-851 (O1): « Profil temporairement indisponible » with « Réessayer », never the reason.
+  expect((await findPageAlert()).textContent).toContain(UNAVAILABLE);
+  expect(screen.queryByText("Lecture refusée")).toBeNull();
   expect(screen.queryByRole("tablist")).toBeNull();
   expect(loadSettings).toHaveBeenCalledTimes(1);
   const pending = deferred();
   vi.mocked(loadSettings).mockReturnValueOnce(pending.promise);
   await userEvent.setup().click(screen.getByRole("button", { name: "Réessayer" }));
-  const button = screen.getByRole("button", { name: "Chargement…" });
-  expect(button.disabled).toBe(true);
-  expect(button.getAttribute("aria-busy")).toBe("true");
-  act(() => { fireEvent.click(button); fireEvent.click(button); });
+  // While the read runs the loading panel replaces the warning: no second « Réessayer » can be pressed.
+  expect(screen.getByRole("heading", { name: "Chargement des paramètres…" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Réessayer" })).toBeNull();
   expect(loadSettings).toHaveBeenCalledTimes(2);
   expect(saveProfile).not.toHaveBeenCalled();
   await act(async () => pending.reject(new Error("Encore refusée")));
@@ -52,7 +54,7 @@ it("recovers an initial refusal explicitly by keyboard, without an automatic rea
   retry.focus();
   await userEvent.setup().keyboard("{Enter}");
   await screen.findByRole("textbox", { name: "Prénom" });
-  expect(screen.queryByRole("alert")).toBeNull();
+  expect(pageAlerts()).toHaveLength(0);
   expect(loadSettings).toHaveBeenCalledTimes(3);
   expect(saveProfile).not.toHaveBeenCalled();
 });
@@ -73,10 +75,10 @@ it("preserves all four dirty fields, including pending edits, and blocks competi
   fireEvent.submit(form);
   expect(saveProfile).not.toHaveBeenCalled();
   change("Prénom", "Latest draft");
-  await user.click(screen.getByRole("tab", { name: "Sécurité" }));
+  await user.click(screen.getByRole("tab", { name: "Sessions" }));
   await act(async () => pending.resolve(dto({ first_name: "Server", last_name: "Server surname", email: "server@example.invalid", phone: "+33987654321" }, "available")));
   expect(screen.getByText("Aucune session à afficher.")).toBeTruthy();
-  expect(screen.getByRole("tab", { name: "Sécurité" }).getAttribute("aria-selected")).toBe("true");
+  expect(screen.getByRole("tab", { name: "Sessions" }).getAttribute("aria-selected")).toBe("true");
   await user.click(screen.getByRole("tab", { name: "Profil" }));
   const values = ["Latest draft", "Draft surname", "draft@example.invalid", "+33123456789"];
   labels.forEach((label, i) => expect(screen.getByRole("textbox", { name: label }).value).toBe(values[i]));
@@ -98,7 +100,7 @@ it("keeps an unusable save out of the read baseline and recovers only through ex
   expect(saveProfile).toHaveBeenCalledExactlyOnceWith(sent);
   expect(loadSettings).toHaveBeenCalledTimes(1);
   await act(async () => pendingSave.resolve({}));
-  expect((await screen.findByRole("alert")).textContent).toBe("L’enregistrement du profil n’a pas été confirmé. Réessayez.");
+  expect((await findPageAlert()).textContent).toBe("L’enregistrement du profil n’a pas été confirmé. Réessayez.");
   expect(screen.queryByText("Votre profil a été enregistré.")).toBeNull();
 
   const pendingRead = deferred();
@@ -107,12 +109,12 @@ it("keeps an unusable save out of the read baseline and recovers only through ex
   expect(loadSettings).toHaveBeenCalledTimes(2);
   expect(saveProfile).toHaveBeenCalledTimes(1);
   expect(screen.getByRole("button", { name: "Enregistrer le profil" }).disabled).toBe(true);
-  await user.click(screen.getByRole("tab", { name: "Sécurité" }));
+  await user.click(screen.getByRole("tab", { name: "Sessions" }));
   await act(async () => pendingRead.resolve(dto({ first_name: "Read", last_name: "Read surname", email: "read@example.invalid", phone: "+33987654321" })));
   await user.click(screen.getByRole("tab", { name: "Profil" }));
   const latest = draft;
   labels.forEach((label, i) => expect(screen.getByRole("textbox", { name: label }).value).toBe(latest[fields[i]]));
-  expect(screen.getByRole("alert").textContent).toBe("L’enregistrement du profil n’a pas été confirmé. Réessayez.");
+  expect(pageAlerts()[0].textContent).toBe("L’enregistrement du profil n’a pas été confirmé. Réessayez.");
   expect(saveProfile).toHaveBeenCalledTimes(1);
 
   const official = { ...latest, first_name: "Confirmed", last_name: "Confirmed surname" };
@@ -120,7 +122,7 @@ it("keeps an unusable save out of the read baseline and recovers only through ex
   await user.click(screen.getByRole("button", { name: "Enregistrer le profil" }));
   await screen.findByText("Votre profil a été enregistré.");
   expect(vi.mocked(saveProfile).mock.calls.map(([patch]) => patch)).toEqual([sent, { ...latest, current_password: "secret" }]);
-  expect(screen.queryByRole("alert")).toBeNull();
+  expect(pageAlerts()).toHaveLength(0);
   expect(screen.queryByLabelText("Mot de passe actuel")).toBeNull();
   change("Prénom", "Next draft");
   vi.mocked(loadSettings).mockResolvedValueOnce(dto({ ...official, last_name: "After confirmation", phone: null }, "available"));
@@ -192,7 +194,7 @@ it("ignores StrictMode stale completion without unlocking its current pending re
   expect(vi.mocked(loadSettings).mock.calls[0][0].aborted).toBe(true);
   await act(async () => stale.resolve(dto({ ...initial, first_name: "Stale" })));
   expect(screen.queryByRole("textbox", { name: "Prénom" })).toBeNull();
-  expect(screen.getByRole("button", { name: "Chargement…" }).disabled).toBe(true);
+  expect(screen.getByRole("heading", { name: "Chargement des paramètres…" })).toBeTruthy();
   await act(async () => current.resolve(dto()));
   expect(screen.getByRole("textbox", { name: "Prénom" }).value).toBe("Test");
 });
@@ -201,6 +203,8 @@ it("retains logout errors when editing or recovering reads", async () => {
   const user = await open();
   await user.click(screen.getByRole("button", { name: /compte|Test User/i }));
   await user.click(screen.getByText("Déconnexion", { exact: true }));
+  // MAIR-834 (lib 2.0): the header confirms the logout first.
+  await user.click(screen.getByRole("button", { name: "Se déconnecter" }));
   await screen.findByText("La déconnexion n’a pas été confirmée. Votre session reste à vérifier.");
   change("Prénom", "Draft");
   await user.click(screen.getByRole("button", { name: "Actualiser les paramètres" }));

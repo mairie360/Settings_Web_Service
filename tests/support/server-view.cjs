@@ -183,6 +183,11 @@ function installReactRuntime({ pathname = '/' } = {}) {
  * Recreates an element through the JSX runtime: array children are static, so keys are not re-validated,
  * and the props are copied because React's dev build leaves a warning `key` getter on the original object.
  */
+/** An element, or an array holding one at any depth (lib-components 2.3 nests `items.map(...)` next to other children). */
+function containsElement(value) {
+  return real.isValidElement(value) || (Array.isArray(value) && value.some(containsElement));
+}
+
 function createElement(type, props, key) {
   return (Array.isArray(props.children) ? jsxs : jsx)(type, { ...props }, key ?? undefined);
 }
@@ -430,7 +435,7 @@ class ServerView {
     let changed = false;
     const next = {};
     for (const [name, value] of Object.entries(props)) {
-      const wrapped = real.isValidElement(value) || (Array.isArray(value) && value.some(real.isValidElement)) ? this.wrap(value, name === 'children' ? `${path}>` : `${path}.${name}`) : value;
+      const wrapped = containsElement(value) ? this.wrap(value, name === 'children' ? `${path}>` : `${path}.${name}`) : value;
       if (wrapped !== value) changed = true;
       next[name] = wrapped;
     }
@@ -515,11 +520,16 @@ function ensureBrowserGlobals() {
       createElement: () => ({ style: {}, setAttribute() {}, appendChild() {}, remove() {} }),
     });
   }
+  // The lib ToastProvider pauses its timers while the page has no focus.
+  globalThis.document.hasFocus ??= () => true;
   const root = globalThis.document.documentElement ??= { clientWidth: 1280, clientHeight: 800 };
   root.dataset ??= {};
   root.style ??= {};
   root.style.setProperty ??= function (name, value) { this[name] = value; };
   root.style.removeProperty ??= function (name) { delete this[name]; };
+  // The lib ToastProvider listens to window focus and tests `instanceof HTMLElement` when a toast opens.
+  globalThis.HTMLElement ??= class HTMLElement {};
+  if (typeof globalThis.window === 'undefined') globalThis.window = {};
   const window = globalThis.window;
   if (!window || typeof window !== 'object') return;
   if (!window.addEventListener) eventTarget(window);

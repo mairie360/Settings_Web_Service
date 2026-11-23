@@ -28,17 +28,19 @@ test('a confirmed profile notification closes by Escape without repeating its sa
   confirm(fixtures.profile({ first_name: 'Confirmed name' }));
   await saving;
 
+  // MAIR-851: the receipt is a lib toast at the top right; its text is announced once by the provider's live region.
   const dom = new JSDOM(view.html);
   try {
     const notices = [...dom.window.document.querySelectorAll('[role="status"]')]
       .filter(node => node.textContent.includes('Votre profil a été enregistré.'));
     assert.equal(notices.length, 1, 'One confirmed receipt has one live announcement.');
-    assert.ok(notices[0].querySelector('button[aria-label]'),
+    const toast = dom.window.document.querySelector('[data-m360-component~="Toast"][role="group"]');
+    assert.ok(toast?.querySelector('button[aria-label="Fermer la notification"]'),
       'The confirmed receipt exposes a manual close command.');
   } finally { dom.window.close(); }
 
-  const notice = view.hostElements(props => props.role === 'status' && typeof props.onKeyDown === 'function')[0];
-  await view.act(() => notice?.props.onKeyDown({ key: 'Escape', preventDefault() {}, stopPropagation() {} }));
+  const notice = view.hostElements(props => props.role === 'group' && typeof props.onKeyDown === 'function')[0];
+  await view.act(() => notice?.props.onKeyDown({ key: 'Escape', defaultPrevented: false, preventDefault() {}, stopPropagation() {} }));
   assert.doesNotMatch(view.text(), /Votre profil a été enregistré/);
   assert.match(view.html, /value="Confirmed name"/);
   assert.deepEqual(writes, [{ first_name: 'Submitted draft' }]);
@@ -51,7 +53,7 @@ test('only a confirmed empty sessions source receives a named empty section', as
   const view = mount(React.createElement(Home, { initialData: fixtures.bootstrap({ sessions: [] }) }));
   t.after(() => { view.unmount(); delete global.window; delete global.document; });
   await view.settle();
-  await view.click((_props, text, tag) => tag === 'button' && text === 'Sécurité');
+  await view.click((_props, text, tag) => tag === 'button' && text === 'Sessions');
   const dom = new JSDOM(view.html);
   try {
     const section = [...dom.window.document.querySelectorAll('section[aria-labelledby]')]

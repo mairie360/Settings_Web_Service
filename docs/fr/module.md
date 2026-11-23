@@ -44,9 +44,8 @@ Domaine fonctionnel: Paramètres personnels.
 - Confirmation de sauvegarde à partir du profil relu par le BFF.
 - Une seule sauvegarde du profil à la fois : les quatre champs et le bouton sont verrouillés pendant l’attente, même après changement d’onglet. Un refus conserve le brouillon et permet de réessayer ; un succès affiche le profil renvoyé et libère les champs pour une nouvelle modification.
 - Une réponse de sauvegarde réussie mais inexploitable ne confirme rien : le brouillon et l’identité confirmée restent intacts. La reprise explicite du bootstrap conserve les champs modifiés et l’erreur de sauvegarde indépendante, adopte les champs reçus non modifiés et ne répète jamais le PATCH. Seule une réponse de sauvegarde validée avance la référence confirmée utilisée par les lectures suivantes.
-- Liste de sessions dans l’onglet Sécurité avec état d’indisponibilité distinct.
-- Double authentification (MAIR-357) : quand l’instance configure Keycloak, l’onglet Sécurité renvoie vers le compte Keycloak de l’agent (**Gérer ma double authentification**), où il ajoute, remplace ou supprime une application d’authentification ou une clé de sécurité (MAIR-572). Sans Keycloak, l’onglet indique que la fonction n’est pas disponible. Settings ne simule jamais de second facteur, ne propose pas le SMS et n’affiche pas d’état activé/désactivé (aucun contrat ne l’expose).
-- Onglet Système : familles estimées du navigateur actuel et du système (MAIR-471), aide adaptée, téléchargements locaux de demande/signalement en texte et diagnostic minimal en JSON. Les versions navigateur/déploiement et quotas de la référence ne sont pas copiés ; une information inconnue ou inaccessible reste explicite. Aucun envoi automatique ni nouvel appel métier.
+- Coque V2 (MAIR-851) : `AccessibleShell` de la lib 2.x, titre « Paramètres » avec la date du jour, six onglets dans l’ordre de la maquette (Profil, Sécurité, Sessions, Notifications, Apparence, Général) ; un ancien lien `?tab=system` ou `system-assistance` ouvre Profil. L’interface reste toujours en clair, quel que soit le thème enregistré. Avant tout profil confirmé, la page affiche le panneau de chargement, puis « Profil temporairement indisponible » avec « Réessayer » (la cause amont n’est jamais affichée). Les confirmations sont des toasts de la lib en haut à droite (5 s pour un succès, fermables, Échap).
+- Liste de sessions dans son propre onglet Sessions avec état d’indisponibilité distinct.
 
 ## Parcours type
 
@@ -66,9 +65,8 @@ Le profil vient de Core `/api/v1/user/me/`; les sessions viennent de `/api/v1/se
 
 ## Périmètre et limites
 
-Les préférences notifications, apparence et général restent indisponibles. Système fournit uniquement une assistance locale, pas des journaux serveur, informations de déploiement ou quotas de stockage. Aide, support et signalement s’ouvrent dans des fenêtres modales nommées comme la référence ; le focus reste dans la fenêtre, Échap/Fermer la ferme et restitue le focus au déclencheur. Un échec conserve le brouillon pour reprise ; la préparation réussie ferme la fenêtre et annonce seulement le lancement du téléchargement. Une nouvelle demande démarre vide, sans envoi automatique. La sécurité affiche les sessions, sans gérer les autres réglages. Les adaptateurs de préférences ne garantissent pas que les routes correspondantes soient déployées dans Core.
+Les préférences notifications, apparence et général restent indisponibles. L’onglet Système a été retiré (MAIR-851) : les mises à jour de l’instance sont gérées dans Administration. Les adaptateurs de préférences ne garantissent pas que les routes correspondantes soient déployées dans Core.
 
-Les brouillons de demande/signalement acceptent 1 à 5 000 caractères et restent en mémoire ; quitter Système ou recharger la page les efface. Un échec de téléchargement conserve le brouillon et permet de réessayer. Relisez les fichiers avant de les partager par votre canal habituel. Aucun profil ni session n’est ajouté automatiquement, aucun service de support n’est contacté. Le diagnostic contient seulement le nom du module, sa date de génération, les familles estimées du navigateur et du système et la disponibilité des URL d’objets. Il ne collecte ni user-agent brut, données de compte, cookies, stockage, adresse de page ou journaux. La détection des familles est indicative, pas un inventaire de l’appareil.
 
 ## Pour développer ou exploiter ce module
 

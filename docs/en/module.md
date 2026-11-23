@@ -34,7 +34,6 @@ Business domain: Personal settings.
 
 ## Available capabilities
 
-- System displays estimated local browser and operating-system families (MAIR-471), matching the reference information without its browser version, deployment fixtures or quotas. Unknown/inaccessible information remains explicit; no account data, storage or additional service call is needed.
 - Form for first name, last name, email and phone. The inputs carry the constraints of the published contract (names up to 64 characters without `<` or `>`, e-mail up to 320, phone up to 32 characters made of digits, spaces, `.`, `-`, `(`, `)` and an optional leading `+`), with help text.
 - Changing the e-mail address asks for the current password (MAIR-511): the field appears only while the typed address differs from the confirmed one (trimmed, case-insensitive), is sent once as `current_password`, is never kept with the profile and is cleared on revert or after a confirmed save. Without it, the save is refused locally with no network call. A refusal of the BFF is explained in French: one line per validation detail labelled with its field, a wrong current password (403) and an address already in use (409) have their own messages.
 - The Settings sidebar restores the reference's 44px link height and lateral shadow. Its mobile stacking remains below the published drawer close control. The short contract-backed profile retains its natural width: unsupported reference fields are not copied to force a scrollbar or visual equivalence.
@@ -43,9 +42,8 @@ Business domain: Personal settings.
 - Save confirmation based on the profile read back by the BFF.
 - One profile save at a time: the four fields and submit are locked while pending, even after switching tabs. A refused save keeps the draft and allows retry; a successful save displays the returned profile and releases the fields for new edits.
 - An unusable successful profile response is not a confirmation: the draft and last confirmed identity remain intact. Explicit bootstrap recovery preserves dirty fields and independent save errors, adopts clean received fields, and never repeats a PATCH. Only a validated save response advances the confirmed baseline used by later reads.
-- Session list in the Security tab with a separate unavailable state.
-- Two-factor authentication (MAIR-357): when the instance configures Keycloak, the Security tab links to the agent's Keycloak account console (**Gérer ma double authentification**), where an authenticator app or a security key is added, replaced or removed (MAIR-572). Without Keycloak it says the feature is unavailable. Settings never simulates a second factor, offers no SMS and shows no enabled/disabled state (no contract exposes it).
-- System tab: reference-style named help/support/report dialogs with native modal focus containment, Escape/Close and opener focus restoration. Support/report preparation failures retain the draft for retry; successful preparation closes the dialog and only announces download initiation. Each new request opens blank. Truthful help, local text exports and a minimal browser diagnostic JSON remain available without automatic transmission.
+- V2 shell (MAIR-851): lib 2.x `AccessibleShell`, title « Paramètres » with today's date, six tabs in the mock-up order (Profil, Sécurité, Sessions, Notifications, Apparence, Général); an old `?tab=system` or `system-assistance` link opens Profil. The interface is always light, whatever theme is stored. Before any confirmed profile the page shows the loading panel, then « Profil temporairement indisponible » with « Réessayer » (the upstream reason is never shown). Receipts are lib toasts at the top right (5 s for a success, closable, Escape).
+- Session list in its own Sessions tab with a separate unavailable state.
 
 ## Typical workflow
 
@@ -67,7 +65,6 @@ The profile comes from Core `/api/v1/user/me/`; sessions come from `/api/v1/sess
 
 Notifications, appearance and general preferences use the three published PATCH operations. Each section hydrates confirmed values, preserves inherited defaults and dirty edits, sends only its changed fields, and validates the returned snapshot before confirming success. Unavailable source flags disable saving until a successful refresh. System provides local assistance only, not server logs, deployment information or storage quotas. Security displays sessions without managing other settings. Preference adapters do not guarantee that the corresponding Core routes are deployed.
 
-Support/report drafts accept 1–5,000 characters and remain in memory only; leaving the System tab or reloading discards them. Download failures keep the draft and allow retry. Review downloaded files before sharing them through your usual channel. No profile or session data is included automatically, and no support service is contacted. The diagnostic contains only the module name, generation time, estimated browser/OS families and object-URL capability. It does not collect raw user agents, account data, cookies, storage, page addresses or logs. Browser family detection is an estimate, not a device inventory.
 
 ## Developing or operating this module
 

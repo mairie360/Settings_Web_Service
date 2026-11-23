@@ -58,17 +58,7 @@ The following sources and limitations describe the associated BFF, which determi
 
 The profile comes from Core `/api/v1/user/me/`; sessions come from `/api/v1/sessions/`. Fields are `first_name`, `last_name`, `email` and `phone` (`phone_country` is read but not edited; an e-mail change also sends `current_password`). The session schema retains displayable information and removes internal fields. The BFF stores no preferences locally.
 
-Notifications, appearance and general remain unavailable. System hosts local assistance only. Security displays sessions without managing other settings. The preference paths currently have empty request/response schemas and bootstrap provides no preference values; route existence alone does not establish a usable contract.
-
-### Local assistance (MAIR-304)
-
-`src/components/settings-assistance.tsx` handles user-triggered exports without an effect, timer loop, network call or persistence. `src/lib/local-assistance.ts` validates authored text (nonblank, at most 5,000 characters), builds plain-text/JSON files and requests a Blob download. An appended temporary anchor is removed immediately; its object URL is revoked after one second on success or immediately on failure. The UI reports a download request, not a confirmed saved file or delivered support message. Raw exceptions never reach the assistance UI or exported diagnostic.
-
-Only coarse browser/OS labels are derived from `navigator.userAgent` when the diagnostic button is clicked. MAIR-471 also displays those local families through `settings-browser-information.tsx`: `useSyncExternalStore` uses stable string snapshots, a no-event subscription and a deterministic server placeholder, so no browser access occurs during SSR or hydration's initial render. Unknown families remain unidentified; an inaccessible getter displays unavailability without raw exceptions. No raw user-agent or browser version is rendered, retained in application storage or exported. The diagnostic JSON allowlist remains `module`, `generatedAt`, `browser`, `operatingSystem`, `capabilities.objectUrls`. No business DTO is passed to the component, no storage is read/cleared and no deployment version/date or quota is invented. No new environment, package, route, permission or BFF operation is required.
-
-Node tests cover export validation/content/privacy and download cleanup; component tests exercise the real page, keyboard access, axe checks, errors/retry and the absence of additional bootstrap calls. The contract harness also verifies the System tab adds no upstream operation.
-
-React state manages display and pending operations. This repository defines no business database of its own; save guarantees come from the BFF and its sources described above.
+Notifications, appearance and general remain unavailable. The System tab was removed (MAIR-851); sessions live in their own Sessions tab. The preference paths currently have empty request/response schemas and bootstrap provides no preference values; route existence alone does not establish a usable contract.
 
 ## Installation and local startup
 
@@ -107,7 +97,6 @@ Values below are local examples or explicitly described behavior, not production
 | --- | --- | --- |
 | `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL` | http://localhost:4008 | Left-to-right proxy precedence; configure an HTTP(S) URL explicitly. Missing or invalid configuration returns an uncached 503 without contacting an upstream. |
 | `LOGIN_FRONT_URL` | — | Validated runtime Login origin used to open `/logout`. |
-| `KEYCLOAK_REALM_URL` | https://auth.mairie360.fr/realms/mairie360 | Public realm URL (MAIR-357), read on the server by `src/lib/keycloak-account.ts`. The Security tab links to `<realm>/account` to manage the second factor; absent or invalid hides the link: HTTPS only (HTTP for a loopback host in local development), path `…/realms/<realm>`, no credentials, query or fragment. |
 
 The shared navigation reads `DASHBOARD_FRONT_URL`, `PROJECT_FRONT_URL`,
 `MESSAGE_FRONT_URL`, `ELEARNING_FRONT_URL`, `CALENDAR_FRONT_URL` and

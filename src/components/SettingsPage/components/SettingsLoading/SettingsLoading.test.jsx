@@ -1,13 +1,19 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import { SettingsLoading } from './SettingsLoading';
 
 describe('SettingsLoading', () => {
-  it('renders the loading and unavailable states', () => {
-    const { rerender } = render(<SettingsLoading reading failed={false} />);
-    expect(screen.getByText('Chargement des paramètres…')).toBeTruthy(); expect(document.querySelector('.mairie-skeleton')).not.toBeNull();
-    rerender(<SettingsLoading reading={false} failed />);
-    expect(screen.getByText('Le profil est indisponible.')).toBeTruthy(); expect(document.querySelector('.mairie-skeleton')).toBeNull();
+  it('shows the loading panel, then the unavailable warning whose « Réessayer » reads again (MAIR-851, O1)', () => {
+    const onRetry = vi.fn();
+    const { rerender } = render(<SettingsLoading reading failed={false} onRetry={onRetry} />);
+    expect(screen.getByRole('heading', { name: 'Chargement des paramètres…' })).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+    rerender(<SettingsLoading reading={false} failed onRetry={onRetry} />);
+    expect(screen.getByRole('alert').textContent).toContain('Profil temporairement indisponible');
+    fireEvent.click(screen.getByRole('button', { name: 'Réessayer' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    rerender(<SettingsLoading reading failed onRetry={onRetry} />);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });

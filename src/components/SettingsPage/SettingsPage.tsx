@@ -1,8 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
-import { Toast } from "@mairie360/lib-components/primitives";
+import { ToastProvider } from "@mairie360/lib-components/primitives";
 import { AccessibleShell } from "@mairie360/lib-components/shell";
-import { useInstanceRole } from "@mairie360/lib-components/react";
 
 import type { SettingsBootstrapRead as Bootstrap } from '../../lib/settings-bootstrap';
 import { getActiveFrontHrefs } from '../../lib/navigation';
@@ -12,17 +11,20 @@ import SettingsPendingFeatures from './components/SettingsPendingFeatures';
 import PreferencesPanel from './components/PreferencesPanel';
 import { ProfileForm } from './components/ProfileForm';
 import { SessionsSection } from './components/SessionsSection';
-import SystemPanel from './components/SystemPanel';
 import { SettingsTabs, settingsPanelId, settingsTabId } from './components/SettingsTabs';
 import { settingsUrlSchema, tabFromUrl, tabToUrl } from './components/SettingsTabs';
 import { SettingsHeader } from './components/SettingsHeader';
 import { SettingsLoading } from './components/SettingsLoading';
 import { SettingsNotices } from './components/SettingsNotices';
+import { StatusToast } from './components/StatusToast';
 import { useProfileForm } from './use-profile-form';
 import { useSettingsData } from './use-settings-data';
 
-/** The settings page: shell, notices, header, six tabs and their panels, fed by `useSettingsData` and `useProfileForm`. */
-export default function SettingsPage({ initialData, twoFactorUrl }: { initialData?: Bootstrap | null; twoFactorUrl?: string }) {
+/**
+ * The settings page (MAIR-851): lib shell, title with the date, the six tabs and their panels, the loading and
+ * unavailable states, and receipts as toasts at the top right; fed by `useSettingsData` and `useProfileForm`.
+ */
+export default function SettingsPage({ initialData }: { initialData?: Bootstrap | null }) {
   const settings = useSettingsData(initialData);
   const { data, setData, profile, reading, readError, readAnnouncement, accountScope, setPreferencesWriting, readSettings, reload } = settings;
   const form = useProfileForm(settings);
@@ -30,7 +32,6 @@ export default function SettingsPage({ initialData, twoFactorUrl }: { initialDat
   const activeTab = tabFromUrl(pageUrl.state.tab);
   const setActiveTab = (tab: typeof activeTab) => pageUrl.update({ tab: tabToUrl(tab) });
   const [logoutError, setLogoutError] = useState("");
-  const isAdmin = useInstanceRole() === "Admin";
   const logoutPending = useRef(false);
   const requestLogout = async () => {
     if (logoutPending.current) return;
@@ -50,26 +51,27 @@ export default function SettingsPage({ initialData, twoFactorUrl }: { initialDat
       onLogout={() => void requestLogout()}
       sidebarProps={{ brandLogoSrc: "/mairie360-logo.png" }}
     >
-      <section className="settings-page">
-        <SettingsHeader />
-        <SettingsNotices error={form.error} errorDetails={form.errorDetails} readError={readError} logoutError={logoutError} recoverable={recoverable} hasData={Boolean(data)} reading={reading} saving={form.saving} onReload={reload} />
-        <Toast message={form.status} tone="success" className={form.status ? "mt-4" : "sr-only"} onClose={form.status ? form.clearStatus : undefined} />
-        <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{readAnnouncement}</p>
-        {!data || !profile ? (
-          <SettingsLoading reading={reading} failed={Boolean(readError)} />
-        ) : (
-          <>
-            <SettingsTabs value={activeTab} onChange={setActiveTab} />
-            <div role="tabpanel" id={settingsPanelId(activeTab)} aria-labelledby={settingsTabId(activeTab)} className="settings-panel">
-              <SettingsPendingFeatures tab={activeTab} isAdmin={isAdmin} twoFactorUrl={twoFactorUrl} profileInitials={initials}
-                preferencesContent={<PreferencesPanel key={accountScope} tab={activeTab} bootstrap={data} reading={reading || form.saving} onWriting={setPreferencesWriting} onRefresh={() => void readSettings()} />}
-                profileContent={<ProfileForm form={form} reading={reading} />}
-                securityContent={<SessionsSection data={data} onRevoked={(id, revokedAt) => setData((current) => current ? { ...current, sessions: current.sessions.map((session) => session.id === id ? { ...session, revoked_at: revokedAt } : session) } : current)} />}
-                systemContent={<SystemPanel />} />
-            </div>
-          </>
-        )}
-      </section>
+      <ToastProvider regionLabel="Notifications de la page" placement="top-end" defaultDuration={5000}>
+        <section className="settings-page">
+          <SettingsHeader />
+          <SettingsNotices error={form.error} errorDetails={form.errorDetails} readError={data ? readError : ""} logoutError={logoutError} recoverable={Boolean(data) && recoverable} hasData={Boolean(data)} reading={reading} saving={form.saving} onReload={reload} />
+          <StatusToast message={form.status} title="Profil enregistré" onShown={form.clearStatus} />
+          <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{readAnnouncement}</p>
+          {!data || !profile ? (
+            <SettingsLoading reading={reading} failed={Boolean(readError)} onRetry={reload} />
+          ) : (
+            <>
+              <SettingsTabs value={activeTab} onChange={setActiveTab} />
+              <div role="tabpanel" id={settingsPanelId(activeTab)} aria-labelledby={settingsTabId(activeTab)} className="settings-panel">
+                <SettingsPendingFeatures tab={activeTab} profileInitials={initials}
+                  preferencesContent={<PreferencesPanel key={accountScope} tab={activeTab} bootstrap={data} reading={reading || form.saving} onWriting={setPreferencesWriting} onRefresh={() => void readSettings()} />}
+                  profileContent={<ProfileForm form={form} reading={reading} />}
+                  sessionsContent={<SessionsSection data={data} onRevoked={(id, revokedAt) => setData((current) => current ? { ...current, sessions: current.sessions.map((session) => session.id === id ? { ...session, revoked_at: revokedAt } : session) } : current)} />} />
+              </div>
+            </>
+          )}
+        </section>
+      </ToastProvider>
     </AccessibleShell>
   );
 }

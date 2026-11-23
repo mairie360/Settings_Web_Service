@@ -59,17 +59,20 @@ describe('actual Settings page with the published shell and consumer styles', ()
     const skip = screen.getByRole('link', { name: 'Aller au contenu' });
     await user.click(skip);
     expect(document.activeElement).toBe(screen.getByRole('main'));
-    expect(screen.getByRole('contentinfo').closest('aside')).toBeNull();
+    // MAIR-1125 / lib-components 2.3: no footer on the V2 Settings page.
+    expect(screen.queryByRole('contentinfo')).toBeNull();
   });
 
-  it('applies the reference sidebar rows and shadow to the actual published navigation', async () => {
-    await page(); const sidebar = screen.getByRole('complementary', { name: 'Navigation principale' });
-    const computed = getComputedStyle(sidebar); expect(computed.position).toBe('relative'); expect(computed.zIndex).toBe('20');
-    expect(shadow(computed.boxShadow)).toEqual([{ lengths: [4, 0, 16, 0], color: 'rgba(12, 28, 48, 0.1)' }]);
-    const buttons = within(within(sidebar).getByRole('navigation', { name: 'Menu principal' })).getAllByRole('button');
-    expect(buttons.map(button => button.textContent)).toEqual(['Tableau de bord', 'Projets', 'Messagerie', 'Formation', 'Calendrier', 'Paramètres']);
-    for (const button of buttons) { expect(getComputedStyle(button).minHeight).toBe('48px'); expect(getComputedStyle(button).flexShrink).toBe('0'); }
+  it('renders the lib 2.x desktop navigation with the configured modules, Paramètres current (MAIR-851)', async () => {
+    await page();
+    // The V2 band is collapsed and only shown from the lg breakpoint: its rows are read through the DOM.
+    const sidebar = document.querySelector('aside.app-desktop-navigation');
+    expect(sidebar.getAttribute('aria-label')).toBe('Navigation principale');
+    const buttons = [...sidebar.querySelectorAll('nav[aria-label="Menu principal"] button')];
+    expect(buttons.map(button => button.getAttribute('aria-label'))).toEqual(['Tableau de bord', 'Projets', 'Messagerie', 'Formation', 'Calendrier', 'Paramètres']);
+    expect(buttons.at(-1).getAttribute('aria-current')).toBe('page');
   });
+
 
   it('opens the real drawer with the lower sidebar layer and closes through its control', async () => {
     const user = await page(); await user.click(screen.getByRole('button', { name: 'Ouvrir la navigation', exact: true }));
@@ -96,29 +99,18 @@ describe('actual Settings page with the published shell and consumer styles', ()
     expect(saveProfile).not.toHaveBeenCalled();
   });
 
-  it('opens bounded assistance content and closes it through the actual command', async () => {
-    const user = await page(); await user.click(screen.getByRole('tab', { name: 'Système', exact: true }));
+  it('keeps one skip link before the navigation, targeting the main area (MAIR-851, no Système tab)', async () => {
+    const user = await page();
+    expect(screen.queryByRole('tab', { name: 'Système' })).toBeNull();
     const skip = screen.getByRole('link', { name: 'Aller au contenu' });
     const main = screen.getByRole('main');
     expect(skip.getAttribute('href')).toBe(`#${main.id}`);
     expect(skip.compareDocumentPosition(document.querySelector('.app-desktop-navigation button')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Centre d’aide', exact: true }));
-    const dialog = screen.getByRole('dialog', { name: 'Centre d’aide' }); const computed = getComputedStyle(dialog);
-    expect(dialog.open).toBe(true);
     expect(document.querySelectorAll(`a[href="#${main.id}"]`)).toHaveLength(1);
-    await user.tab();
-    expect(dialog.contains(document.activeElement)).toBe(true);
-    // The native showModal() boundary makes outside content inert in browsers.
-    // JSDOM models open/close only; an inert attribute is not expected on the skip link here.
-    expect(computed.width.replace(/\s+/g, '')).toBe('min(600px,100%-32px)');
-    expect(computed.maxHeight.replace(/\s+/g, '')).toBe('calc(100dvh-32px)'); expect(computed.overflow).toBe('auto');
-    await user.click(within(dialog).getByRole('button', { name: 'Fermer', exact: true })); expect(screen.queryByRole('dialog')).toBeNull();
-    expect(screen.getByRole('main')).toBe(main);
-    expect(screen.getByRole('link', { name: 'Aller au contenu' })).toBe(skip);
-    expect(skip.closest('[inert]')).toBeNull();
     await user.click(skip);
     expect(document.activeElement).toBe(main);
     expect(loadSettings).toHaveBeenCalledTimes(1); expect(saveProfile).not.toHaveBeenCalled();
   });
+
   // API functions reuse existing canonical fixtures. No deployed BFF response-schema or persistence certification here.
 });

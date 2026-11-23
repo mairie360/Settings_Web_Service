@@ -8,9 +8,7 @@ import type { SettingsTabId } from '../SettingsTabs';
 import { ProfilePhoto } from './components/ProfilePhoto';
 import { ProfessionalDraft } from './components/ProfessionalDraft';
 import { PasswordForm } from './components/PasswordForm';
-import { TwoFactorSection } from './components/TwoFactorSection';
 import { DraftPreferences } from './components/DraftPreferences';
-import InstanceUpdatesPanel from './components/InstanceUpdatesPanel';
 import { FailureToast, FeedbackToast } from '../FeedbackToast';
 
 const initialPreferences: SettingsPreferences = {
@@ -20,19 +18,17 @@ const initialPreferences: SettingsPreferences = {
 const emptyProfile: ExtendedProfile = { service: '', position: '', biography: '' };
 
 export interface SettingsPendingFeaturesProps {
-  tab: SettingsTabId; isAdmin: boolean; port?: SettingsFeaturePort;
-  /** Keycloak account console, where the second factor is managed (MAIR-357); absent without Keycloak. */
-  twoFactorUrl?: string;
+  tab: SettingsTabId; port?: SettingsFeaturePort;
   profileInitials?: string;
-  preferencesContent?: ReactNode; profileContent?: ReactNode; securityContent?: ReactNode; systemContent?: ReactNode;
+  preferencesContent?: ReactNode; profileContent?: ReactNode; sessionsContent?: ReactNode;
   initial?: SettingsPreferences; extendedProfile?: ExtendedProfile;
 }
 
 /**
  * The tab contents that still go through the feature port (photo, professional draft, password,
- * two-factor, draft preferences, instance updates), composed with the confirmed contents the page passes in.
+ * draft preferences), composed with the confirmed contents the page passes in (profile, sessions, preferences).
  */
-export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSettingsPort, initial, extendedProfile, preferencesContent, profileContent, securityContent, systemContent, profileInitials = '?', twoFactorUrl }: SettingsPendingFeaturesProps) {
+export default function SettingsPendingFeatures({ tab, port = pendingSettingsPort, initial, extendedProfile, preferencesContent, profileContent, sessionsContent, profileInitials = '?' }: SettingsPendingFeaturesProps) {
   const [preferences, setPreferences] = useState(initial ?? initialPreferences);
   const [confirmedPreferences, setConfirmedPreferences] = useState(initial ?? initialPreferences);
   const [profile, setProfile] = useState(extendedProfile ?? emptyProfile);
@@ -103,12 +99,10 @@ export default function SettingsPendingFeatures({ tab, isAdmin, port = pendingSe
         onSubmit={(currentPassword, next, done) => void perform('password', port.changePassword ? async () => { const epoch = securityEpoch.current; await port.changePassword!(currentPassword, next); if (alive.current && epoch === securityEpoch.current) done(); } : undefined, 'Mot de passe modifié.')}>
         {notice('password')}
       </PasswordForm>
-      <TwoFactorSection twoFactorUrl={twoFactorUrl} />
-      {securityContent}
     </> : null}
+    {tab === 'sessions' ? sessionsContent : null}
     {preferencesContent ?? (['notifications', 'appearance', 'general'].includes(tab)
       ? <DraftPreferences tab={tab as 'notifications' | 'appearance' | 'general'} preferences={preferences} confirmed={confirmedPreferences} busy={Boolean(busy)} update={update} onSave={savePreferences}>{notice('preferences')}</DraftPreferences>
       : null)}
-    {tab === 'system' ? <>{isAdmin ? <InstanceUpdatesPanel port={port} /> : null}{systemContent}</> : null}
   </div>;
 }

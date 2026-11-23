@@ -28,7 +28,8 @@ it('applies and caches only the confirmed bootstrap and write receipt, keeping t
   expect(document.documentElement.dataset.theme).toBe('light'); expect(screen.queryByText('Préférences enregistrées.')).toBeNull();
   await act(async () => response.resolve(fixtures.appearance({ theme: 'dark', density: 'comfortable', font_family: 'Georgia, serif', font_size: 32767 })));
   await screen.findByText('Préférences enregistrées.');
-  expect(document.documentElement.dataset.theme).toBe('dark');
+  // MAIR-851 / MAIR-933: the interface stays light whatever theme is stored.
+  expect(document.documentElement.dataset.theme).toBe('light');
   expect(document.documentElement.dataset.density).toBe('comfortable');
   expect(document.documentElement.style.getPropertyValue('--mairie-user-font')).toBe('Georgia, serif');
   expect(document.cookie).not.toMatch(/32767|font_size/);
@@ -60,25 +61,16 @@ it('keeps appearance controls keyboard accessible and confines extreme font size
   expect(document.documentElement.style.fontSize).toBe('');
 });
 
-it('follows system colour changes through the distributed provider and retains an explicit confirmed theme', async () => {
-  const { InstanceProvider } = await import('@mairie360/lib-components/react');
-  const { applyConfirmedAppearance } = await import('@mairie360/lib-components/theme');
-  const media = Object.assign(new EventTarget(), { matches: false });
+it('MAIR-851: stays light with a dark system preference and with a stored dark theme', async () => {
+  const media = Object.assign(new EventTarget(), { matches: true });
   const original = window.matchMedia;
   window.matchMedia = () => media;
   try {
-    const user = userEvent.setup();
-    const view = render(<InstanceProvider role="User" timeZone="Indian/Reunion" appearance={{ theme: 'system', density: null, font_family: null }}><button type="button" onClick={() => applyConfirmedAppearance({ theme: 'light', density: 'compact', font_family: null })}>Confirmer le thème clair</button></InstanceProvider>);
+    api.loadSettings.mockResolvedValue(fixtures.bootstrap({ appearance: fixtures.appearance({ theme: 'dark', density: 'compact', font_family: 'Arial' }) }));
+    render(<Home />); await screen.findByRole('tab', { name: 'Apparence' });
+    await waitFor(() => expect(document.documentElement.dataset.density).toBe('compact'));
     expect(document.documentElement.dataset.theme).toBe('light');
     act(() => { media.matches = true; media.dispatchEvent(new Event('change')); });
-    expect(document.documentElement.dataset.theme).toBe('dark');
-    screen.getByRole('button', { name: 'Confirmer le thème clair' }).focus(); await user.keyboard('{Enter}');
     expect(document.documentElement.dataset.theme).toBe('light');
-    expect(document.documentElement.dataset.density).toBe('compact');
-    act(() => { media.matches = false; media.dispatchEvent(new Event('change')); media.matches = true; media.dispatchEvent(new Event('change')); });
-    expect(document.documentElement.dataset.theme).toBe('light');
-    view.unmount(); document.documentElement.dataset.theme = 'unmounted';
-    act(() => media.dispatchEvent(new Event('change')));
-    expect(document.documentElement.dataset.theme).toBe('unmounted');
   } finally { window.matchMedia = original; }
 });

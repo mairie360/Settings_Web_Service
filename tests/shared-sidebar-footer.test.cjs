@@ -16,6 +16,8 @@ test('sidebar information keeps copyright without creating a nested contentinfo 
   const html = renderToStaticMarkup(React.createElement(AppShell, {
     user: { name: '' },
     hrefs: { projects: 'https://projects.example/' },
+    // lib-components 2.3 (MAIR-1139): the footer is only drawn when the front asks for it.
+    showFooter: true,
     footerProps: { year: 2026 },
   }, React.createElement('p', null, 'Contenu du module')));
   const dom = new JSDOM(html);
@@ -41,6 +43,8 @@ test('supplied product, year, real version and actionable links remain in sideba
   const html = renderToStaticMarkup(React.createElement(AppShell, {
     user: { name: '' },
     hrefs: { projects: 'https://projects.example/' },
+    // lib-components 2.3 (MAIR-1139): the footer is only drawn when the front asks for it.
+    showFooter: true,
     footerProps: {
       productName: 'Produit fourni',
       year: 2024,
@@ -64,6 +68,8 @@ test('an explicitly requested legacy content footer remains supported', () => {
   const html = renderToStaticMarkup(React.createElement(AppShell, {
     user: { name: '' },
     hrefs: { projects: 'https://projects.example/' },
+    // lib-components 2.3 (MAIR-1139): the footer is only drawn when the front asks for it.
+    showFooter: true,
     footerPlacement: 'content',
     footerProps: { year: 2026 },
   }, React.createElement('p', null, 'Contenu du module')));

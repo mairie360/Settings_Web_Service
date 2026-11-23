@@ -67,7 +67,7 @@ Le profil vient de Core `/api/v1/user/me/`; les sessions viennent de `/api/v1/se
 
 ## Périmètre et limites
 
-Les préférences notifications, apparence et général restent indisponibles. L’onglet Système a été retiré (MAIR-851) : les mises à jour de l’instance sont gérées dans Administration. Les adaptateurs de préférences ne garantissent pas que les routes correspondantes soient déployées dans Core.
+Notifications, Apparence et Général (MAIR-902, MAIR-912, MAIR-921) utilisent les trois opérations PATCH publiées. Un interrupteur, une liste (police, densité) ou le curseur de taille du texte (14 à 24 px, envoyé au relâchement) enregistre tout de suite et confirme par un toast ; un refus remet la valeur confirmée et affiche « Enregistrement impossible. ». « Langue et région » (langue, fuseau horaire, format des dates, page d’accueil) est un formulaire avec Annuler / Enregistrer et le nombre de champs modifiés. `null` vaut la valeur par défaut du compte. Une section indisponible affiche « Préférences indisponibles » avec « Réessayer » et verrouille ses contrôles, comme pendant une lecture au premier plan. L’onglet Système a été retiré (MAIR-851) : les mises à jour de l’instance sont gérées dans Administration. Les adaptateurs de préférences ne garantissent pas que les routes correspondantes soient déployées dans Core.
 
 
 ## Pour développer ou exploiter ce module

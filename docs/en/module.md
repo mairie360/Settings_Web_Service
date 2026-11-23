@@ -65,7 +65,7 @@ The profile comes from Core `/api/v1/user/me/`; sessions come from `/api/v1/sess
 
 ## Scope and limitations
 
-Notifications, appearance and general preferences use the three published PATCH operations. Each section hydrates confirmed values, preserves inherited defaults and dirty edits, sends only its changed fields, and validates the returned snapshot before confirming success. Unavailable source flags disable saving until a successful refresh. System provides local assistance only, not server logs, deployment information or storage quotas. Security displays sessions without managing other settings. Preference adapters do not guarantee that the corresponding Core routes are deployed.
+Notifications, Apparence and Général (MAIR-902, MAIR-912, MAIR-921) use the three published PATCH operations. A switch, a list (font, density) or the text-size slider (14 to 24 px, sent once released) saves at once and confirms with a toast; a refusal brings the confirmed value back and shows « Enregistrement impossible. ». « Langue et région » (language, time zone, date format, home page) is a form with Annuler / Enregistrer and the count of changed fields. `null` reads as the account default. An unavailable section shows « Préférences indisponibles » with « Réessayer » and locks its controls, as does a foreground read. Preference adapters do not guarantee that the corresponding Core routes are deployed.
 
 
 ## Developing or operating this module

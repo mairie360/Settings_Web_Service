@@ -354,13 +354,12 @@ test('MAIR-851: the sessions tab lists the sessions of the bootstrap, or their u
 
   await view.click('Notifications');
   assert.match(view.html, /<h2[^>]*>Préférences de notification<\/h2>/);
-  assert.match(view.text(), /Vos modifications sont enregistrées uniquement après confirmation/);
-  // The SDK form wrapper receives JSX children as props; count the rendered DOM,
-  // rather than the harness's intermediate child-prop host registrations.
+  // MAIR-902: one switch per notification, each saved at once (no form, no « Enregistrer »).
+  assert.match(view.text(), /Les changements s’appliquent immédiatement\./);
   const preferencesDom = new (require('jsdom').JSDOM)(view.html);
-  try { assert.equal(preferencesDom.window.document.querySelectorAll('select').length, 6); }
+  try { assert.equal(preferencesDom.window.document.querySelectorAll('[role="switch"]').length, 5); }
   finally { preferencesDom.window.close(); }
-  assert.equal(view.hostElements('Enregistrer les préférences').find(element => element.type === 'button').props.disabled, true);
+  assert.doesNotMatch(view.text(), /Enregistrer les préférences/);
   assert.doesNotMatch(view.text(), /BFF/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap'], 'an unavailable tab does not call the BFF');
 });

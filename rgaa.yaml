@@ -161,4 +161,4 @@ states:
     as: agent
     route: /?tab=general
     steps:
-      - wait_for: { role: heading, name: Préférences générales }
+      - wait_for: { role: heading, name: Langue et région }

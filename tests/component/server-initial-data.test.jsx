@@ -35,7 +35,8 @@ it('keeps personal data and preferences out of native GET submissions in every s
   for (const name of ['Apparence', 'Général', 'Notifications']) {
     fireEvent.click(screen.getByRole('tab', { name, exact: true }));
     const forms = [...document.querySelectorAll('form')];
-    expect(forms.length).toBeGreaterThan(0);
+    // MAIR-902 / MAIR-912: switches, lists and the slider save at once, so only « Langue et région » is a form.
+    if (name === 'Général') expect(forms.length).toBeGreaterThan(0);
     expect(forms.every(form => form.method === 'post')).toBe(true);
   }
 });

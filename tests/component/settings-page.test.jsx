@@ -314,13 +314,14 @@ describe("Settings page", () => {
     expect(screen.queryByText("not-a-date")).toBeNull();
   });
 
-  it.each(["Notifications", "Apparence", "Général"])("shows the persisted %s controls with explicit save confirmation", async (tabName) => {
+  it.each([["Notifications", "Préférences de notification"], ["Apparence", "Apparence"], ["Général", "Langue et région"]])("shows the persisted %s controls, saved at once or by their form", async (tabName, heading) => {
     const user = await openSettings();
     await user.click(screen.getByRole("tab", { name: tabName }));
 
-    expect(screen.getByRole("heading", { name: tabName === "Notifications" ? "Préférences de notification" : tabName === "Général" ? "Préférences générales" : tabName })).toBeTruthy();
-    expect(screen.getByText(/Vos modifications sont enregistrées uniquement après confirmation/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Enregistrer les préférences" }).disabled).toBe(true);
+    expect(screen.getByRole("heading", { name: heading })).toBeTruthy();
+    if (tabName === "Général") expect(screen.getByRole("button", { name: "Enregistrer" }).disabled).toBe(true);
+    else expect(screen.getByText(/s’appliquent immédiatement/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Enregistrer les préférences" })).toBeNull();
     expect(document.querySelector("main").textContent).not.toContain("BFF");
     expect(saveProfile).not.toHaveBeenCalled();
   });

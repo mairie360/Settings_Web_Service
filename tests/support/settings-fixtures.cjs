@@ -28,12 +28,12 @@ function appearance(overrides = {}) {
 
 /** SettingsGeneral (BFF_Settings). */
 function general(overrides = {}) {
-  return { language: 'fr', timezone: 'Europe/Paris', date_format: 'DD/MM/YYYY', home_page: 'dashboard', auto_open_notifications: false, ...overrides };
+  return { language: 'fr', timezone: 'Europe/Paris', date_format: 'DD/MM/YYYY', home_page: 'dashboard', auto_open_notifications: false, autosave: true, ...overrides };
 }
 
 /** SettingsNotifications (BFF_Settings). */
 function notifications(overrides = {}) {
-  return { email: true, push: false, desktop: true, messages: true, projects: true, calendar: false, ...overrides };
+  return { email: true, push: false, desktop: true, messages: true, projects: true, calendar: false, system_updates: true, login_alerts: false, ...overrides };
 }
 
 /** SettingsBootstrap (BFF_Settings). `sources` is merged key by key so a test can override one source only. */
@@ -42,12 +42,15 @@ function bootstrap(overrides = {}) {
   return {
     profile: profile(),
     sessions: [session('s-1')],
+    // MAIR-892: the session of the page and the ended ones.
+    current_session_id: 's-1',
+    session_history: [session('s-0', { device_info: 'Chrome sur Windows', revoked_at: '2026-09-10T08:00:00Z' })],
     appearance: appearance(),
     general: general(),
     notifications: notifications(),
     sources: sources && typeof sources === 'object' && !Array.isArray(sources)
-      ? { sessions: 'available', preferences: 'available', notifications: 'available', ...sources }
-      : sources === undefined ? { sessions: 'available', preferences: 'available', notifications: 'available' } : sources,
+      ? { sessions: 'available', session_history: 'available', preferences: 'available', notifications: 'available', ...sources }
+      : sources === undefined ? { sessions: 'available', session_history: 'available', preferences: 'available', notifications: 'available' } : sources,
     ...rest,
   };
 }
@@ -82,6 +85,10 @@ const SETTINGS_OPERATIONS = {
   'POST /settings/passkeys/options': { reply: { body: { options: { publicKey: { challenge: 'Y2hhbGxlbmdl', user: { id: 'dXNlcg', name: 'agent', displayName: 'Agent' } } } } } },
   'POST /settings/passkeys': { send: { label: 'Téléphone', credential: { id: 'cred' } }, reply: { status: 201, body: { id: 13, label: 'Téléphone', provider: null, created_at: '2026-11-17T09:30:00+00:00', last_used_at: null } } },
   'DELETE /settings/passkeys/{id}': { path: '/settings/passkeys/12', reply: { status: 204 } },
+  // MAIR-892 / MAIR-876: sessions and password (Settings V2).
+  'DELETE /settings/sessions/{id}': { path: '/settings/sessions/s-2', reply: { body: { sessions: [session('s-1')], session_history: [session('s-2', { revoked_at: '2026-09-16T08:00:00Z' })] } } },
+  'POST /settings/sessions/revoke-others': { reply: { body: { sessions: [session('s-1')], session_history: [session('s-2', { revoked_at: '2026-09-16T08:00:00Z' })], revoked: 1 } } },
+  'POST /settings/password': { send: { current_password: 'Ancien-mot-2026', new_password: 'Nouveau-mot-2026' }, reply: { status: 204 } },
 };
 
 module.exports = { ACCESS_TOKEN, profile, session, appearance, general, notifications, bootstrap, error, SETTINGS_OPERATIONS };

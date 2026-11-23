@@ -73,7 +73,8 @@ describe('network surface of src/', () => {
     assert.deepEqual([...new Set(routes)], ['GET /settings/bootstrap', 'PATCH /settings/profile', 'PATCH /settings/appearance', 'PATCH /settings/general', 'PATCH /settings/notifications',
       // MAIR-807 / MAIR-811: second factor and passkeys of the Security tab.
       'GET /settings/2fa', 'POST /settings/2fa/setup', 'POST /settings/2fa/confirm', 'POST /settings/2fa/backup-codes', 'POST /settings/2fa/disable',
-      'GET /settings/passkeys', 'POST /settings/passkeys/options', 'POST /settings/passkeys', 'DELETE /settings/passkeys/${id}']);
+      'GET /settings/passkeys', 'POST /settings/passkeys/options', 'POST /settings/passkeys', 'DELETE /settings/passkeys/${id}',
+      'POST /settings/password', 'DELETE /settings/sessions/${id}', 'POST /settings/sessions/revoke-others']);
   });
 
   test('business requests use the Settings contract proxy and configured BFF URL', () => {
@@ -130,7 +131,7 @@ describe('fixtures conform to the published contract', () => {
   });
 
   test('the validator reports contract violations', () => {
-    assert.deepEqual(contract.validate(contract.schema('SettingsBootstrap'), { profile: { first_name: 42, email: 'anne@mairie.test' }, sessions: {}, appearance: null, general: null, notifications: null, sources: { sessions: 'maybe', preferences: 'available', notifications: 'available' } }), [
+    assert.deepEqual(contract.validate(contract.schema('SettingsBootstrap'), { profile: { first_name: 42, email: 'anne@mairie.test' }, sessions: {}, current_session_id: null, session_history: [], appearance: null, general: null, notifications: null, sources: { sessions: 'maybe', session_history: 'available', preferences: 'available', notifications: 'available' } }), [
       '$.profile.last_name: propriété requise manquante',
       '$.profile.first_name: type string attendu, reçu number',
       '$.sessions: type array attendu, reçu object',

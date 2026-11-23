@@ -22,12 +22,12 @@ it('submits only changed preferences to a provided future bridge and prevents a 
 });
 it('validates password confirmation, reports an unavailable operation, and clears secrets on another tab', () => {
   const { rerender } = render(<SettingsPendingFeatures tab="security" />);
-  fireEvent.change(screen.getByLabelText('Mot de passe actuel'), { target: { value: 'old' } });
-  fireEvent.change(screen.getByLabelText('Nouveau mot de passe'), { target: { value: 'new' } });
+  fireEvent.change(screen.getByLabelText('Mot de passe actuel'), { target: { value: 'ancien-2026' } });
+  fireEvent.change(screen.getByLabelText('Nouveau mot de passe'), { target: { value: 'nouveau-2026' } });
   fireEvent.change(screen.getByLabelText('Confirmer le mot de passe'), { target: { value: 'mismatch' } });
   fireEvent.submit(screen.getByRole('button', { name: 'Changer le mot de passe' }).closest('form'));
   expect(screen.getByRole('alert').textContent).toContain('ne correspondent pas');
-  fireEvent.change(screen.getByLabelText('Confirmer le mot de passe'), { target: { value: 'new' } }); fireEvent.submit(screen.getByRole('button', { name: 'Changer le mot de passe' }).closest('form'));
+  fireEvent.change(screen.getByLabelText('Confirmer le mot de passe'), { target: { value: 'nouveau-2026' } }); fireEvent.submit(screen.getByRole('button', { name: 'Changer le mot de passe' }).closest('form'));
   expect(screen.getByRole('alert').textContent).toContain('aucune modification du compte');
   rerender(<SettingsPendingFeatures tab="general" />); rerender(<SettingsPendingFeatures tab="security" />); expect(screen.getByLabelText('Mot de passe actuel').value).toBe('');
 });

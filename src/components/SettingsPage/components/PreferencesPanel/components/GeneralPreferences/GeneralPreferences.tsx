@@ -55,6 +55,10 @@ export const GeneralPreferences = ({ values, disabled, save }: GeneralPreference
         description="Le centre de notifications s’ouvre quand une nouvelle notification arrive." checked={values.auto_open_notifications ?? false}
         disabled={disabled} onChange={async (checked) => { await save({ auto_open_notifications: checked }, `${checked ? 'Option activée' : 'Option désactivée'} — Ouverture automatique des notifications`); }}
         onError={() => undefined} />
+      <SettingToggle id="settings-autosave" label="Sauvegarde automatique des brouillons"
+        description="Vos brouillons sont enregistrés toutes les 30 secondes." checked={values.autosave ?? true}
+        disabled={disabled} onChange={async (checked) => { await save({ autosave: checked }, `${checked ? 'Option activée' : 'Option désactivée'} — Sauvegarde automatique`); }}
+        onError={() => undefined} />
     </Panel>
   </>;
 };

@@ -92,3 +92,9 @@ Les régions de statut restent montées vides avant les annonces ; la confirmati
 ## Direction visuelle commune — MAIR-547
 
 DA claire option 1 : tokens et police communs, navigation accessible et contenu métier conservé. Voir la [recette visuelle](../qa/design-qa.md) pour les preuves, vérifications et limites RGAA.
+
+### Sessions, mot de passe et alertes (MAIR-892, MAIR-876)
+
+- Sessions : « Sessions actives » signale cet appareil (« Cet appareil », jamais déconnectable). Toute autre session active se ferme après une confirmation ; « Déconnecter les autres appareils » les ferme toutes sauf celle-ci et indique combien. « Historique des connexions » liste les sessions terminées ou expirées. Une session déjà terminée (404) ou la session de la page (409) est expliquée en français.
+- Sécurité : le mot de passe se change par BFF_Settings (8 à 255 caractères, différent de l’actuel) ; un mot de passe actuel faux, trop de tentatives ou un nouveau mot de passe refusé sont expliqués en français, et Core ferme les autres sessions. « Alertes de connexion » envoie un e-mail à chaque nouvelle connexion.
+- Notifications ajoute « Mises à jour de la plateforme » ; Général ajoute « Sauvegarde automatique des brouillons » (activée par défaut).

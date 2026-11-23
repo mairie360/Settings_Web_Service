@@ -59,7 +59,8 @@ describe('actual Settings page with the published shell and consumer styles', ()
     const skip = screen.getByRole('link', { name: 'Aller au contenu' });
     await user.click(skip);
     expect(document.activeElement).toBe(screen.getByRole('main'));
-    expect(screen.getByRole('contentinfo').closest('aside')).toBeNull();
+    // MAIR-1125 / lib-components 2.3: no footer on the V2 Settings page.
+    expect(screen.queryByRole('contentinfo')).toBeNull();
   });
 
   it('renders the lib 2.x desktop navigation with the configured modules, Paramètres current (MAIR-851)', async () => {

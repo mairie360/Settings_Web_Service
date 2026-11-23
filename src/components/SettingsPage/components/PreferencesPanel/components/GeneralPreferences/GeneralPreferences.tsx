@@ -1,5 +1,5 @@
 "use client";
-import { Globe, SlidersHorizontal } from "lucide-react";
+import { BellRing, Clock, Globe, SlidersHorizontal } from "lucide-react";
 import { useState } from 'react';
 import { FormActions, Panel, SelectField, SettingToggle } from '@mairie360/lib-components/primitives';
 import type { SettingsGeneral } from '@mairie360/bff-settings-openapi/model';
@@ -52,11 +52,11 @@ export const GeneralPreferences = ({ values, disabled, save }: GeneralPreference
       </form>
     </Panel>
     <Panel icon={SlidersHorizontal} title="Comportement" className="settings-general-behaviour">
-      <SettingToggle id="settings-auto-open-notifications" label="Ouvrir automatiquement les notifications"
+      <SettingToggle id="settings-auto-open-notifications" icon={BellRing} label="Ouvrir automatiquement les notifications"
         description="Le centre de notifications s’ouvre quand une nouvelle notification arrive." checked={values.auto_open_notifications ?? false}
         disabled={disabled} onChange={async (checked) => { await save({ auto_open_notifications: checked }, `${checked ? 'Option activée' : 'Option désactivée'} — Ouverture automatique des notifications`); }}
         onError={() => undefined} />
-      <SettingToggle id="settings-autosave" label="Sauvegarde automatique des brouillons"
+      <SettingToggle id="settings-autosave" icon={Clock} label="Sauvegarde automatique des brouillons"
         description="Vos brouillons sont enregistrés toutes les 30 secondes." checked={values.autosave ?? true}
         disabled={disabled} onChange={async (checked) => { await save({ autosave: checked }, `${checked ? 'Option activée' : 'Option désactivée'} — Sauvegarde automatique`); }}
         onError={() => undefined} />

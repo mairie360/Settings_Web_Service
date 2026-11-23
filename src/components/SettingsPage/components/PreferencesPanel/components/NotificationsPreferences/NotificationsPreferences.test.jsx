@@ -18,6 +18,11 @@ describe('NotificationsPreferences', () => {
     expect(save).toHaveBeenCalledWith({ messages: false }, 'Option désactivée — Nouveaux messages');
   });
 
+  it('MAIR-1127: each setting is a card with its icon, the notification types in the colour of their module', () => {
+    const { container } = render(<NotificationsPreferences values={values} disabled={false} save={vi.fn()} />);
+    expect(container.querySelectorAll('[data-m360-component~="SettingToggle"] [data-m360-component~="IconChip"]').length).toBe(6);
+  });
+
   it('locks every switch while the section is unavailable', () => {
     render(<NotificationsPreferences values={values} disabled save={vi.fn()} />);
     for (const element of screen.getAllByRole('switch')) expect(element.hasAttribute('disabled')).toBe(true);

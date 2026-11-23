@@ -63,12 +63,15 @@ test('the reusable workflow receives only its declared named secrets', () => {
   ]);
 });
 
-test('npm keeps the seven-day window except for the internal UI package', () => {
+// MAIR-823: the BFF_Settings contract is published by this organisation for each BFF commit; the front
+// must pin the one that serves its feature without waiting seven days (same reasoning as the UI package).
+test('npm keeps the seven-day window except for the internal UI and contract packages', () => {
   const config = read('.npmrc');
   assert.match(config, /^min-release-age\s*=\s*7\s*$/m);
   const exclusions = [...config.matchAll(/^\s*min-release-age-exclude(\[\])?\s*=\s*(.+?)\s*$/gm)];
   assert.deepEqual(exclusions.map(([, list, name]) => [list, name]), [
     ['[]', '@mairie360/lib-components'],
+    ['[]', '@mairie360/bff-settings-openapi'],
   ]);
   assert.doesNotMatch(config, /^\s*before\b/m);
 });

@@ -122,12 +122,14 @@ states:
       - click: { role: button, name: Enregistrer }
       - wait_for: { text: Votre profil a été enregistré. }
   - id: security
-    description: Password form of the security tab
+    description: Password, second factor and passkeys of the security tab (MAIR-807, MAIR-811)
     as: agent
     route: /
     steps:
       - click: { role: tab, name: Sécurité }
       - wait_for: { label: Mot de passe actuel }
+      - wait_for: { role: heading, name: Double authentification }
+      - wait_for: { role: heading, name: Passkeys }
   - id: sessions
     description: The list of open sessions (MAIR-851, own tab)
     as: agent

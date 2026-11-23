@@ -71,6 +71,17 @@ const SETTINGS_OPERATIONS = {
   'PATCH /settings/notifications': { send: { email: false }, reply: { body: notifications({ email: false }) } },
   'PATCH /settings/appearance': { send: { theme: 'dark' }, reply: { body: appearance({ theme: 'dark' }) } },
   'PATCH /settings/general': { send: { language: 'fr' }, reply: { body: general() } },
+  // MAIR-807: second factor.
+  'GET /settings/2fa': { reply: { body: { enabled: true, backup_codes_remaining: 8 } } },
+  'POST /settings/2fa/setup': { reply: { body: { secret: 'JBSWY3DPEHPK3PXP', otpauth_uri: 'otpauth://totp/Mairie360:agent?secret=JBSWY3DPEHPK3PXP&issuer=Mairie360' } } },
+  'POST /settings/2fa/confirm': { send: { code: '123456' }, reply: { body: { backup_codes: Array.from({ length: 10 }, (_, index) => `ab${index}c-d${index}ef`) } } },
+  'POST /settings/2fa/disable': { send: { password: 'secret', code: '123456' }, reply: { status: 204 } },
+  'POST /settings/2fa/backup-codes': { send: { code: '123456' }, reply: { body: { backup_codes: Array.from({ length: 10 }, (_, index) => `cd${index}e-f${index}gh`) } } },
+  // MAIR-811: passkeys.
+  'GET /settings/passkeys': { reply: { body: [{ id: 12, label: 'Ordinateur de la mairie', provider: 'Google Password Manager', created_at: '2026-11-17T09:30:00+00:00', last_used_at: null }] } },
+  'POST /settings/passkeys/options': { reply: { body: { options: { publicKey: { challenge: 'Y2hhbGxlbmdl', user: { id: 'dXNlcg', name: 'agent', displayName: 'Agent' } } } } } },
+  'POST /settings/passkeys': { send: { label: 'Téléphone', credential: { id: 'cred' } }, reply: { status: 201, body: { id: 13, label: 'Téléphone', provider: null, created_at: '2026-11-17T09:30:00+00:00', last_used_at: null } } },
+  'DELETE /settings/passkeys/{id}': { path: '/settings/passkeys/12', reply: { status: 204 } },
 };
 
 module.exports = { ACCESS_TOKEN, profile, session, appearance, general, notifications, bootstrap, error, SETTINGS_OPERATIONS };

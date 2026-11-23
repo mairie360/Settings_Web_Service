@@ -37,6 +37,8 @@ beforeEach(() => {
   front.reset();
   for (const name of BFF_URL_VARIABLES) delete process.env[name];
   process.env.SETTINGS_BFF_URL = bffSettings.url;
+  // The Security tab reads its second factor and passkeys when it opens (MAIR-807, MAIR-811).
+  for (const key of ['GET /settings/2fa', 'GET /settings/passkeys']) bffSettings.on('GET', key.split(' ')[1], fixtures.SETTINGS_OPERATIONS[key].reply);
 });
 afterEach(() => {
   view?.unmount();
@@ -54,6 +56,9 @@ const stripTags = (fragment) => fragment.replace(/<[^>]*>/g, '').replace(/&lt;/g
 const toastAlert = (html) => stripTags(html.match(/data-m360-component="ToastProvider" class="sr-only" role="alert"[^>]*>((?:<div>[^<]*<\/div>)*)<\/div>/)?.[1] ?? '');
 // …and the fields to fix carry their message underneath (lib Field: `<p id="<input id>-error" role="alert">`).
 const fieldError = (html, field) => stripTags(html.match(new RegExp(`<p id="settings-${field}-error"[^>]*>([^]*?)</p>`))?.[1] ?? '');
+// MAIR-807 / MAIR-811: opening Sécurité reads the second factor and the passkeys, nothing else.
+const SECURITY_READS = ['GET /settings/2fa', 'GET /settings/passkeys'];
+const withoutSecurityReads = () => upstream().filter(call => !SECURITY_READS.includes(call));
 const upstream = () => bffSettings.requests.map((request) => `${request.method} ${request.template}`);
 const profileInputs = () => [...view.html.matchAll(/<input\b[^>]*>/g)].map(([html]) => html).filter(html => /name="(?:first_name|last_name|email|phone)"/.test(html));
 
@@ -359,7 +364,7 @@ test('MAIR-851: the sessions tab lists the sessions of the bootstrap, or their u
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap'], 'an unavailable tab does not call the BFF');
 });
 
-test('arrow, Home and End keys select and focus Settings tabs without a BFF call', async () => {
+test('arrow, Home and End keys select and focus Settings tabs without a call beyond the reads of the tab', async () => {
   await renderLoadedPage();
   const focused = [];
   // MAIR-608: the lib Tabs focus the next tab by id (settings-tab-<key>); the runner has no DOM, so the ids resolve here.
@@ -384,7 +389,7 @@ test('arrow, Home and End keys select and focus Settings tabs without a BFF call
   assert.deepEqual(focused, [1, 5, 0]);
   await key('Profil', 'Home');
   assert.deepEqual(focused, [1, 5, 0, 0]);
-  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
+  assert.deepEqual(withoutSecurityReads(), ['GET /settings/bootstrap']);
   } finally { global.document.getElementById = previousGetElementById; }
 });
 
@@ -424,8 +429,9 @@ for (const refused of [false, true]) {
       release(); await Promise.all([pending, duplicate]); await view.settle();
     }
     assert.equal(patchCount, 1);
-    assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
-    assert.deepEqual(bffSettings.requests[1].body, { first_name: 'Anne' });
+    assert.deepEqual(withoutSecurityReads(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
+    const patches = () => bffSettings.requests.filter(request => request.method === 'PATCH');
+    assert.deepEqual(patches()[0].body, { first_name: 'Anne' });
     assert.ok(profileInputs().every((html) => !html.includes('disabled=""')));
     assert.match(view.html, /<form[^>]*aria-busy="false"/);
     if (refused) {
@@ -435,7 +441,7 @@ for (const refused of [false, true]) {
       bffSettings.on('PATCH', '/settings/profile', { body: saved });
       await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
       assert.equal(patchCount, 2);
-      assert.deepEqual(bffSettings.requests[2].body, { first_name: 'Anne' });
+      assert.deepEqual(patches()[1].body, { first_name: 'Anne' });
     }
     assert.match(view.html, /value="ANNE"/);
     assert.match(view.html, /value="LE GALL"/);
@@ -705,4 +711,25 @@ test('describeDetail labels known fields and keeps unknown paths and messages', 
   assert.equal(describeDetail({ path: 'body.first_name', message: 'String must contain at least 2 character(s)' }), 'Prénom : 2 caractères minimum');
   assert.equal(describeDetail({ path: 'body.first_name', message: 'Too big: expected string to have <=64 characters' }), 'Prénom : 64 caractères maximum');
   assert.equal(describeDetail({ message: 'Expected at least one of first_name, last_name, email, phone, phone_country' }), 'Expected at least one of first_name, last_name, email, phone, phone_country');
+});
+
+test('MAIR-807 / MAIR-811: the Security tab reads the second factor and the passkeys through the contract proxy', async () => {
+  await renderLoadedPage();
+  await view.click('Sécurité');
+  await view.waitFor(html => html.includes('Codes de secours restants') && html.includes('Ordinateur de la mairie'));
+  assert.match(view.text(), /Double authentification/);
+  assert.match(view.text(), /Activée/);
+  assert.match(view.text(), /Codes de secours restants : 8 sur 10/);
+  assert.match(view.text(), /Passkeys/);
+  assert.match(view.text(), /Google Password Manager/);
+  assert.deepEqual(upstream().sort(), ['GET /settings/2fa', 'GET /settings/bootstrap', 'GET /settings/passkeys']);
+});
+
+test('MAIR-807: an unavailable second factor offers « Réessayer » without breaking the tab', async () => {
+  bffSettings.on('GET', '/settings/2fa', { status: 502, body: fixtures.error('Core API indisponible', 502), outOfContract: true });
+  await renderLoadedPage();
+  await view.click('Sécurité');
+  await view.waitFor(html => html.includes('Double authentification indisponible'));
+  assert.doesNotMatch(view.text(), /Core API indisponible/);
+  assert.match(view.text(), /Mot de passe actuel/);
 });

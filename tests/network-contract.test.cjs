@@ -70,7 +70,10 @@ describe('network surface of src/', () => {
       assert.ok(contract.match(method.toUpperCase(), template), `${name}: ${method} ${template} absent de ${PACKAGE}`);
       return `${method.toUpperCase()} ${template}`;
     });
-    assert.deepEqual([...new Set(routes)], ['GET /settings/bootstrap', 'PATCH /settings/profile', 'PATCH /settings/appearance', 'PATCH /settings/general', 'PATCH /settings/notifications']);
+    assert.deepEqual([...new Set(routes)], ['GET /settings/bootstrap', 'PATCH /settings/profile', 'PATCH /settings/appearance', 'PATCH /settings/general', 'PATCH /settings/notifications',
+      // MAIR-807 / MAIR-811: second factor and passkeys of the Security tab.
+      'GET /settings/2fa', 'POST /settings/2fa/setup', 'POST /settings/2fa/confirm', 'POST /settings/2fa/backup-codes', 'POST /settings/2fa/disable',
+      'GET /settings/passkeys', 'POST /settings/passkeys/options', 'POST /settings/passkeys', 'DELETE /settings/passkeys/${id}']);
   });
 
   test('business requests use the Settings contract proxy and configured BFF URL', () => {
@@ -111,7 +114,8 @@ describe('fixtures conform to the published contract', () => {
     assert.deepEqual(Object.keys(fixtures.SETTINGS_OPERATIONS).sort(), operationKeys());
     for (const [key, { send, reply }] of Object.entries(fixtures.SETTINGS_OPERATIONS)) {
       const [method, template] = key.split(' ');
-      assert.deepEqual(contract.validate(successSchema(method, template), reply.body), [], key);
+      // A 204 has no body to validate (`void` in the generated client).
+      if (reply.body !== undefined) assert.deepEqual(contract.validate(successSchema(method, template), reply.body), [], key);
       const { schema } = contract.requestBodySchema(contract.match(method, template));
       if (send !== undefined) assert.deepEqual(contract.validate(schema, send), [], `${key} (corps envoyé)`);
     }

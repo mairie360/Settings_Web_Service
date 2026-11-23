@@ -71,6 +71,25 @@ describe('SessionsSection', () => {
     expect(screen.getByRole('button', { name: 'Déconnecter les autres appareils' }).disabled).toBe(true);
   });
 
+  it('MAIR-1126: counts the sessions in four cards and opens a row in a detail window, ending it after the confirmation', async () => {
+    const user = userEvent.setup();
+    const onSessions = vi.fn();
+    api.revokeSession.mockResolvedValue({ sessions: [fixtures.session('s-1')], session_history: [fixtures.session('s-2')] });
+    render(<SessionsSection {...props({ onSessions })} />);
+    const card = (label) => screen.getAllByText(label).map((node) => node.closest('[data-m360-component~="MetricCard"]')).find(Boolean).textContent;
+    expect(card('Sessions actives')).toContain('2');
+    expect(card('Autres appareils connectés')).toContain('1');
+    expect(card('Sessions dans l’historique')).toContain('1');
+    const rowButtons = within(screen.getByRole('table', { name: 'Sessions actives' })).getAllByRole('button', { name: /Safari sur iPhone/ });
+    await user.click(rowButtons.find((button) => !/Déconnecter/.test(button.textContent + (button.getAttribute('aria-label') ?? ''))));
+    expect(screen.getByRole('dialog', { name: 'Détail de la session' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Déconnecter cette session' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmer la déconnexion' }));
+    expect(api.revokeSession).toHaveBeenCalledWith('s-2');
+    expect(onSessions).toHaveBeenCalled();
+    expect(screen.queryByRole('dialog', { name: 'Détail de la session' })).toBeNull();
+  });
+
   it('explains every refusal in French', () => {
     expect(revokeFailure(new BffRequestError('x', 409, null))).toBe('Pour fermer cette session, déconnectez-vous.');
     expect(revokeFailure(new Error('x'))).toBe('La déconnexion n’a pas été confirmée.');

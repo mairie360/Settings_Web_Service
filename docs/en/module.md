@@ -100,3 +100,5 @@ Approved light option 1: shared tokens and font, accessible navigation, and pres
 
 - A header band names the agent (name, « Paramètres du compte », e-mail) on every tab and shows three tiles that open their tab: double authentication (Activée / Désactivée), active sessions, notifications switched on. They follow every change.
 - The tabs are a floating bar that stays at the top while scrolling; every panel has its icon; the « Annuler / Enregistrer » bar of Profil and « Langue et région » stays visible.
+
+- Sessions V2.1 (MAIR-1126): four cards above the lists (active sessions, other connected devices, sessions in the history, location of this device: « Non disponible », the BFF has none yet), and a click on a session opens its detail in a centred window, with « Déconnecter cette session » for another active session (confirmed above the window).

@@ -7,6 +7,8 @@ import type { SettingsBootstrapRead as Bootstrap } from '@/lib/settings-bootstra
 import * as api from '@/lib/settings-api';
 import { BffRequestError } from '@/lib/bff-client';
 import SessionRevokeDialog from './components/SessionRevokeDialog';
+import { SessionMetrics } from './components/SessionMetrics';
+import { SessionDetailDialog } from './components/SessionDetailDialog';
 
 type Session = Bootstrap['sessions'][number];
 
@@ -33,6 +35,7 @@ export function revokeFailure(error: unknown) {
  */
 export const SessionsSection = ({ data, onSessions, onNotify, onFailure }: SessionsSectionProps) => {
   const [sessionToRevoke, setSessionToRevoke] = useState<{ id: string; device_info: string } | null>(null);
+  const [selected, setSelected] = useState<Session | null>(null);
   const [confirmOthers, setConfirmOthers] = useState(false);
   const [revokingOthers, setRevokingOthers] = useState(false);
   const writing = useRef(false);
@@ -40,6 +43,7 @@ export const SessionsSection = ({ data, onSessions, onNotify, onFailure }: Sessi
   const sessions = data.sources.sessions === "unavailable" ? null : data.sessions;
   const others = (sessions ?? []).filter(session => session.id !== current && isActive(session));
   const historyAvailable = data.sources.session_history !== "unavailable" && Array.isArray(data.session_history);
+  const active = sessions === null ? null : sessions.filter(isActive).length;
 
   const revokeOthers = async () => {
     if (writing.current) return;
@@ -56,6 +60,7 @@ export const SessionsSection = ({ data, onSessions, onNotify, onFailure }: Sessi
 
   return (
     <div className="space-y-5">
+      <SessionMetrics active={active} others={sessions === null ? null : others.length} history={historyAvailable ? data.session_history!.length : null} />
       <Panel icon={MonitorSmartphone} title="Sessions actives" description="Les appareils connectés à votre compte." className="settings-sessions"
         action={<Button variant="outline" tone="danger" icon={LogOut} disabled={!others.length || revokingOthers} onClick={() => setConfirmOthers(true)}>
           Déconnecter les autres appareils
@@ -67,6 +72,7 @@ export const SessionsSection = ({ data, onSessions, onNotify, onFailure }: Sessi
           unavailableTitle="Les sessions sont temporairement indisponibles."
           emptyTitle="Aucune session à afficher."
           onRevoke={(session) => setSessionToRevoke({ id: session.id, device_info: session.device_info })}
+          onSelect={(session) => setSelected(session as Session)}
         />
       </Panel>
       <Panel icon={History} title="Historique des connexions" description="Les sessions terminées ou expirées de votre compte." className="settings-session-history">
@@ -78,11 +84,13 @@ export const SessionsSection = ({ data, onSessions, onNotify, onFailure }: Sessi
           emptyTitle="Aucune session terminée."
         />
       </Panel>
+      <SessionDetailDialog session={selected} current={selected?.id === current} revocable={selected ? isActive(selected) : false}
+        onClose={() => setSelected(null)} onRevoke={(session) => setSessionToRevoke({ id: session.id, device_info: session.device_info })} />
       {sessionToRevoke ? (
         <SessionRevokeDialog session={sessionToRevoke}
           port={{ revokeSession: async (id) => { try { const result = await api.revokeSession(id); onSessions(result.sessions, result.session_history); } catch (error) { throw new Error(revokeFailure(error)); } } }}
           onClose={() => setSessionToRevoke(null)}
-          onRevoked={() => { onNotify(`Session « ${sessionToRevoke.device_info} » déconnectée.`); setSessionToRevoke(null); }} />
+          onRevoked={() => { onNotify(`Session « ${sessionToRevoke.device_info} » déconnectée.`); setSessionToRevoke(null); setSelected(null); }} />
       ) : null}
       <ConfirmModal open={confirmOthers} title="Déconnecter les autres appareils ?"
         message={`${others.length === 1 ? 'L’autre session sera fermée' : `Les ${others.length} autres sessions seront fermées`}. Cet appareil reste connecté.`}

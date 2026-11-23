@@ -41,7 +41,6 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
     finally { logoutPending.current = false; }
   };
   const recoverable = !data || data.sources.sessions === "unavailable" || data.sources.preferences === "unavailable" || data.sources.notifications === "unavailable" || Boolean(readError);
-  const initials = data ? `${data.profile.first_name.trim().charAt(0)}${data.profile.last_name.trim().charAt(0)}`.toLocaleUpperCase("fr") || "?" : "?";
   return (
     <AccessibleShell
       className="settings-shell"
@@ -54,8 +53,9 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
       <ToastProvider regionLabel="Notifications de la page" placement="top-end" defaultDuration={5000}>
         <section className="settings-page">
           <SettingsHeader />
-          <SettingsNotices error={form.error} errorDetails={form.errorDetails} readError={data ? readError : ""} logoutError={logoutError} recoverable={Boolean(data) && recoverable} hasData={Boolean(data)} reading={reading} saving={form.saving} onReload={reload} />
+          <SettingsNotices readError={data ? readError : ""} logoutError={logoutError} recoverable={Boolean(data) && recoverable} hasData={Boolean(data)} reading={reading} saving={form.saving} onReload={reload} />
           <StatusToast message={form.status} title="Profil enregistré" onShown={form.clearStatus} />
+          <StatusToast message={form.failure?.message ?? ""} title={form.failure?.title} tone="error" onShown={form.clearFailure} dismiss={form.saving} />
           <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{readAnnouncement}</p>
           {!data || !profile ? (
             <SettingsLoading reading={reading} failed={Boolean(readError)} onRetry={reload} />
@@ -63,7 +63,7 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
             <>
               <SettingsTabs value={activeTab} onChange={setActiveTab} />
               <div role="tabpanel" id={settingsPanelId(activeTab)} aria-labelledby={settingsTabId(activeTab)} className="settings-panel">
-                <SettingsPendingFeatures tab={activeTab} profileInitials={initials}
+                <SettingsPendingFeatures tab={activeTab}
                   preferencesContent={<PreferencesPanel key={accountScope} tab={activeTab} bootstrap={data} reading={reading || form.saving} onWriting={setPreferencesWriting} onRefresh={() => void readSettings()} />}
                   profileContent={<ProfileForm form={form} reading={reading} />}
                   sessionsContent={<SessionsSection data={data} onRevoked={(id, revokedAt) => setData((current) => current ? { ...current, sessions: current.sessions.map((session) => session.id === id ? { ...session, revoked_at: revokedAt } : session) } : current)} />} />

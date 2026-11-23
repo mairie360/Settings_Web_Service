@@ -101,6 +101,41 @@ export function describeDetail({ path, message }: BffErrorDetail): string {
   return field ? `${FIELD_LABELS[field] ?? field} : ${text}` : text;
 }
 
+/** Local checks of the V2 form (MAIR-864, parcours P2), shown under each field before any request. */
+export const FIELD_MESSAGES = {
+  first_name: 'Le prénom est obligatoire.',
+  last_name: 'Le nom est obligatoire.',
+  email: 'Adresse invalide (ex. prenom.nom@mairie.fr).',
+  phone: 'Saisissez un numéro au format 06 12 34 56 78.',
+} as const;
+export type FieldErrors = Partial<Record<ProfileField | 'current_password', string>>;
+
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_SHAPE = /^\+?[\d\s.()-]*\d[\d\s.()-]*$/;
+
+/** Errors of the fields the agent can fix before saving; empty when the draft can be sent. */
+export function validateProfile(profile: SettingsProfile): FieldErrors {
+  const errors: FieldErrors = {};
+  if (!profile.first_name.trim()) errors.first_name = FIELD_MESSAGES.first_name;
+  if (!profile.last_name.trim()) errors.last_name = FIELD_MESSAGES.last_name;
+  if (!EMAIL_SHAPE.test(profile.email.trim())) errors.email = FIELD_MESSAGES.email;
+  const phone = profile.phone?.trim();
+  if (phone && (!PHONE_SHAPE.test(phone) || phone.replace(/\D/g, '').length < 6)) errors.phone = FIELD_MESSAGES.phone;
+  return errors;
+}
+
+/** Fields of a BFF 400 (`details[].path` = `body.<field>`) that the form shows under the field. */
+export function detailFieldErrors(details: readonly BffErrorDetail[]): FieldErrors {
+  const errors: FieldErrors = {};
+  for (const detail of details) {
+    const field = detail.path?.split('.').filter((part) => part && part !== 'body').pop();
+    if (field && (field === 'current_password' || PROFILE_FIELDS.some((rule) => rule.field === field))) {
+      errors[field as keyof FieldErrors] ??= describeDetail(detail).replace(/^[^:]+ : /, '').replace(/^./, (first) => first.toUpperCase()) + '.';
+    }
+  }
+  return errors;
+}
+
 export type SaveError = { message: string; details: string[] };
 
 /** French message of a refused profile save, with one line per validation detail of the BFF. */

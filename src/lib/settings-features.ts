@@ -5,11 +5,8 @@ export type SettingsPreferences = {
   fontSize: number; density: 'compact' | 'normal' | 'comfortable';
   homePage: 'dashboard' | 'projects' | 'calendar' | 'messages'; autoOpenNotifications: boolean;
 };
-export type ExtendedProfile = { service: string; position: string; biography: string };
 export interface SettingsFeaturePort {
   savePreferences?: (patch: Partial<SettingsPreferences>) => Promise<SettingsPreferences>;
-  saveExtendedProfile?: (patch: Partial<ExtendedProfile>) => Promise<ExtendedProfile>;
-  savePhoto?: (photo: File) => Promise<string>;
   changePassword?: (current: string, next: string) => Promise<void>;
   revokeSession?: (id: string) => Promise<void>;
 }
@@ -25,11 +22,5 @@ export function validatePassword(current: string, next: string, confirmation: st
   if (!current || !next || !confirmation) return 'Tous les champs de mot de passe sont obligatoires.';
   if (next !== confirmation) return 'Les nouveaux mots de passe ne correspondent pas.';
   if (next === current) return 'Choisissez un mot de passe différent du mot de passe actuel.';
-  return '';
-}
-
-export function validatePhoto(file: File) {
-  if (!['image/jpeg', 'image/png'].includes(file.type)) return 'Utilisez une photo JPG ou PNG.';
-  if (!file.size || file.size > 2 * 1024 * 1024) return 'La photo doit contenir entre 1 octet et 2 Mo.';
   return '';
 }

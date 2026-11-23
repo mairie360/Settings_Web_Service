@@ -1,12 +1,9 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Help, SectionTitle } from '@mairie360/lib-components/primitives';
 
 import { changedFields, pendingFeatureMessage, pendingSettingsPort } from '@/lib/settings-features';
-import type { ExtendedProfile, SettingsFeaturePort, SettingsPreferences } from '@/lib/settings-features';
+import type { SettingsFeaturePort, SettingsPreferences } from '@/lib/settings-features';
 import type { SettingsTabId } from '../SettingsTabs';
-import { ProfilePhoto } from './components/ProfilePhoto';
-import { ProfessionalDraft } from './components/ProfessionalDraft';
 import { PasswordForm } from './components/PasswordForm';
 import { DraftPreferences } from './components/DraftPreferences';
 import { FailureToast, FeedbackToast } from '../FeedbackToast';
@@ -15,25 +12,20 @@ const initialPreferences: SettingsPreferences = {
   messages: true, projects: true, calendar: true, theme: 'system', fontFamily: 'system',
   fontSize: 17, density: 'normal', homePage: 'dashboard', autoOpenNotifications: false,
 };
-const emptyProfile: ExtendedProfile = { service: '', position: '', biography: '' };
 
 export interface SettingsPendingFeaturesProps {
   tab: SettingsTabId; port?: SettingsFeaturePort;
-  profileInitials?: string;
   preferencesContent?: ReactNode; profileContent?: ReactNode; sessionsContent?: ReactNode;
-  initial?: SettingsPreferences; extendedProfile?: ExtendedProfile;
+  initial?: SettingsPreferences;
 }
 
 /**
  * The tab contents that still go through the feature port (photo, professional draft, password,
  * draft preferences), composed with the confirmed contents the page passes in (profile, sessions, preferences).
  */
-export default function SettingsPendingFeatures({ tab, port = pendingSettingsPort, initial, extendedProfile, preferencesContent, profileContent, sessionsContent, profileInitials = '?' }: SettingsPendingFeaturesProps) {
+export default function SettingsPendingFeatures({ tab, port = pendingSettingsPort, initial, preferencesContent, profileContent, sessionsContent }: SettingsPendingFeaturesProps) {
   const [preferences, setPreferences] = useState(initial ?? initialPreferences);
   const [confirmedPreferences, setConfirmedPreferences] = useState(initial ?? initialPreferences);
-  const [profile, setProfile] = useState(extendedProfile ?? emptyProfile);
-  const [confirmedProfile, setConfirmedProfile] = useState(extendedProfile ?? emptyProfile);
-  const [confirmedPhoto, setConfirmedPhoto] = useState('');
   const [feedback, setFeedback] = useState<Record<string, { message: string; failed: boolean }>>({});
   const [busy, setBusy] = useState('');
   const writing = useRef(false);
@@ -75,24 +67,7 @@ export default function SettingsPendingFeatures({ tab, port = pendingSettingsPor
   }
 
   return <div className="settings-feature-panels mt-5 space-y-5">
-    {tab === 'profile' ? <section className="settings-feature-card settings-account-card">
-      <SectionTitle>Informations personnelles</SectionTitle>
-      <Help className="settings-section-description">Ces informations sont utilisées pour votre compte Mairie360.</Help>
-      <ProfilePhoto initials={profileInitials} busy={Boolean(busy)} confirmedPhoto={confirmedPhoto}
-        onInvalid={(message) => setFeedback(current => ({ ...current, photo: { message, failed: true } }))}
-        onPreview={() => setFeedback(current => ({ ...current, photo: { message: 'Aperçu local uniquement. La photo du compte reste inchangée.', failed: false } }))}
-        onSave={(photo) => void perform('photo', port.savePhoto ? async () => {
-          const url = await port.savePhoto!(photo); if (!url || !/^https?:\/\//.test(url)) throw new Error('La photo enregistrée n’a pas été confirmée.');
-          if (alive.current) setConfirmedPhoto(url);
-        } : undefined, 'Photo enregistrée.')} />
-      {notice('photo')}
-      {profileContent}
-    </section> : null}
-    {tab === 'profile' ? <ProfessionalDraft profile={profile} confirmedProfile={confirmedProfile} busy={Boolean(busy)} onChange={setProfile} onSubmit={() => void perform('extendedProfile', port.saveExtendedProfile ? async () => {
-      const next = await port.saveExtendedProfile!(changedFields(confirmedProfile, profile));
-      if (!next || ['service', 'position', 'biography'].some(key => typeof next[key as keyof ExtendedProfile] !== 'string')) throw new Error('Le profil complémentaire n’a pas été confirmé.');
-      if (alive.current) { setProfile(next); setConfirmedProfile(next); }
-    } : undefined, 'Informations complémentaires enregistrées.')}>{notice('extendedProfile')}</ProfessionalDraft> : null}
+    {tab === 'profile' ? profileContent : null}
     {tab === 'security' ? <>
       <PasswordForm busy={Boolean(busy)} epoch={passwordEpoch}
         onInvalid={(message) => setFeedback(current => ({ ...current, password: { message, failed: true } }))}

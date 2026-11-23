@@ -49,6 +49,11 @@ afterEach(() => {
 
 // The lib ToastProvider keeps two empty live regions (status and alert) mounted: page alerts are read without them.
 const pageHtml = (html) => html.replace(/<div data-m360-component="ToastProvider"[^>]*><\/div>/g, '');
+const stripTags = (fragment) => fragment.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+// MAIR-864: a refused save is a lib danger toast, announced by the provider's assertive region…
+const toastAlert = (html) => stripTags(html.match(/data-m360-component="ToastProvider" class="sr-only" role="alert"[^>]*>((?:<div>[^<]*<\/div>)*)<\/div>/)?.[1] ?? '');
+// …and the fields to fix carry their message underneath (lib Field: `<p id="<input id>-error" role="alert">`).
+const fieldError = (html, field) => stripTags(html.match(new RegExp(`<p id="settings-${field}-error"[^>]*>([^]*?)</p>`))?.[1] ?? '');
 const upstream = () => bffSettings.requests.map((request) => `${request.method} ${request.template}`);
 const profileInputs = () => [...view.html.matchAll(/<input\b[^>]*>/g)].map(([html]) => html).filter(html => /name="(?:first_name|last_name|email|phone)"/.test(html));
 
@@ -294,7 +299,7 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.match(html, /<input[^>]*type="text"[^>]*required=""[^>]*value="Anne Marie"/);
   assert.match(html, /<input[^>]*type="email"[^>]*value="anne\.le-gall@mairie\.test"/);
   assert.match(html, /<input[^>]*type="tel"[^>]*value="\+33123456789"/);
-  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>(?:<svg[^]*?<\/svg>)?Enregistrer le profil<\/button>/);
+  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>(?:<svg[^]*?<\/svg>)?Enregistrer<\/button>/);
   assert.match(html, /Aucune modification à enregistrer\./);
   assert.doesNotMatch(pageHtml(html), /role="alert"/);
 });
@@ -464,7 +469,7 @@ test('editing a field and submitting the form saves the profile with PATCH /sett
     assert.equal(announcements.length, 1, 'the confirmed profile receipt has one live announcement');
   } finally { receiptDom.window.close(); }
   assert.match(html, /<input[^>]*type="text"[^>]*value="LE GALL"/);
-  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>(?:<svg[^]*?<\/svg>)?Enregistrer le profil<\/button>/, 'the button is disabled again');
+  assert.match(html, /<button[^>]*type="submit"[^>]*disabled=""[^>]*>(?:<svg[^]*?<\/svg>)?Enregistrer<\/button>/, 'the button is disabled again');
   assert.match(html, /Aucune modification à enregistrer\./);
 });
 
@@ -474,14 +479,15 @@ test('a refused save keeps the form and shows the BFF message', async () => {
 
   // "12" passes the contract pattern of SettingsProfilePatch.phone (digits, spaces, dots, dashes, optional +):
   // the refusal comes from the BFF's own validation, not from the mock's contract check.
-  await view.fire((props) => props.type === 'tel', 'onChange', { target: { value: '12' } });
+  await view.fire((props) => props.type === 'tel', 'onChange', { target: { value: '061234567' } });
   await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
-  const html = await view.waitFor((current) => pageHtml(current).includes('role="alert"'));
+  const html = await view.waitFor((current) => toastAlert(current) !== '');
 
-  assert.match(html, /<div role="alert"[^>]*><p>Numéro de téléphone invalide<\/p><\/div>/);
+  // MAIR-864 (P1): a refusal without field details is the « Enregistrement impossible » toast, the draft is kept.
+  assert.equal(toastAlert(html), 'Enregistrement impossible Numéro de téléphone invalide');
   assert.match(html, /value="Anne Marie"/);
   assert.match(html, /<p role="status"[^>]*><\/p>/, 'the empty success live region stays mounted after refusal');
-  assert.deepEqual(bffSettings.requests[1].body, { phone: '12' });
+  assert.deepEqual(bffSettings.requests[1].body, { phone: '061234567' });
 });
 
 test('submitting an unchanged profile never calls the BFF', async () => {
@@ -573,12 +579,13 @@ test('an e-mail change without the current password is refused locally, then sen
   await renderLoadedPage();
   await view.fire(isEmailInput, 'onChange', { target: { value: 'anne.nouvelle@mairie.test' } });
   await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
-  assert.match(view.html, /<div role="alert"[^>]*><p>Saisissez votre mot de passe actuel pour changer votre adresse e-mail\.<\/p><\/div>/);
+  assert.equal(fieldError(view.html, 'current_password'), 'Saisissez votre mot de passe actuel pour changer votre adresse e-mail.');
+  assert.equal(toastAlert(view.html), 'Profil non enregistré Corrigez les champs signalés.');
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
   assert.match(passwordInputs()[0], /required=""/);
 
   await view.fire((props) => props.type === 'password', 'onChange', { target: { value: 'current-secret' } });
-  assert.doesNotMatch(pageHtml(view.html), /role="alert"/);
+  assert.equal(fieldError(view.html, 'current_password'), '', 'the error disappears as the agent types');
   const saved = fixtures.profile({ email: 'anne.nouvelle@mairie.test' });
   bffSettings.on('PATCH', '/settings/profile', { body: saved });
   await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
@@ -619,22 +626,20 @@ for (const [label, reply, expected] of [
       { message: 'Something unexpected' },
     ] } },
   }, {
-    message: 'Le profil n’a pas pu être enregistré : vérifiez les champs signalés.',
-    details: [
-      'Mot de passe actuel : requis pour changer l’adresse e-mail',
-      'Prénom : ne doit pas contenir &lt; ni &gt;',
-      'Téléphone : chiffres, espaces, points, tirets, parenthèses et un + initial seulement',
-      'Pays du téléphone : code pays à deux lettres attendu',
-      'Nom : 64 caractères maximum',
-      'E-mail : adresse e-mail invalide',
-      'champ non pris en charge',
-      'Something unexpected',
-    ],
+    // MAIR-864 (P2): each field the BFF refuses gets its message underneath, the toast asks to fix them.
+    toast: 'Profil non enregistré Corrigez les champs signalés.',
+    fields: {
+      current_password: 'Requis pour changer l’adresse e-mail.',
+      first_name: 'Ne doit pas contenir < ni >.',
+      phone: 'Chiffres, espaces, points, tirets, parenthèses et un + initial seulement.',
+      last_name: '64 caractères maximum.',
+      email: 'Adresse e-mail invalide.',
+    },
   }],
-  ['400 without details', { status: 400, body: fixtures.error('Validation failed', 400) }, { message: 'Validation failed', details: [] }],
-  ['403 wrong password', { status: 403, body: fixtures.error('Invalid credentials', 403) }, { message: 'Le mot de passe actuel est incorrect, ou ce compte n’a pas de mot de passe.', details: [] }],
-  ['409 address in use', { status: 409, body: fixtures.error('Email already used', 409) }, { message: 'Cette adresse e-mail est déjà utilisée par un autre compte.', details: [] }],
-  ['503 upstream', { status: 503, body: fixtures.error('Core API indisponible', 503) }, { message: 'Core API indisponible', details: [] }],
+  ['400 without details', { status: 400, body: fixtures.error('Validation failed', 400) }, { toast: 'Enregistrement impossible Validation failed', fields: {} }],
+  ['403 wrong password', { status: 403, body: fixtures.error('Invalid credentials', 403) }, { toast: 'Profil non enregistré Corrigez les champs signalés.', fields: { current_password: 'Le mot de passe actuel est incorrect, ou ce compte n’a pas de mot de passe.' } }],
+  ['409 address in use', { status: 409, body: fixtures.error('Email already used', 409) }, { toast: 'Profil non enregistré Corrigez les champs signalés.', fields: { email: 'Cette adresse e-mail est déjà utilisée par un autre compte.' } }],
+  ['503 upstream', { status: 503, body: fixtures.error('Core API indisponible', 503) }, { toast: 'Enregistrement impossible Core API indisponible', fields: {} }],
 ]) {
   test(`a refused e-mail change (${label}) is explained in French and keeps the draft and the password field`, async () => {
     await renderLoadedPage();
@@ -642,11 +647,12 @@ for (const [label, reply, expected] of [
     await view.fire((props) => props.type === 'password', 'onChange', { target: { value: 'current-secret' } });
     bffSettings.on('PATCH', '/settings/profile', { ...reply, outOfContract: true });
     await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
-    const html = await view.waitFor((current) => pageHtml(current).includes('role="alert"'));
+    const html = await view.waitFor((current) => toastAlert(current) !== '');
 
-    assert.match(html, new RegExp(`<div role="alert"[^>]*><p>${expected.message.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</p>`));
-    const items = [...html.matchAll(/<li>([^<]*)<\/li>/g)].map(([, text]) => text);
-    assert.deepEqual(items, expected.details);
+    assert.equal(toastAlert(html), expected.toast);
+    for (const field of ['first_name', 'last_name', 'email', 'phone', 'current_password']) {
+      assert.equal(fieldError(html, field), expected.fields[field] ?? '', field);
+    }
     assert.deepEqual(bffSettings.requests[1].body, { email: 'anne.nouvelle@mairie.test', current_password: 'current-secret' });
     assert.match(html, /<input[^>]*type="email"[^>]*value="anne\.nouvelle@mairie\.test"/);
     assert.equal(passwordInputs().length, 1);
@@ -660,8 +666,36 @@ test('a 403 on a save without password keeps the BFF message', async () => {
   await view.fire((props) => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Anne' } });
   bffSettings.on('PATCH', '/settings/profile', { status: 403, body: fixtures.error('Accès refusé', 403), outOfContract: true });
   await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
-  const html = await view.waitFor((current) => pageHtml(current).includes('role="alert"'));
-  assert.match(html, /<div role="alert"[^>]*><p>Accès refusé<\/p><\/div>/);
+  const html = await view.waitFor((current) => toastAlert(current) !== '');
+  assert.equal(toastAlert(html), 'Enregistrement impossible Accès refusé');
+});
+
+test('MAIR-864 (P2): invalid fields are refused locally, under each field, with the toast and no request', async () => {
+  await renderLoadedPage();
+  await view.fire((props) => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: '  ' } });
+  await view.fire((props) => props.type === 'tel', 'onChange', { target: { value: '12' } });
+  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  assert.equal(fieldError(view.html, 'first_name'), 'Le prénom est obligatoire.');
+  assert.equal(fieldError(view.html, 'phone'), 'Saisissez un numéro au format 06 12 34 56 78.');
+  assert.match(view.html, /<input[^>]*aria-invalid="true"[^>]*aria-describedby="settings-first_name-error[^"]*"/);
+  assert.equal(toastAlert(view.html), 'Profil non enregistré Corrigez les champs signalés.');
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap'], 'nothing is sent');
+  await view.fire((props) => props.name === 'first_name', 'onChange', { target: { value: 'Anne' } });
+  assert.equal(fieldError(view.html, 'first_name'), '', 'the error disappears as the agent types');
+  assert.equal(fieldError(view.html, 'phone'), 'Saisissez un numéro au format 06 12 34 56 78.');
+});
+
+test('MAIR-864: « Annuler » restores the confirmed values and the counter follows the draft', async () => {
+  await renderLoadedPage();
+  assert.match(view.text(), /Aucune modification à enregistrer\./);
+  await view.fire((props) => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Anne' } });
+  await view.fire((props) => props.type === 'tel', 'onChange', { target: { value: '0611223344' } });
+  assert.match(view.text(), /2 champs modifiés\./);
+  await view.click('Annuler');
+  assert.match(view.html, /value="Anne Marie"/);
+  assert.match(view.html, /value="\+33123456789"/);
+  assert.match(view.text(), /Aucune modification à enregistrer\./);
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
 });
 
 test('describeDetail labels known fields and keeps unknown paths and messages', () => {

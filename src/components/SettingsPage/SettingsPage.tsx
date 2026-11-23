@@ -69,7 +69,8 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
               <SettingsTabs value={activeTab} onChange={setActiveTab} />
               <div role="tabpanel" id={settingsPanelId(activeTab)} aria-labelledby={settingsTabId(activeTab)} className="settings-panel">
                 <SettingsPendingFeatures tab={activeTab}
-                  preferencesContent={<PreferencesPanel key={accountScope} tab={activeTab} bootstrap={data} reading={reading || form.saving} onWriting={setPreferencesWriting} onRefresh={() => void readSettings()} />}
+                  preferencesContent={<PreferencesPanel key={accountScope} tab={activeTab} bootstrap={data} reading={reading || form.saving} onWriting={setPreferencesWriting} onRefresh={() => void readSettings()}
+                    onNotify={(message) => setNotice({ message, tone: "success" })} onFailure={(message) => setNotice({ message, tone: "error" })} />}
                   profileContent={<ProfileForm form={form} reading={reading} />}
                   securityContent={<>
                     <TwoFactorSection onNotify={(message) => setNotice({ message, tone: "success" })} />

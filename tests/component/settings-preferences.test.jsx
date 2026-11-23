@@ -3,12 +3,14 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import Home from '@/components/SettingsPage';
 import * as api from '@/lib/settings-api';
 import fixtures from '../support/settings-fixtures.cjs';
-import { findPageAlert } from './page-alerts';
+import { findToastAlert, toastAlertText } from './page-alerts';
 
+// MAIR-902 / MAIR-912 / MAIR-921: switches, lists and the slider save at once; « Langue et région » is a form.
 vi.mock('@/lib/settings-api', () => ({ loadSettings: vi.fn(), saveProfile: vi.fn(), saveAppearance: vi.fn(), saveGeneral: vi.fn(), saveNotifications: vi.fn() }));
 const deferred = () => { let resolve; let reject; const promise = new Promise((ok, fail) => { resolve = ok; reject = fail; }); return { promise, resolve, reject }; };
 const tab = name => fireEvent.click(screen.getByRole('tab', { name, exact: true }));
-const save = () => fireEvent.click(screen.getByRole('button', { name: 'Enregistrer les préférences', exact: true }));
+const toggle = name => fireEvent.click(screen.getByRole('switch', { name }));
+const checked = name => screen.getByRole('switch', { name }).getAttribute('aria-checked');
 const select = (name, value) => fireEvent.change(screen.getByLabelText(name), { target: { value } });
 const refresh = async body => {
   vi.mocked(api.loadSettings).mockResolvedValueOnce(body);
@@ -17,136 +19,127 @@ const refresh = async body => {
 beforeEach(() => {
   for (const operation of Object.values(api)) operation.mockReset();
   api.loadSettings.mockResolvedValue(fixtures.bootstrap());
-  api.saveAppearance.mockResolvedValue(fixtures.appearance({ theme: 'dark' }));
+  api.saveAppearance.mockResolvedValue(fixtures.appearance({ density: 'compact' }));
   api.saveGeneral.mockResolvedValue(fixtures.general({ home_page: 'projects' }));
   api.saveNotifications.mockResolvedValue(fixtures.notifications({ messages: false }));
 });
 
-it('hydrates persisted values, isolates tab patches, and uses the server confirmation', async () => {
-  render(<Home />); await screen.findByRole('tab', { name: 'Apparence' });
-  tab('Apparence'); expect(screen.getByLabelText('Police de caractères').value).toBe('Marianne');
-  select('Thème', 'dark');
-  tab('Notifications'); expect(screen.getByLabelText('Calendrier').value).toBe('false');
-  select('Messages', 'false'); const button = screen.getByRole('button', { name: 'Enregistrer les préférences' }); fireEvent.click(button); fireEvent.click(button);
-  await screen.findByText('Préférences enregistrées.');
+it('hydrates persisted values, sends one field per change and shows the server confirmation as a toast', async () => {
+  render(<Home />); await screen.findByRole('tab', { name: 'Notifications' });
+  tab('Notifications'); expect(checked('Événements du calendrier')).toBe('false');
+  toggle('Nouveaux messages');
+  expect((await screen.findByRole('group', { name: /Option désactivée — Nouveaux messages/ }))).toBeTruthy();
   expect(api.saveNotifications).toHaveBeenCalledExactlyOnceWith({ messages: false });
   expect(api.saveAppearance).not.toHaveBeenCalled();
-  tab('Apparence'); expect(screen.getByLabelText('Thème').value).toBe('dark');
-  api.saveAppearance.mockResolvedValueOnce(fixtures.appearance({ theme: 'light' })); save();
-  await screen.findByText('Préférences enregistrées.');
-  expect(api.saveAppearance).toHaveBeenCalledExactlyOnceWith({ theme: 'dark' });
-  expect(screen.getByLabelText('Thème').value).toBe('light');
-  expect(screen.getByRole('button', { name: 'Enregistrer les préférences' }).disabled).toBe(true);
+  tab('Apparence');
+  fireEvent.click(screen.getByRole('radio', { name: 'Compacte' }));
+  await waitFor(() => expect(api.saveAppearance).toHaveBeenCalledExactlyOnceWith({ density: 'compact' }));
+  await waitFor(() => expect(screen.getByRole('radio', { name: 'Compacte' }).getAttribute('aria-checked')).toBe('true'));
 });
 
-it('keeps null values as inherited defaults and sends only an explicit reset', async () => {
+it('reads `null` as the account default and never sends a value the agent did not choose', async () => {
   api.loadSettings.mockResolvedValueOnce(fixtures.bootstrap({ appearance: null, general: null, notifications: null }));
   render(<Home />); await screen.findByRole('tab', { name: 'Apparence' }); tab('Apparence');
-  expect(screen.getByLabelText('Thème').value).toBe('');
-  expect(screen.getByLabelText('Police de caractères').value).toBe('');
-  expect(screen.getByRole('button', { name: 'Enregistrer les préférences' }).disabled).toBe(true);
-  select('Thème', 'dark'); select('Thème', '');
-  expect(screen.getByRole('button', { name: 'Enregistrer les préférences' }).disabled).toBe(true);
-  tab('Général'); expect(screen.getByLabelText('Ouverture automatique des notifications').value).toBe('');
-  expect(screen.queryByLabelText(/Fuseau horaire/i)).toBeNull();
-  await refresh(fixtures.bootstrap()); tab('Apparence'); select('Thème', '');
-  api.saveAppearance.mockResolvedValueOnce(fixtures.appearance({ theme: null })); save();
-  await screen.findByText('Préférences enregistrées.'); expect(api.saveAppearance).toHaveBeenCalledExactlyOnceWith({ theme: null });
+  expect(screen.getByLabelText('Police de caractères').value).toBe('system');
+  expect(screen.getByRole('slider', { name: /Taille du texte/ }).value).toBe('16');
+  tab('Général');
+  expect(screen.getByLabelText('Langue').value).toBe('fr');
+  expect(checked('Ouvrir automatiquement les notifications')).toBe('false');
+  expect(screen.getByRole('button', { name: 'Enregistrer' }).disabled).toBe(true);
+  tab('Notifications'); expect(checked('Nouveaux messages')).toBe('true');
+  expect(api.saveAppearance).not.toHaveBeenCalled(); expect(api.saveGeneral).not.toHaveBeenCalled(); expect(api.saveNotifications).not.toHaveBeenCalled();
 });
 
-it('retains dirty edits across a foreground read and refuses malformed save snapshots', async () => {
-  render(<Home />); await screen.findByRole('tab', { name: 'Apparence' }); tab('Apparence'); select('Thème', 'dark');
-  await refresh(fixtures.bootstrap({ appearance: fixtures.appearance({ font_family: 'Arial', theme: 'light' }) }));
-  expect(screen.getByLabelText('Thème').value).toBe('dark'); expect(screen.getByLabelText('Police de caractères').value).toBe('Arial');
-  api.saveAppearance.mockResolvedValueOnce({ theme: 'light', font_family: 'Arial', font_size: 16, density: {} }); save();
-  expect((await findPageAlert()).textContent).toContain('n’a pas été confirmé');
-  expect(screen.getByLabelText('Thème').value).toBe('dark'); expect(screen.queryByText('Préférences enregistrées.')).toBeNull();
-  api.saveAppearance.mockRejectedValueOnce(new Error('Validation refusée')); save();
-  await screen.findByText('Validation refusée'); expect(screen.getByLabelText('Thème').value).toBe('dark');
-  expect(api.saveAppearance).toHaveBeenLastCalledWith({ theme: 'dark' });
+it('brings a switch back and shows « Enregistrement impossible. » when the save is refused or not confirmed', async () => {
+  render(<Home />); await screen.findByRole('tab', { name: 'Notifications' }); tab('Notifications');
+  api.saveNotifications.mockRejectedValueOnce(new Error('Validation refusée'));
+  toggle('Nouveaux messages');
+  expect(await findToastAlert()).toContain('Enregistrement impossible.');
+  await waitFor(() => expect(checked('Nouveaux messages')).toBe('true'));
+  api.saveNotifications.mockResolvedValueOnce({ email: 'yes' });
+  toggle('Nouveaux messages');
+  await waitFor(() => expect(api.saveNotifications).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(checked('Nouveaux messages')).toBe('true'));
+  expect(toastAlertText()).toContain('Enregistrement impossible.');
 });
 
-it('blocks unavailable sources and recovers their drafts when the source returns', async () => {
-  render(<Home />); await screen.findByRole('tab', { name: 'Notifications' }); tab('Notifications'); select('Messages', 'false');
+it('locks an unavailable section with « Réessayer » and unlocks it when the source returns', async () => {
+  render(<Home />); await screen.findByRole('tab', { name: 'Notifications' }); tab('Notifications');
   await refresh(fixtures.bootstrap({ notifications: null, sources: { notifications: 'unavailable' } }));
-  expect(screen.getByRole('button', { name: 'Enregistrer les préférences' }).disabled).toBe(true);
-  expect(screen.getByLabelText('Messages').value).toBe('false'); save(); expect(api.saveNotifications).not.toHaveBeenCalled();
-  await refresh(fixtures.bootstrap()); save(); await screen.findByText('Préférences enregistrées.');
-  expect(api.saveNotifications).toHaveBeenCalledExactlyOnceWith({ messages: false });
+  expect(screen.getByRole('switch', { name: 'Nouveaux messages' }).disabled).toBe(true);
+  expect(screen.getByText('Préférences indisponibles')).toBeTruthy();
+  toggle('Nouveaux messages'); expect(api.saveNotifications).not.toHaveBeenCalled();
+  api.loadSettings.mockResolvedValueOnce(fixtures.bootstrap());
+  fireEvent.click(screen.getByRole('button', { name: 'Réessayer' }));
+  await waitFor(() => expect(screen.getByRole('switch', { name: 'Nouveaux messages' }).disabled).toBe(false));
 });
 
 it('keeps the other account safe when an earlier save settles after a foreground account change', async () => {
   const pending = deferred(); api.saveNotifications.mockReturnValueOnce(pending.promise);
-  render(<Home />); await screen.findByRole('tab', { name: 'Notifications' }); tab('Notifications'); select('Messages', 'false'); save();
+  render(<Home />); await screen.findByRole('tab', { name: 'Notifications' }); tab('Notifications'); toggle('Nouveaux messages');
   // A focus event during a write must not start a competing bootstrap read.
   await act(async () => { window.dispatchEvent(new Event('focus')); }); expect(api.loadSettings).toHaveBeenCalledTimes(1);
   await act(async () => pending.resolve(fixtures.notifications({ messages: false })));
   await refresh(fixtures.bootstrap({ profile: fixtures.profile({ email: 'autre@mairie.test' }), notifications: fixtures.notifications({ messages: true }) }));
-  expect(screen.getByLabelText('Messages').value).toBe('true');
-  expect(screen.queryByText('Préférences enregistrées.')).toBeNull();
-  expect(screen.getByRole('button', { name: 'Enregistrer les préférences' }).disabled).toBe(true);
+  await waitFor(() => expect(checked('Nouveaux messages')).toBe('true'));
 });
 
 it('does not commit a save after the page has been unmounted', async () => {
   const pending = deferred(); api.saveGeneral.mockReturnValueOnce(pending.promise);
-  const view = render(<Home />); await screen.findByRole('tab', { name: 'Général' }); tab('Général'); select('Page d’accueil par défaut', 'projects'); save(); expect(api.saveGeneral).toHaveBeenCalledExactlyOnceWith({ home_page: 'projects' });
+  const view = render(<Home />); await screen.findByRole('tab', { name: 'Général' }); tab('Général');
+  select('Page d’accueil', 'projects'); fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+  expect(api.saveGeneral).toHaveBeenCalledExactlyOnceWith({ home_page: 'projects' });
   view.unmount(); render(<Home />); await screen.findByRole('tab', { name: 'Général' }); tab('Général');
   await act(async () => pending.resolve(fixtures.general({ home_page: 'projects' })));
-  expect(screen.getByLabelText('Page d’accueil par défaut').value).toBe('dashboard'); expect(screen.queryByText('Préférences enregistrées.')).toBeNull();
+  expect(screen.getByLabelText('Page d’accueil').value).toBe('dashboard');
 });
 
 it('retains a confirmed preference when an unrelated profile save updates bootstrap', async () => {
   api.saveProfile.mockResolvedValueOnce(fixtures.profile({ first_name: 'Anne' }));
-  render(<Home />); await screen.findByRole('tab', { name: 'Apparence' }); tab('Apparence'); select('Thème', 'dark'); save();
-  await screen.findByText('Préférences enregistrées.'); tab('Profil');
+  render(<Home />); await screen.findByRole('tab', { name: 'Apparence' }); tab('Apparence');
+  fireEvent.click(screen.getByRole('radio', { name: 'Compacte' }));
+  await waitFor(() => expect(api.saveAppearance).toHaveBeenCalled());
+  tab('Profil');
   fireEvent.change(screen.getByLabelText('Prénom'), { target: { value: 'Anne' } });
   fireEvent.click(screen.getByRole('button', { name: 'Enregistrer', exact: true }));
-  await screen.findByText('Votre profil a été enregistré.'); tab('Apparence');
-  expect(screen.getByLabelText('Thème').value).toBe('dark');
-  expect(screen.getByRole('button', { name: 'Enregistrer les préférences' }).disabled).toBe(true);
+  await screen.findByRole('group', { name: /Profil enregistré/ }); tab('Apparence');
+  expect(screen.getByRole('radio', { name: 'Compacte' }).getAttribute('aria-checked')).toBe('true');
 });
 
-it('keeps edits made during a foreground read and waits for that read before saving', async () => {
-  render(<Home />); await screen.findByRole('tab', { name: 'Apparence' }); tab('Apparence');
+it('locks the controls during a foreground read and saves nothing until it ends', async () => {
+  render(<Home />); await screen.findByRole('tab', { name: 'Général' }); tab('Général');
+  select('Langue', 'en');
   const pending = deferred(); api.loadSettings.mockReturnValueOnce(pending.promise);
   await act(async () => { window.dispatchEvent(new Event('focus')); });
-  select('Thème', 'dark');
-  expect(screen.getByRole('button', { name: 'Enregistrer les préférences' }).disabled).toBe(true);
-  save(); expect(api.saveAppearance).not.toHaveBeenCalled();
-  await act(async () => pending.resolve(fixtures.bootstrap({ appearance: fixtures.appearance({ font_family: 'Arial' }) })));
-  expect(screen.getByLabelText('Thème').value).toBe('dark'); expect(screen.getByLabelText('Police de caractères').value).toBe('Arial');
-  save(); await screen.findByText('Préférences enregistrées.');
-  expect(api.saveAppearance).toHaveBeenCalledExactlyOnceWith({ theme: 'dark' });
+  expect(screen.getByRole('button', { name: 'Enregistrer' }).disabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); expect(api.saveGeneral).not.toHaveBeenCalled();
+  await act(async () => pending.resolve(fixtures.bootstrap({ general: fixtures.general({ timezone: 'Indian/Reunion' }) })));
+  expect(screen.getByLabelText('Langue').value).toBe('en'); expect(screen.getByLabelText('Fuseau horaire').value).toBe('Indian/Reunion');
+  api.saveGeneral.mockResolvedValueOnce(fixtures.general({ language: 'en', timezone: 'Indian/Reunion' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+  await screen.findByRole('group', { name: /Langue et région enregistrées/ });
+  expect(api.saveGeneral).toHaveBeenCalledExactlyOnceWith({ language: 'en' });
 });
 
 it('offers a safe retry when an available source returns unusable preference values', async () => {
   api.loadSettings.mockResolvedValueOnce(fixtures.bootstrap({ appearance: { theme: 'unsupported', font_family: null, font_size: null, density: null } }));
   render(<Home />); await screen.findByRole('tab', { name: 'Apparence' }); tab('Apparence');
-  expect(screen.getByLabelText('Thème').disabled).toBe(true);
-  expect(screen.getByRole('button', { name: 'Enregistrer les préférences' }).disabled).toBe(true);
-  fireEvent.click(screen.getByRole('button', { name: 'Actualiser les préférences' }));
-  await waitFor(() => expect(screen.getByLabelText('Thème').disabled).toBe(false));
-  expect(screen.getByLabelText('Thème').value).toBe('system');
+  expect(screen.getByLabelText('Police de caractères').disabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Réessayer' }));
+  await waitFor(() => expect(screen.getByLabelText('Police de caractères').disabled).toBe(false));
   expect(api.saveAppearance).not.toHaveBeenCalled();
 });
 
-it('resets preference drafts and confirmations when a manual retry reads another account', async () => {
+it('resets the preferences when a manual retry reads another account', async () => {
   api.loadSettings.mockResolvedValueOnce(fixtures.bootstrap({ sources: { sessions: 'unavailable' } }));
   render(<Home />); await screen.findByRole('tab', { name: 'Notifications' });
-  tab('Notifications'); select('Messages', 'false'); save();
-  await screen.findByText('Préférences enregistrées.');
-  tab('Apparence'); select('Thème', 'dark');
+  tab('Notifications'); toggle('Nouveaux messages');
+  await waitFor(() => expect(checked('Nouveaux messages')).toBe('false'));
   api.loadSettings.mockResolvedValueOnce(fixtures.bootstrap({
     profile: fixtures.profile({ email: 'another-account@mairie.test' }),
-    appearance: fixtures.appearance({ theme: 'light' }),
     notifications: fixtures.notifications({ messages: true }),
   }));
   fireEvent.click(screen.getByRole('button', { name: 'Actualiser les paramètres' }));
   await waitFor(() => expect(api.loadSettings).toHaveBeenCalledTimes(2));
-  await waitFor(() => expect(screen.getByLabelText('Thème').value).toBe('light'));
-  expect(screen.getByRole('button', { name: 'Enregistrer les préférences' }).disabled).toBe(true);
-  expect(api.saveAppearance).not.toHaveBeenCalled();
-  tab('Notifications'); expect(screen.getByLabelText('Messages').value).toBe('true');
-  expect(screen.queryByText('Préférences enregistrées.')).toBeNull();
-  expect(screen.getByRole('button', { name: 'Enregistrer les préférences' }).disabled).toBe(true);
+  await waitFor(() => expect(checked('Nouveaux messages')).toBe('true'));
 });

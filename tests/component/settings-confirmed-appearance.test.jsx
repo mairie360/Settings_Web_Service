@@ -15,19 +15,17 @@ beforeEach(() => {
   for (const method of Object.values(api)) method.mockReset();
   api.loadSettings.mockResolvedValue(fixtures.bootstrap({ appearance: fixtures.appearance({ theme: 'light', density: 'normal', font_family: 'Arial' }) }));
 });
-it('applies and caches only the confirmed bootstrap and write receipt, keeping the draft local while pending', async () => {
+it('applies and caches only the confirmed bootstrap and write receipt, never a pending value', async () => {
   const response = deferred(); api.saveAppearance.mockReturnValueOnce(response.promise);
   render(<Home />); await screen.findByRole('tab', { name: 'Apparence' });
   await waitFor(() => expect(document.documentElement.dataset.theme).toBe('light'));
   expect(document.cookie).toContain('mairie360_appearance=');
   const cookie = document.cookie;
   fireEvent.click(screen.getByRole('tab', { name: 'Apparence', exact: true }));
-  fireEvent.change(screen.getByLabelText('Thème'), { target: { value: 'dark' } });
-  expect(document.documentElement.dataset.theme).toBe('light'); expect(document.cookie).toBe(cookie);
-  fireEvent.click(screen.getByRole('button', { name: 'Enregistrer les préférences', exact: true }));
-  expect(document.documentElement.dataset.theme).toBe('light'); expect(screen.queryByText('Préférences enregistrées.')).toBeNull();
+  fireEvent.click(screen.getByRole('radio', { name: 'Confortable' }));
+  expect(document.documentElement.dataset.density).toBe('normal'); expect(document.cookie).toBe(cookie);
   await act(async () => response.resolve(fixtures.appearance({ theme: 'dark', density: 'comfortable', font_family: 'Georgia, serif', font_size: 32767 })));
-  await screen.findByText('Préférences enregistrées.');
+  await screen.findByRole('group', { name: /Densité enregistrée/ });
   // MAIR-851 / MAIR-933: the interface stays light whatever theme is stored.
   expect(document.documentElement.dataset.theme).toBe('light');
   expect(document.documentElement.dataset.density).toBe('comfortable');
@@ -40,24 +38,23 @@ it('does not cache malformed receipts or an unavailable preference source', asyn
   const view = render(<Home />); await screen.findByRole('tab', { name: 'Apparence' });
   expect(document.cookie).not.toContain('mairie360_appearance=');
   view.unmount(); render(<Home />); await screen.findByRole('tab', { name: 'Apparence' });
-  await waitFor(() => expect(document.documentElement.dataset.theme).toBe('light'));
+  await waitFor(() => expect(document.documentElement.dataset.density).toBe('normal'));
   const before = document.cookie;
   fireEvent.click(screen.getByRole('tab', { name: 'Apparence', exact: true }));
-  fireEvent.change(screen.getByLabelText('Thème'), { target: { value: 'dark' } });
-  api.saveAppearance.mockResolvedValueOnce({ theme: 'dark', font_family: 'Arial', font_size: 'invalid', density: 'normal' });
-  fireEvent.click(screen.getByRole('button', { name: 'Enregistrer les préférences', exact: true }));
-  await screen.findByRole('alert');
-  expect(document.documentElement.dataset.theme).toBe('light'); expect(document.cookie).toBe(before);
+  api.saveAppearance.mockResolvedValueOnce({ theme: 'dark', font_family: 'Arial', font_size: 'invalid', density: 'compact' });
+  fireEvent.click(screen.getByRole('radio', { name: 'Compacte' }));
+  await waitFor(() => expect(api.saveAppearance).toHaveBeenCalled());
+  await waitFor(() => expect(document.querySelector('[data-m360-component~="ToastProvider"][role="alert"]')?.textContent).toContain('Enregistrement impossible.'));
+  expect(document.documentElement.dataset.density).toBe('normal'); expect(document.cookie).toBe(before);
 });
-it('keeps appearance controls keyboard accessible and confines extreme font sizes to a bounded preview', async () => {
+it('keeps appearance controls keyboard accessible and bounds the text size to the slider range', async () => {
   const user = userEvent.setup();
+  api.loadSettings.mockResolvedValue(fixtures.bootstrap({ appearance: fixtures.appearance({ font_size: 32767 }) }));
   render(<Home />); await screen.findByRole('tab', { name: 'Apparence' });
   fireEvent.click(screen.getByRole('tab', { name: 'Apparence', exact: true }));
-  const theme = screen.getByLabelText('Thème'); theme.focus(); await user.keyboard('{ArrowDown}');
-  expect(document.activeElement).toBe(theme);
-  fireEvent.change(screen.getByLabelText('Taille de police (px)'), { target: { value: '32767' } });
-  const preview = screen.getByLabelText('Aperçu de l’apparence');
-  expect(preview.style.fontSize).toBe('24px');
+  const font = screen.getByLabelText('Police de caractères'); font.focus(); await user.keyboard('{ArrowDown}');
+  expect(document.activeElement).toBe(font);
+  expect(screen.getByRole('slider', { name: /Taille du texte/ }).value).toBe('24');
   expect(document.documentElement.style.fontSize).toBe('');
 });
 

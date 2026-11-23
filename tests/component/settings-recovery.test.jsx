@@ -8,7 +8,7 @@ import { findToastAlert, toastAlertText } from './page-alerts';
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { logoutAndRedirect, navigateToLogin } from "@/lib/logout";
 
-vi.mock("@/lib/settings-api", () => ({ loadSettings: vi.fn(), saveProfile: vi.fn() }));
+vi.mock("@/lib/settings-api", () => ({ loadSettings: vi.fn(), saveProfile: vi.fn(), loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })) }));
 vi.mock("@/lib/logout", () => ({ logoutAndRedirect: vi.fn(), navigateToLogin: vi.fn() }));
 
 const initial = { first_name: "Test", last_name: "User", email: "test@example.invalid", phone: null };

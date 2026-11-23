@@ -4,7 +4,7 @@ import Home from '@/components/SettingsPage';
 import { DesktopNavigation } from '@mairie360/lib-components/shell';
 import { loadSettings, saveProfile } from '@/lib/settings-api';
 
-vi.mock('@/lib/settings-api', () => ({ loadSettings:vi.fn(), saveProfile:vi.fn() }));
+vi.mock('@/lib/settings-api', () => ({ loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })), loadSettings:vi.fn(), saveProfile:vi.fn() }));
 const bootstrap = { profile:{first_name:'Test',last_name:'User',email:'test@example.invalid',phone:null}, sessions:[], sources:{sessions:'available'} };
 
 it('opens a validated tab link and restores it on history navigation without another bootstrap', async () => {

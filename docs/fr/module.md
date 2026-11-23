@@ -98,3 +98,8 @@ DA claire option 1 : tokens et police communs, navigation accessible et contenu 
 - Sessions : « Sessions actives » signale cet appareil (« Cet appareil », jamais déconnectable). Toute autre session active se ferme après une confirmation ; « Déconnecter les autres appareils » les ferme toutes sauf celle-ci et indique combien. « Historique des connexions » liste les sessions terminées ou expirées. Une session déjà terminée (404) ou la session de la page (409) est expliquée en français.
 - Sécurité : le mot de passe se change par BFF_Settings (8 à 255 caractères, différent de l’actuel) ; un mot de passe actuel faux, trop de tentatives ou un nouveau mot de passe refusé sont expliqués en français, et Core ferme les autres sessions. « Alertes de connexion » envoie un e-mail à chaque nouvelle connexion.
 - Notifications ajoute « Mises à jour de la plateforme » ; Général ajoute « Sauvegarde automatique des brouillons » (activée par défaut).
+
+### Mise en page V2.1 (MAIR-1125)
+
+- Un bandeau d’en-tête présente l’agent (nom, « Paramètres du compte », e-mail) sur tous les onglets et montre trois tuiles qui ouvrent leur onglet : double authentification (Activée / Désactivée), sessions actives, notifications activées. Elles suivent chaque changement.
+- Les onglets sont une barre flottante qui reste en haut au défilement ; chaque panneau a son icône ; la barre « Annuler / Enregistrer » de Profil et de « Langue et région » reste visible.

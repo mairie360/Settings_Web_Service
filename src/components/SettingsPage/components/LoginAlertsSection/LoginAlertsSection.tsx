@@ -1,4 +1,5 @@
 "use client";
+import { MailWarning } from "lucide-react";
 import { Panel, SettingToggle } from "@mairie360/lib-components/primitives";
 import type { SettingsNotifications } from '@mairie360/bff-settings-openapi/model';
 
@@ -17,7 +18,7 @@ export interface LoginAlertsSectionProps {
 
 /** « Alertes de connexion » of the Security tab (MAIR-876): an e-mail at every new sign-in, saved at once. */
 export const LoginAlertsSection = ({ enabled, disabled, onSaved, onNotify, onFailure }: LoginAlertsSectionProps) => (
-  <Panel title="Alertes de connexion" className="settings-login-alerts">
+  <Panel icon={MailWarning} title="Alertes de connexion" className="settings-login-alerts">
     <SettingToggle id="settings-login-alerts" label="M’alerter par e-mail à chaque nouvelle connexion"
       description="Un e-mail indique l’appareil, l’adresse IP et l’heure de chaque connexion à votre compte."
       checked={enabled ?? false} disabled={disabled}

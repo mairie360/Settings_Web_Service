@@ -1,4 +1,5 @@
 "use client";
+import { Bell, ListChecks } from "lucide-react";
 import { Panel, SettingToggle } from '@mairie360/lib-components/primitives';
 import type { SettingsNotifications } from '@mairie360/bff-settings-openapi/model';
 
@@ -31,10 +32,10 @@ export const NotificationsPreferences = ({ values, disabled, save }: Notificatio
       onChange={async (checked) => { await save({ [field]: checked }, `${checked ? 'Option activée' : 'Option désactivée'} — ${label}`); }} onError={() => undefined} />
   );
   return <>
-    <Panel title="Préférences de notification" description="Les changements s’appliquent immédiatement." className="settings-notifications-channels">
+    <Panel icon={Bell} title="Préférences de notification" description="Les changements s’appliquent immédiatement." className="settings-notifications-channels">
       {channels.map(toggle)}
     </Panel>
-    <Panel title="Types de notifications" className="settings-notifications-types">
+    <Panel icon={ListChecks} title="Types de notifications" className="settings-notifications-types">
       {types.map(toggle)}
     </Panel>
   </>;

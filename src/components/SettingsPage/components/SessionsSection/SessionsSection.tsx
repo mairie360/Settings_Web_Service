@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { Button, ConfirmModal, Panel, SessionList } from "@mairie360/lib-components/primitives";
-import { LogOut } from "lucide-react";
+import { History, LogOut, MonitorSmartphone } from "lucide-react";
 
 import type { SettingsBootstrapRead as Bootstrap } from '@/lib/settings-bootstrap';
 import * as api from '@/lib/settings-api';
@@ -56,7 +56,7 @@ export const SessionsSection = ({ data, onSessions, onNotify, onFailure }: Sessi
 
   return (
     <div className="space-y-5">
-      <Panel title="Sessions actives" description="Les appareils connectés à votre compte." className="settings-sessions"
+      <Panel icon={MonitorSmartphone} title="Sessions actives" description="Les appareils connectés à votre compte." className="settings-sessions"
         action={<Button variant="outline" tone="danger" icon={LogOut} disabled={!others.length || revokingOthers} onClick={() => setConfirmOthers(true)}>
           Déconnecter les autres appareils
         </Button>}>
@@ -69,7 +69,7 @@ export const SessionsSection = ({ data, onSessions, onNotify, onFailure }: Sessi
           onRevoke={(session) => setSessionToRevoke({ id: session.id, device_info: session.device_info })}
         />
       </Panel>
-      <Panel title="Historique des connexions" description="Les sessions terminées ou expirées de votre compte." className="settings-session-history">
+      <Panel icon={History} title="Historique des connexions" description="Les sessions terminées ou expirées de votre compte." className="settings-session-history">
         <SessionList
           sessions={historyAvailable ? data.session_history! : null}
           caption="Historique des connexions"

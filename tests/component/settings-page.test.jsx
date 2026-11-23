@@ -12,6 +12,8 @@ import { setBrowserFrontUrls } from "@/lib/front-urls";
 vi.mock("@/lib/settings-api", () => ({
   loadSettings: vi.fn(),
   saveProfile: vi.fn(),
+  // MAIR-1125: the page header reads the second factor.
+  loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })),
 }));
 
 // The lib ToastProvider keeps an empty assertive region mounted: page alerts are read without it.

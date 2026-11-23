@@ -6,7 +6,7 @@ import { loadSettings, saveProfile } from '@/lib/settings-api';
 import fixtures from '../support/settings-fixtures.cjs';
 import { findPageAlert, pageAlerts, UNAVAILABLE } from './page-alerts';
 
-vi.mock('@/lib/settings-api', () => ({ loadSettings: vi.fn(), saveProfile: vi.fn() }));
+vi.mock('@/lib/settings-api', () => ({ loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })), loadSettings: vi.fn(), saveProfile: vi.fn() }));
 const message = 'Les paramètres reçus sont incohérents. Réessayez.';
 const valid = () => fixtures.bootstrap({ sessions: [], sources: { sessions: 'unavailable' } });
 const deferred = () => { let resolve; const promise = new Promise(ok => { resolve = ok; }); return { promise, resolve }; };

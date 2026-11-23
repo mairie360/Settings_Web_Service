@@ -1,4 +1,5 @@
 "use client";
+import { Palette } from "lucide-react";
 import { useRef, useState } from 'react';
 import { Panel, SegmentedControl, SelectField, Slider } from '@mairie360/lib-components/primitives';
 import type { SettingsAppearance } from '@mairie360/bff-settings-openapi/model';
@@ -31,7 +32,7 @@ export const AppearancePreferences = ({ values, disabled, save }: AppearancePref
       .finally(() => { sending.current = null; setSize(null); });
   };
   const keep = (promise: Promise<unknown>) => { void promise.catch(() => undefined); };
-  return <Panel title="Apparence" description="Les changements s’appliquent immédiatement à toute l’interface." className="settings-appearance">
+  return <Panel icon={Palette} title="Apparence" description="Les changements s’appliquent immédiatement à toute l’interface." className="settings-appearance">
     <div className="space-y-5">
       <SelectField id="settings-font-family" label="Police de caractères" options={choices.font_family} placeholder={null} disabled={disabled}
         value={listValue('font_family', values.font_family)}

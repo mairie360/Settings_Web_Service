@@ -105,3 +105,5 @@ DA claire option 1 : tokens et police communs, navigation accessible et contenu 
 - Les onglets sont une barre flottante qui reste en haut au défilement ; chaque panneau a son icône ; la barre « Annuler / Enregistrer » de Profil et de « Langue et région » reste visible.
 
 - Sessions V2.1 (MAIR-1126) : quatre cartes au-dessus des listes (sessions actives, autres appareils connectés, sessions dans l’historique, localisation de cet appareil : « Non disponible », le BFF ne la fournit pas encore), et un clic sur une session ouvre son détail dans une fenêtre centrée, avec « Déconnecter cette session » pour une autre session active (confirmation au-dessus de la fenêtre).
+
+- Cartes de réglage et score de protection (MAIR-1127) : chaque interrupteur montre son icône (les types de notification dans la couleur de leur module). L’onglet Sécurité commence par « Protection du compte » : un score sur trois (double authentification, alertes de connexion, au plus trois sessions actives) avec « Bien protégé », « Correct » ou « À renforcer », puis les appareils connectés et « Gérer », qui ouvre Sessions.

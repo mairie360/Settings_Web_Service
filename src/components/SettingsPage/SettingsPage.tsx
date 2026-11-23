@@ -14,7 +14,8 @@ import { SessionsSection } from './components/SessionsSection';
 import { SettingsTabs, settingsPanelId, settingsTabId } from './components/SettingsTabs';
 import { settingsUrlSchema, tabFromUrl, tabToUrl } from './components/SettingsTabs';
 import { SettingsHeader } from './components/SettingsHeader';
-import { SettingsHero } from './components/SettingsHero';
+import { SettingsHero, activeSessions } from './components/SettingsHero';
+import { ProtectionSection } from './components/ProtectionSection';
 import { loadTwoFactor } from '../../lib/settings-api';
 import { SettingsLoading } from './components/SettingsLoading';
 import { SettingsNotices } from './components/SettingsNotices';
@@ -86,6 +87,8 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
                     onNotify={(message) => setNotice({ message, tone: "success" })} onFailure={(message) => setNotice({ message, tone: "error" })} />}
                   profileContent={<ProfileForm form={form} reading={reading} />}
                   securityContent={<>
+                    <ProtectionSection twoFactorEnabled={twoFactorEnabled} loginAlerts={data.notifications?.login_alerts}
+                      activeSessions={activeSessions(data)} onManageSessions={() => setActiveTab("sessions")} />
                     <TwoFactorSection onNotify={(message) => setNotice({ message, tone: "success" })} onStatus={setTwoFactorEnabled} />
                     <LoginAlertsSection enabled={data.notifications?.login_alerts} disabled={reading || data.sources.notifications === "unavailable"}
                       onSaved={(notifications) => setData((current) => current ? { ...current, notifications } : current)}

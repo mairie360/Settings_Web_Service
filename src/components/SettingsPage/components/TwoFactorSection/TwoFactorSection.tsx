@@ -1,4 +1,5 @@
 "use client";
+import { ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Button, Help, InfoAlert, Panel, StatusPill } from "@mairie360/lib-components/primitives";
 
@@ -12,6 +13,8 @@ import { DisableDialog } from './components/DisableDialog';
 export interface TwoFactorSectionProps {
   /** Receipts of the section, shown by the page as toasts. */
   onNotify: (message: string) => void;
+  /** Called with the status each time it is read (the page header shows it, MAIR-1125). */
+  onStatus?: (enabled: boolean) => void;
 }
 
 type Dialog = "enable" | "regenerate" | "disable" | null;
@@ -21,7 +24,7 @@ type Dialog = "enable" | "regenerate" | "disable" | null;
  * (QR code + first code, then the ten backup codes shown once), regeneration of the codes and deactivation. When the
  * mairie imposes the second factor, Core refuses the deactivation (403): the section then says so and hides the action.
  */
-export const TwoFactorSection = ({ onNotify }: TwoFactorSectionProps) => {
+export const TwoFactorSection = ({ onNotify, onStatus }: TwoFactorSectionProps) => {
   const [status, setStatus] = useState<SettingsTwoFactorStatus | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "unavailable">("loading");
   const [dialog, setDialog] = useState<Dialog>(null);
@@ -31,9 +34,9 @@ export const TwoFactorSection = ({ onNotify }: TwoFactorSectionProps) => {
 
   const read = useCallback(async () => {
     setState("loading");
-    try { setStatus(await loadTwoFactor()); setState("ready"); }
+    try { const received = await loadTwoFactor(); setStatus(received); setState("ready"); onStatus?.(received.enabled); }
     catch { setState("unavailable"); }
-  }, []);
+  }, [onStatus]);
   useEffect(() => { void read(); }, [read]);
 
   const showCodes = (received: string[], receipt: string) => { setDialog(null); setCodes(received); setCodesReceipt(receipt); };
@@ -41,7 +44,7 @@ export const TwoFactorSection = ({ onNotify }: TwoFactorSectionProps) => {
 
   // The dialogs stay outside the Panel: it replaces its children by its loading / empty / unavailable state.
   return (<>
-    <Panel title="Double authentification"
+    <Panel icon={ShieldCheck} title="Double authentification"
       description="Un code de votre application d’authentification vous est demandé à chaque connexion, en plus du mot de passe."
       state={state === "ready" ? "default" : state} stateProps={{ onRetry: () => void read(), title: state === "unavailable" ? "Double authentification indisponible" : undefined }}
       className="settings-two-factor">

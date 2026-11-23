@@ -99,4 +99,9 @@ DA claire option 1 : tokens et police communs, navigation accessible et contenu 
 - Sécurité : le mot de passe se change par BFF_Settings (8 à 255 caractères, différent de l’actuel) ; un mot de passe actuel faux, trop de tentatives ou un nouveau mot de passe refusé sont expliqués en français, et Core ferme les autres sessions. « Alertes de connexion » envoie un e-mail à chaque nouvelle connexion.
 - Notifications ajoute « Mises à jour de la plateforme » ; Général ajoute « Sauvegarde automatique des brouillons » (activée par défaut).
 
+### Mise en page V2.1 (MAIR-1125)
+
+- Un bandeau d’en-tête présente l’agent (nom, « Paramètres du compte », e-mail) sur tous les onglets et montre trois tuiles qui ouvrent leur onglet : double authentification (Activée / Désactivée), sessions actives, notifications activées. Elles suivent chaque changement.
+- Les onglets sont une barre flottante qui reste en haut au défilement ; chaque panneau a son icône ; la barre « Annuler / Enregistrer » de Profil et de « Langue et région » reste visible.
+
 - Lora (MAIR-1128) : « Police de caractères » propose Police système, Geist, Atkinson Hyperlegible et Lora. Les quatre polices sont nommées par lib-components 2.3.1, un choix s’affiche donc de la même façon dans tous les fronts ; Atkinson Hyperlegible et Lora sont chargées par la page.

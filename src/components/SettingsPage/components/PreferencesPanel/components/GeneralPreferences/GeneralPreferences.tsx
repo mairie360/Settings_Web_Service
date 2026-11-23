@@ -1,4 +1,5 @@
 "use client";
+import { Globe, SlidersHorizontal } from "lucide-react";
 import { useState } from 'react';
 import { FormActions, Panel, SelectField, SettingToggle } from '@mairie360/lib-components/primitives';
 import type { SettingsGeneral } from '@mairie360/bff-settings-openapi/model';
@@ -41,16 +42,16 @@ export const GeneralPreferences = ({ values, disabled, save }: GeneralPreference
     finally { setBusy(false); }
   };
   return <>
-    <Panel title="Langue et région" description="Langue de l’interface, fuseau horaire et format des dates." className="settings-general">
+    <Panel icon={Globe} title="Langue et région" description="Langue de l’interface, fuseau horaire et format des dates." className="settings-general">
       <form method="post" noValidate onSubmit={submit} aria-label="Langue et région" className="space-y-5">
         {FIELDS.map(field => <SelectField key={field} id={`settings-${field.replace('_', '-')}`} label={LABELS[field]} options={choices[field]}
           placeholder={null} disabled={disabled || busy} value={shown[field]}
           onChange={(value) => setDraft(current => ({ ...current, [field]: value }))} />)}
-        <FormActions status={status} dirty={changed.length > 0} busy={busy} saveDisabled={disabled || changed.length === 0}
+        <FormActions sticky status={status} dirty={changed.length > 0} busy={busy} saveDisabled={disabled || changed.length === 0}
           saveLabel="Enregistrer" cancelLabel="Annuler" onCancel={() => setDraft({})} />
       </form>
     </Panel>
-    <Panel title="Comportement" className="settings-general-behaviour">
+    <Panel icon={SlidersHorizontal} title="Comportement" className="settings-general-behaviour">
       <SettingToggle id="settings-auto-open-notifications" label="Ouvrir automatiquement les notifications"
         description="Le centre de notifications s’ouvre quand une nouvelle notification arrive." checked={values.auto_open_notifications ?? false}
         disabled={disabled} onChange={async (checked) => { await save({ auto_open_notifications: checked }, `${checked ? 'Option activée' : 'Option désactivée'} — Ouverture automatique des notifications`); }}

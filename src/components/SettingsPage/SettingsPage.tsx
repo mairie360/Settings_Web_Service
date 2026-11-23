@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ToastProvider } from "@mairie360/lib-components/primitives";
 import { AccessibleShell } from "@mairie360/lib-components/shell";
 
@@ -14,6 +14,8 @@ import { SessionsSection } from './components/SessionsSection';
 import { SettingsTabs, settingsPanelId, settingsTabId } from './components/SettingsTabs';
 import { settingsUrlSchema, tabFromUrl, tabToUrl } from './components/SettingsTabs';
 import { SettingsHeader } from './components/SettingsHeader';
+import { SettingsHero } from './components/SettingsHero';
+import { loadTwoFactor } from '../../lib/settings-api';
 import { SettingsLoading } from './components/SettingsLoading';
 import { SettingsNotices } from './components/SettingsNotices';
 import { StatusToast } from './components/StatusToast';
@@ -38,6 +40,15 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
   const [logoutError, setLogoutError] = useState("");
   // Receipts of the security sections (MAIR-807, MAIR-811), shown as toasts like the profile ones.
   const [notice, setNotice] = useState<{ message: string; tone: "success" | "error" } | null>(null);
+  // MAIR-1125: the header shows the second factor on every tab; the Security tab updates it after each change.
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState<boolean | null>(null);
+  const loaded = Boolean(data && profile);
+  useEffect(() => {
+    if (!loaded) return;
+    let current = true;
+    loadTwoFactor().then((status) => { if (current) setTwoFactorEnabled(status.enabled); }).catch(() => undefined);
+    return () => { current = false; };
+  }, [loaded, accountScope]);
   const logoutPending = useRef(false);
   const requestLogout = async () => {
     if (logoutPending.current) return;
@@ -58,7 +69,7 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
     >
       <ToastProvider regionLabel="Notifications de la page" placement="top-end" defaultDuration={5000}>
         <section className="settings-page">
-          <SettingsHeader />
+          {data && profile ? <SettingsHero data={data} twoFactorEnabled={twoFactorEnabled} onOpen={setActiveTab} /> : <SettingsHeader />}
           <SettingsNotices readError={data ? readError : ""} logoutError={logoutError} recoverable={Boolean(data) && recoverable} hasData={Boolean(data)} reading={reading} saving={form.saving} onReload={reload} />
           <StatusToast message={form.status} title="Profil enregistré" onShown={form.clearStatus} />
           <StatusToast message={form.failure?.message ?? ""} title={form.failure?.title} tone="error" onShown={form.clearFailure} dismiss={form.saving} />
@@ -75,7 +86,7 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
                     onNotify={(message) => setNotice({ message, tone: "success" })} onFailure={(message) => setNotice({ message, tone: "error" })} />}
                   profileContent={<ProfileForm form={form} reading={reading} />}
                   securityContent={<>
-                    <TwoFactorSection onNotify={(message) => setNotice({ message, tone: "success" })} />
+                    <TwoFactorSection onNotify={(message) => setNotice({ message, tone: "success" })} onStatus={setTwoFactorEnabled} />
                     <LoginAlertsSection enabled={data.notifications?.login_alerts} disabled={reading || data.sources.notifications === "unavailable"}
                       onSaved={(notifications) => setData((current) => current ? { ...current, notifications } : current)}
                       onNotify={(message) => setNotice({ message, tone: "success" })} onFailure={(message) => setNotice({ message, tone: "error" })} />

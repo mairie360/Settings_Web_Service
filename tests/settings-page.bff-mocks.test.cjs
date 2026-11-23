@@ -59,7 +59,12 @@ const fieldError = (html, field) => stripTags(html.match(new RegExp(`<p id="sett
 // MAIR-807 / MAIR-811: opening Sécurité reads the second factor and the passkeys, nothing else.
 const SECURITY_READS = ['GET /settings/2fa', 'GET /settings/passkeys'];
 const withoutSecurityReads = () => upstream().filter(call => !SECURITY_READS.includes(call));
-const upstream = () => bffSettings.requests.map((request) => `${request.method} ${request.template}`);
+const allUpstream = () => bffSettings.requests.map((request) => `${request.method} ${request.template}`);
+// MAIR-1125: the page header reads the second factor whenever a profile is confirmed (pinned by its own test); the
+// journeys below count the other calls.
+const HEADER_READ = 'GET /settings/2fa';
+const journeyRequests = () => bffSettings.requests.filter((request) => `${request.method} ${request.template}` !== HEADER_READ);
+const upstream = () => journeyRequests().map((request) => `${request.method} ${request.template}`);
 const profileInputs = () => [...view.html.matchAll(/<input\b[^>]*>/g)].map(([html]) => html).filter(html => /name="(?:first_name|last_name|email|phone)"/.test(html));
 
 for (const [label, reply] of [
@@ -86,10 +91,10 @@ for (const [label, reply] of [
     assert.match(view.html, /value="anne\.le-gall@mairie\.test"/);
     assert.equal(view.hostElements(props => props.type === 'submit')[0].props.disabled, false);
     assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
-    assert.deepEqual(bffSettings.requests[1].body, { first_name: 'Submitted draft' });
+    assert.deepEqual(journeyRequests()[1].body, { first_name: 'Submitted draft' });
     bffSettings.on('PATCH', '/settings/profile', { body: fixtures.profile({ first_name: 'OFFICIAL', last_name: 'RECEIVED' }) });
     await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
-    assert.deepEqual(bffSettings.requests[2].body, bffSettings.requests[1].body);
+    assert.deepEqual(journeyRequests()[2].body, journeyRequests()[1].body);
     assert.match(view.html, /value="OFFICIAL"/);
     assert.match(view.html, /value="RECEIVED"/);
     assert.match(view.text(), /Votre profil a été enregistré/);
@@ -111,6 +116,28 @@ for (const [label, phone] of [['absent', undefined], ['null', null], ['string', 
   });
 }
 
+test('MAIR-1125: the header names the agent and shows the second factor, read once after the profile', async () => {
+  await renderLoadedPage();
+  await view.waitFor((html) => html.includes('Double authentification : Activée'));
+  assert.match(view.html, /<h1[^>]*>Anne Marie Le Gall<\/h1>/);
+  assert.match(view.text(), /Paramètres du compte/);
+  assert.deepEqual(allUpstream(), ['GET /settings/bootstrap', 'GET /settings/2fa'], 'one read of the second factor, after the bootstrap');
+  await view.click((props) => props['aria-label'] === 'Nombre de sessions actives : 0');
+  assert.match(view.html, /<h2[^>]*>Sessions actives<\/h2>/, 'the tile opens the Sessions tab');
+});
+
+test('MAIR-1125: no attribute of any tab starts with a tab key (ZAP 10031 reads it as a reflected `?tab=` value)', async () => {
+  const keys = ['profile', 'security', 'sessions', 'notification-preferences', 'appearance', 'general'];
+  await renderLoadedPage();
+  for (const tab of ['Profil', 'Sécurité', 'Sessions', 'Notifications', 'Apparence', 'Général']) {
+    await view.click(tab);
+    const reflected = [...view.html.matchAll(/([\w:-]+)="([^"]*)"/g)]
+      .filter(([, , value]) => keys.some((key) => value.toLowerCase().startsWith(key)))
+      .map(([, name, value]) => `${name}="${value}"`);
+    assert.deepEqual(reflected, [], tab);
+  }
+});
+
 test('an explicit retry recovers an initial upstream refusal through GET only', async () => {
   // Intentional fault injection: 502 is not a published response; it is not contract conformance evidence.
   bffSettings.on('GET', '/settings/bootstrap', { status: 502, body: fixtures.error('Lecture refusée'), outOfContract: true });
@@ -124,7 +151,7 @@ test('an explicit retry recovers an initial upstream refusal through GET only', 
   await view.waitFor(html => html.includes('Informations personnelles'));
   assert.doesNotMatch(view.html, /Lecture refusée/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap']);
-  assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role'), [
+  assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role' && call.path !== '/settings/2fa'), [
     { method: 'GET', path: '/settings/bootstrap' },
     { method: 'GET', path: '/settings/bootstrap' },
   ]);
@@ -161,7 +188,7 @@ for (const [name, body] of malformedBootstraps) {
       await view.waitFor(html => html.includes(mode === 'initial' ? 'Profil temporairement indisponible' : message));
       assert.match(pageHtml(view.html), /role="alert"/);
       assert.doesNotMatch(view.text(), /Cannot read|TypeError|Votre profil a été enregistré/);
-      assert.equal(bffSettings.requests.length, mode === 'initial' ? 1 : 2, 'no automatic retry');
+      assert.equal(journeyRequests().length, mode === 'initial' ? 1 : 2, 'no automatic retry');
       assert.equal(bffSettings.requests.filter(request => request.method !== 'GET').length, 0);
       if (mode === 'initial') assert.doesNotMatch(view.html, /role="tablist"/);
       else {
@@ -179,7 +206,7 @@ for (const [name, body] of malformedBootstraps) {
       await view.click(mode === 'initial' ? 'Réessayer' : 'Actualiser les paramètres');
       await view.waitFor(html => html.includes('Confirmed surname'));
       assert.doesNotMatch(view.text(), /paramètres reçus sont incohérents/);
-      assert.equal(bffSettings.requests.length, mode === 'initial' ? 2 : 3);
+      assert.equal(journeyRequests().length, mode === 'initial' ? 2 : 3);
       assert.equal(bffSettings.requests.filter(request => request.method !== 'GET').length, 0);
       if (mode === 'refresh') {
         assert.match(view.html, /value="\+33999999999"/);
@@ -220,7 +247,7 @@ test('refreshing unavailable sessions keeps dirty fields and updates clean field
   await view.click('Sessions');
   assert.doesNotMatch(view.text(), /Les sessions sont temporairement indisponibles/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap']);
-  assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role'), [
+  assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role' && call.path !== '/settings/2fa'), [
     { method: 'GET', path: '/settings/bootstrap' },
     { method: 'GET', path: '/settings/bootstrap' },
   ]);
@@ -254,7 +281,7 @@ test('an unusable profile reply does not poison a recovered read or repeat its P
   const official = fixtures.profile({ first_name: 'Confirmed name', last_name: 'Confirmed surname' });
   bffSettings.on('PATCH', '/settings/profile', { body: official });
   await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
-  assert.deepEqual(bffSettings.requests[3].body, { first_name: 'Retained draft' });
+  assert.deepEqual(journeyRequests()[3].body, { first_name: 'Retained draft' });
   assert.match(view.text(), /Votre profil a été enregistré/);
   assert.match(view.html, /value="Confirmed name"/);
   assert.doesNotMatch(view.text(), /L’enregistrement du profil n’a pas été confirmé/);
@@ -282,7 +309,7 @@ test('the first pass renders the loading state, the next one the profile form fi
   const html = await view.waitFor((current) => !current.includes('Chargement des paramètres'));
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
-  assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role'), [{ method: 'GET', path: '/settings/bootstrap' }]);
+  assert.deepEqual(front.browserCalls.filter(call => call.path !== '/api/auth/role' && call.path !== '/settings/2fa'), [{ method: 'GET', path: '/settings/bootstrap' }]);
   assert.equal(view.find('AppShell').length, 1);
   assert.doesNotMatch(html, /<aside\b[^]*?<footer\b[^]*?<\/footer>[^]*?<\/aside>/);
   // MAIR-1125 / lib-components 2.3: the V2 Settings page has no footer.
@@ -321,7 +348,7 @@ test('unconfirmed account-menu logout retains the draft until explicit canonical
   assert.deepEqual(destinations, []);
   assert.match(view.text(), /déconnexion n’a pas été confirmée/);
   assert.match(view.html, /value="Brouillon conservé"/);
-  assert.deepEqual(front.browserCalls.map(call => call.method + ' ' + call.path), ['GET /settings/bootstrap', 'POST /api/auth/logout']);
+  assert.deepEqual(front.browserCalls.filter(call => call.path !== '/settings/2fa').map(call => call.method + ' ' + call.path), ['GET /settings/bootstrap', 'POST /api/auth/logout']);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
   await view.click('Retour à la connexion');
   assert.equal(destinations.length, 1);
@@ -365,7 +392,8 @@ test('MAIR-851: the sessions tab lists the sessions of the bootstrap, or their u
   finally { preferencesDom.window.close(); }
   assert.doesNotMatch(view.text(), /Enregistrer les préférences/);
   assert.doesNotMatch(view.text(), /BFF/);
-  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/bootstrap'], 'an unavailable tab does not call the BFF');
+  // Two page mounts, so two header reads of the second factor (MAIR-1125), left out with the security reads.
+  assert.deepEqual(withoutSecurityReads(), ['GET /settings/bootstrap', 'GET /settings/bootstrap'], 'an unavailable tab does not call the BFF');
 });
 
 test('arrow, Home and End keys select and focus Settings tabs without a call beyond the reads of the tab', async () => {
@@ -470,7 +498,7 @@ test('editing a field and submitting the form saves the profile with PATCH /sett
   const html = await view.waitFor((current) => current.includes('Votre profil a été enregistré.'));
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
-  assert.deepEqual(bffSettings.requests[1].body, { first_name: 'Anne' });
+  assert.deepEqual(journeyRequests()[1].body, { first_name: 'Anne' });
   const receiptDom = new (require('jsdom').JSDOM)(html);
   try {
     const announcements = [...receiptDom.window.document.querySelectorAll('[role="status"]')]
@@ -496,7 +524,7 @@ test('a refused save keeps the form and shows the BFF message', async () => {
   assert.equal(toastAlert(html), 'Enregistrement impossible Numéro de téléphone invalide');
   assert.match(html, /value="Anne Marie"/);
   assert.match(html, /<p role="status"[^>]*><\/p>/, 'the empty success live region stays mounted after refusal');
-  assert.deepEqual(bffSettings.requests[1].body, { phone: '061234567' });
+  assert.deepEqual(journeyRequests()[1].body, { phone: '061234567' });
 });
 
 test('submitting an unchanged profile never calls the BFF', async () => {
@@ -601,7 +629,7 @@ test('an e-mail change without the current password is refused locally, then sen
   await view.waitFor((html) => html.includes('Votre profil a été enregistré.'));
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
-  assert.deepEqual(bffSettings.requests[1].body, { email: 'anne.nouvelle@mairie.test', current_password: 'current-secret' });
+  assert.deepEqual(journeyRequests()[1].body, { email: 'anne.nouvelle@mairie.test', current_password: 'current-secret' });
   assert.equal(passwordInputs().length, 0, 'the saved address is the confirmed one');
   assert.doesNotMatch(view.html, /current-secret/);
   assert.match(view.html, /<input[^>]*type="email"[^>]*value="anne\.nouvelle@mairie\.test"/);
@@ -617,7 +645,7 @@ test('a save without an e-mail change never sends current_password', async () =>
   bffSettings.on('PATCH', '/settings/profile', { body: fixtures.profile({ first_name: 'Anne' }) });
   await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
   await view.waitFor((html) => html.includes('Votre profil a été enregistré.'));
-  assert.deepEqual(bffSettings.requests[1].body, { first_name: 'Anne' });
+  assert.deepEqual(journeyRequests()[1].body, { first_name: 'Anne' });
   assert.equal(passwordInputs().length, 0);
 });
 
@@ -662,7 +690,7 @@ for (const [label, reply, expected] of [
     for (const field of ['first_name', 'last_name', 'email', 'phone', 'current_password']) {
       assert.equal(fieldError(html, field), expected.fields[field] ?? '', field);
     }
-    assert.deepEqual(bffSettings.requests[1].body, { email: 'anne.nouvelle@mairie.test', current_password: 'current-secret' });
+    assert.deepEqual(journeyRequests()[1].body, { email: 'anne.nouvelle@mairie.test', current_password: 'current-secret' });
     assert.match(html, /<input[^>]*type="email"[^>]*value="anne\.nouvelle@mairie\.test"/);
     assert.equal(passwordInputs().length, 1);
     assert.match(passwordInputs()[0], /value="current-secret"/, 'the password stays for a retry');
@@ -726,7 +754,7 @@ test('MAIR-807 / MAIR-811: the Security tab reads the second factor and the pass
   assert.match(view.text(), /Codes de secours restants : 8 sur 10/);
   assert.match(view.text(), /Passkeys/);
   assert.match(view.text(), /Google Password Manager/);
-  assert.deepEqual(upstream().sort(), ['GET /settings/2fa', 'GET /settings/bootstrap', 'GET /settings/passkeys']);
+  assert.deepEqual([...new Set(allUpstream())].sort(), ['GET /settings/2fa', 'GET /settings/bootstrap', 'GET /settings/passkeys']);
 });
 
 test('MAIR-807: an unavailable second factor offers « Réessayer » without breaking the tab', async () => {

@@ -136,7 +136,7 @@ states:
     route: /
     steps:
       - click: { role: tab, name: Sessions }
-      - wait_for: { role: heading, name: Sessions }
+      - wait_for: { role: heading, name: Sessions actives }
       - wait_for: { role: table }
   # MAIR-767: Core_API serves ISO 8601 session dates, so the lib SessionList shows the seeded
   # sessions as active with their "Déconnecter" action.

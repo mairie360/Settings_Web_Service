@@ -18,11 +18,12 @@ export const choices = {
   language: [{ value: 'fr', label: 'Français' }, { value: 'en', label: 'English' }, { value: 'es', label: 'Español' }],
   timezone: [{ value: 'Europe/Paris', label: 'Paris (Europe/Paris)' }, { value: 'Indian/Reunion', label: 'La Réunion (Indian/Reunion)' }, { value: 'America/Cayenne', label: 'Cayenne (America/Cayenne)' }, { value: 'Pacific/Noumea', label: 'Nouméa (Pacific/Noumea)' }],
   date_format: [{ value: 'DD/MM/YYYY', label: 'JJ/MM/AAAA' }, { value: 'YYYY-MM-DD', label: 'AAAA-MM-JJ' }],
-  home_page: [{ value: 'dashboard', label: 'Tableau de bord' }, { value: 'projects', label: 'Projets' }, { value: 'calendar', label: 'Calendrier' }, { value: 'messages', label: 'Messagerie' }],
+  // Core stores the home page as a path of the application (MAIR-479): `/dashboard`, never `dashboard`.
+  home_page: [{ value: '/dashboard', label: 'Tableau de bord' }, { value: '/projects', label: 'Projets' }, { value: '/calendar', label: 'Calendrier' }, { value: '/messages', label: 'Messagerie' }],
 } as const;
 
 /** Defaults shown while a field holds `null` (the account default): normal text size, system font, normal density, French, Paris. */
-export const defaults = { font_size: 16, font_family: 'system', density: 'normal', language: 'fr', timezone: 'Europe/Paris', date_format: 'DD/MM/YYYY', home_page: 'dashboard' } as const;
+export const defaults = { font_size: 16, font_family: 'system', density: 'normal', language: 'fr', timezone: 'Europe/Paris', date_format: 'DD/MM/YYYY', home_page: '/dashboard' } as const;
 export const FONT_SIZE = { min: 14, max: 24 } as const;
 
 // Bootstrap reads may omit values; PATCH receipts must contain every contracted field.

@@ -14,3 +14,14 @@ export const findPageAlert = async () => {
 };
 /** Title of the warning shown before any confirmed profile (Figma « Profil indisponible »). */
 export const UNAVAILABLE = 'Profil temporairement indisponible';
+/** Text of the refused-save toast (MAIR-864), announced by the ToastProvider's assertive region. */
+export const toastAlertText = () => document.querySelector('[data-m360-component~="ToastProvider"][role="alert"]')?.textContent ?? '';
+export const findToastAlert = async () => {
+  const started = Date.now();
+  for (;;) {
+    const text = toastAlertText();
+    if (text) return text;
+    if (Date.now() - started > 1000) throw new Error('no toast alert');
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+};

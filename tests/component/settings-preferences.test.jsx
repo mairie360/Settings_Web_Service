@@ -100,7 +100,7 @@ it('retains a confirmed preference when an unrelated profile save updates bootst
   render(<Home />); await screen.findByRole('tab', { name: 'Apparence' }); tab('Apparence'); select('Thème', 'dark'); save();
   await screen.findByText('Préférences enregistrées.'); tab('Profil');
   fireEvent.change(screen.getByLabelText('Prénom'), { target: { value: 'Anne' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Enregistrer le profil' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Enregistrer', exact: true }));
   await screen.findByText('Votre profil a été enregistré.'); tab('Apparence');
   expect(screen.getByLabelText('Thème').value).toBe('dark');
   expect(screen.getByRole('button', { name: 'Enregistrer les préférences' }).disabled).toBe(true);

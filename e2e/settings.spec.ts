@@ -19,10 +19,10 @@ test.describe('agent editing their profile', () => {
   });
 
   test('saves a new phone number that survives a reload', async ({ page }) => {
-    await expect(page.getByRole('button', { name: 'Enregistrer le profil' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Enregistrer', exact: true })).toBeDisabled();
     await page.getByLabel('Téléphone').fill(phone);
-    await page.getByRole('button', { name: 'Enregistrer le profil' }).click();
-    await expect(page.getByText('Votre profil a été enregistré.')).toBeVisible();
+    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await expect(page.getByRole('group', { name: 'Profil enregistré' })).toBeVisible();
 
     await page.reload();
     // Stored without its spaces.
@@ -33,10 +33,10 @@ test.describe('agent editing their profile', () => {
     await page.getByLabel('E-mail').fill('perf-tester-renomme@mairie360.fr');
     // The current password is only asked for an e-mail change.
     await page.getByLabel('Mot de passe actuel').fill('pas-le-bon-mot-de-passe');
-    await page.getByRole('button', { name: 'Enregistrer le profil' }).click();
+    await page.getByRole('button', { name: 'Enregistrer', exact: true }).click();
     // BFF Settings answers 403: the front names the cause.
     await expect(page.getByText('Le mot de passe actuel est incorrect, ou ce compte n’a pas de mot de passe.')).toBeVisible();
-    await expect(page.getByText('Votre profil a été enregistré.')).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Profil enregistré' })).toHaveCount(0);
 
     await page.reload();
     await expect(page.getByLabel('E-mail')).toHaveValue('perf-tester@mairie360.fr');

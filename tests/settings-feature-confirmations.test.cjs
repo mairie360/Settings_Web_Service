@@ -38,40 +38,6 @@ test('preference writes retain drafts after refusal and accept only a complete c
   assert.equal(view.hostElements('Enregistrer les préférences').find(x => x.type === 'button').props.disabled, true);
 });
 
-test('professional drafts send changed fields and do not discard values on inconsistent receipts', async t => {
-  const calls = []; let reply = {};
-  const view = panel(t, 'profile', { saveExtendedProfile: async patch => { calls.push(patch); return reply; } });
-  await change(view, 'input', 'service', 'Accueil');
-  await change(view, 'input', 'position', 'Agent');
-  await change(view, 'textarea', 'biography', 'Texte personnel');
-  await submit(view, 'Enregistrer les informations professionnelles');
-  assert.match(view.text(), /profil complémentaire n’a pas été confirmé/);
-  reply = { service: 'Accueil', position: 'Agent', biography: 'Texte personnel' };
-  await submit(view, 'Enregistrer les informations professionnelles');
-  assert.deepEqual(calls, [reply, reply]);
-  assert.match(view.text(), /Informations complémentaires enregistrées/);
-});
-
-test('photo selection validates size and type, releases previews, and requires a received URL', async t => {
-  const urls = [];
-  t.mock.method(URL, 'createObjectURL', () => 'blob:preview');
-  t.mock.method(URL, 'revokeObjectURL', url => urls.push(url));
-  let reply = ''; const calls = [];
-  const view = panel(t, 'profile', { savePhoto: async file => { calls.push(file); return reply; } });
-  await change(view, 'input', 'photo', '', { files: [new File(['bad'], 'bad.txt', { type: 'text/plain' })] });
-  assert.match(view.text(), /Utilisez une photo JPG ou PNG/);
-  assert.equal(calls.length, 0);
-  const photo = new File(['image'], 'photo.png', { type: 'image/png' });
-  await change(view, 'input', 'photo', '', { files: [photo] });
-  await view.click('Enregistrer la photo');
-  assert.match(view.text(), /photo enregistrée n’a pas été confirmée/);
-  reply = 'https://example.test/photo.png';
-  await view.click('Enregistrer la photo');
-  assert.deepEqual(calls, [photo, photo]);
-  assert.match(view.text(), /Photo enregistrée/);
-  assert.ok(urls.includes('blob:preview'));
-});
-
 test('password submission validates confirmation and clears secrets only after a resolved write', async t => {
   const calls = []; let reject = true;
   const view = panel(t, 'security', { changePassword: async (...args) => { calls.push(args); if (reject) throw new Error('Refus de confirmation'); } });

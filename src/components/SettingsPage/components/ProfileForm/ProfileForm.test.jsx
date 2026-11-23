@@ -4,19 +4,41 @@ import userEvent from '@testing-library/user-event';
 
 import { ProfileForm } from './ProfileForm';
 
-const form = (overrides = {}) => ({ profile: { first_name: 'Alice', last_name: 'Martin', email: 'alice@mairie.fr', phone: null }, saving: false, hasChanges: false, emailChanged: false, currentPassword: '', setCurrentPassword: vi.fn(), updateProfile: vi.fn(), save: vi.fn((event) => event?.preventDefault?.()), ...overrides });
+const form = (overrides = {}) => ({
+  profile: { first_name: 'Alice', last_name: 'Martin', email: 'alice@mairie.fr', phone: null },
+  saving: false, hasChanges: false, changedCount: 0, emailChanged: false, currentPassword: '', fieldErrors: {}, focusTarget: '',
+  setCurrentPassword: vi.fn(), updateProfile: vi.fn(), cancel: vi.fn(), save: vi.fn((event) => event?.preventDefault?.()), ...overrides,
+});
 
-describe('ProfileForm', () => {
-  it('renders nothing without a profile, then the four fields and a save action enabled on changes', async () => {
+describe('ProfileForm (MAIR-864)', () => {
+  it('renders nothing without a profile, then one card with the fields, Annuler and Enregistrer following the draft', async () => {
     const { container, rerender } = render(<ProfileForm form={form({ profile: null })} reading={false} />);
     expect(container.innerHTML).toBe('');
     const state = form();
     rerender(<ProfileForm form={state} reading={false} />);
+    expect(screen.getByRole('heading', { name: 'Informations personnelles' })).toBeTruthy();
     expect(screen.getByDisplayValue('alice@mairie.fr')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Enregistrer le profil' }).disabled).toBe(true); expect(screen.getByText('Aucune modification à enregistrer.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Enregistrer', exact: true }).disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Annuler', exact: true }).disabled).toBe(true);
+    expect(screen.getByText('Aucune modification à enregistrer.')).toBeTruthy();
     await userEvent.type(screen.getByDisplayValue('Alice'), 'x'); expect(state.updateProfile).toHaveBeenCalledWith('first_name', 'Alicex');
-    rerender(<ProfileForm form={form({ hasChanges: true, emailChanged: true })} reading={false} />);
-    expect(screen.getByRole('button', { name: 'Enregistrer le profil' }).disabled).toBe(false); expect(screen.getByLabelText(/Mot de passe actuel/)).toBeTruthy();
+    const changed = form({ hasChanges: true, changedCount: 2, emailChanged: true });
+    rerender(<ProfileForm form={changed} reading={false} />);
+    expect(screen.getByText('2 champs modifiés.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Enregistrer', exact: true }).disabled).toBe(false); expect(screen.getByLabelText(/Mot de passe actuel/)).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Annuler', exact: true })); expect(changed.cancel).toHaveBeenCalledTimes(1);
+    rerender(<ProfileForm form={form({ hasChanges: true, changedCount: 1, saving: true })} reading={false} />);
+    expect(screen.getByText('1 champ modifié.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Enregistrement…/ })).toBeTruthy();
+  });
+
+  it('shows each error under its field, focuses the first one and marks it invalid', () => {
+    render(<ProfileForm form={form({ hasChanges: true, changedCount: 1, fieldErrors: { first_name: 'Le prénom est obligatoire.', phone: 'Saisissez un numéro au format 06 12 34 56 78.' }, focusTarget: 'first_name' })} reading={false} />);
+    const first = screen.getByRole('textbox', { name: /Prénom/ });
+    expect(first.getAttribute('aria-invalid')).toBe('true');
+    expect(document.getElementById(first.getAttribute('aria-describedby').split(' ')[0]).textContent).toContain('Le prénom est obligatoire.');
+    expect(document.activeElement).toBe(first);
+    expect(screen.getByRole('textbox', { name: /Téléphone/ }).getAttribute('aria-invalid')).toBe('true');
   });
 
   it('says who sees the phone number (MAIR-292)', () => {

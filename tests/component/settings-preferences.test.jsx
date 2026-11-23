@@ -20,7 +20,7 @@ beforeEach(() => {
   for (const operation of Object.values(api)) operation.mockReset();
   api.loadSettings.mockResolvedValue(fixtures.bootstrap());
   api.saveAppearance.mockResolvedValue(fixtures.appearance({ density: 'compact' }));
-  api.saveGeneral.mockResolvedValue(fixtures.general({ home_page: 'projects' }));
+  api.saveGeneral.mockResolvedValue(fixtures.general({ home_page: '/projects' }));
   api.saveNotifications.mockResolvedValue(fixtures.notifications({ messages: false }));
 });
 
@@ -87,11 +87,11 @@ it('keeps the other account safe when an earlier save settles after a foreground
 it('does not commit a save after the page has been unmounted', async () => {
   const pending = deferred(); api.saveGeneral.mockReturnValueOnce(pending.promise);
   const view = render(<Home />); await screen.findByRole('tab', { name: 'Général' }); tab('Général');
-  select('Page d’accueil', 'projects'); fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
-  expect(api.saveGeneral).toHaveBeenCalledExactlyOnceWith({ home_page: 'projects' });
+  select('Page d’accueil', '/projects'); fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+  expect(api.saveGeneral).toHaveBeenCalledExactlyOnceWith({ home_page: '/projects' });
   view.unmount(); render(<Home />); await screen.findByRole('tab', { name: 'Général' }); tab('Général');
-  await act(async () => pending.resolve(fixtures.general({ home_page: 'projects' })));
-  expect(screen.getByLabelText('Page d’accueil').value).toBe('dashboard');
+  await act(async () => pending.resolve(fixtures.general({ home_page: '/projects' })));
+  expect(screen.getByLabelText('Page d’accueil').value).toBe('/dashboard');
 });
 
 it('retains a confirmed preference when an unrelated profile save updates bootstrap', async () => {

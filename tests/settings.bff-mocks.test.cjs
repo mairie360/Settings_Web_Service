@@ -129,7 +129,7 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
 
   for (const [name, call, section, patch, saved] of [
     ['appearance', saveAppearance, 'appearance', { theme: 'dark' }, fixtures.appearance({ theme: 'dark' })],
-    ['general', saveGeneral, 'general', { home_page: 'projects' }, fixtures.general({ home_page: 'projects' })],
+    ['general', saveGeneral, 'general', { home_page: '/projects' }, fixtures.general({ home_page: '/projects' })],
     ['notifications', saveNotifications, 'notifications', { messages: false }, fixtures.notifications({ messages: false })],
   ]) {
     test(`save ${name} uses the generated PATCH and returns its snapshot`, async () => {

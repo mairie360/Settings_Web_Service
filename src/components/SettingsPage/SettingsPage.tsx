@@ -19,6 +19,8 @@ import { SettingsNotices } from './components/SettingsNotices';
 import { StatusToast } from './components/StatusToast';
 import { TwoFactorSection } from './components/TwoFactorSection';
 import { PasskeysSection } from './components/PasskeysSection';
+import { LoginAlertsSection } from './components/LoginAlertsSection';
+import { settingsPort } from '../../lib/settings-port';
 import { useProfileForm } from './use-profile-form';
 import { useSettingsData } from './use-settings-data';
 
@@ -68,15 +70,20 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
             <>
               <SettingsTabs value={activeTab} onChange={setActiveTab} />
               <div role="tabpanel" id={settingsPanelId(activeTab)} aria-labelledby={settingsTabId(activeTab)} className="settings-panel">
-                <SettingsPendingFeatures tab={activeTab}
+                <SettingsPendingFeatures tab={activeTab} port={settingsPort}
                   preferencesContent={<PreferencesPanel key={accountScope} tab={activeTab} bootstrap={data} reading={reading || form.saving} onWriting={setPreferencesWriting} onRefresh={() => void readSettings()}
                     onNotify={(message) => setNotice({ message, tone: "success" })} onFailure={(message) => setNotice({ message, tone: "error" })} />}
                   profileContent={<ProfileForm form={form} reading={reading} />}
                   securityContent={<>
                     <TwoFactorSection onNotify={(message) => setNotice({ message, tone: "success" })} />
+                    <LoginAlertsSection enabled={data.notifications?.login_alerts} disabled={reading || data.sources.notifications === "unavailable"}
+                      onSaved={(notifications) => setData((current) => current ? { ...current, notifications } : current)}
+                      onNotify={(message) => setNotice({ message, tone: "success" })} onFailure={(message) => setNotice({ message, tone: "error" })} />
                     <PasskeysSection onNotify={(message) => setNotice({ message, tone: "success" })} onFailure={(message) => setNotice({ message, tone: "error" })} />
                   </>}
-                  sessionsContent={<SessionsSection data={data} onRevoked={(id, revokedAt) => setData((current) => current ? { ...current, sessions: current.sessions.map((session) => session.id === id ? { ...session, revoked_at: revokedAt } : session) } : current)} />} />
+                  sessionsContent={<SessionsSection data={data}
+                    onSessions={(sessions, history) => setData((current) => current ? { ...current, sessions, session_history: history, sources: { ...current.sources, sessions: "available", session_history: "available" } } : current)}
+                    onNotify={(message) => setNotice({ message, tone: "success" })} onFailure={(message) => setNotice({ message, tone: "error" })} />} />
               </div>
             </>
           )}

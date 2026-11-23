@@ -41,17 +41,17 @@ test('preference writes retain drafts after refusal and accept only a complete c
 test('password submission validates confirmation and clears secrets only after a resolved write', async t => {
   const calls = []; let reject = true;
   const view = panel(t, 'security', { changePassword: async (...args) => { calls.push(args); if (reject) throw new Error('Refus de confirmation'); } });
-  for (const [name, value] of [['current', 'old'], ['next', 'new'], ['confirmation', 'incorrect']]) await change(view, 'input', name, value);
+  for (const [name, value] of [['current', 'ancien-2026'], ['next', 'nouveau-2026'], ['confirmation', 'incorrect-2026']]) await change(view, 'input', name, value);
   await submit(view, 'Changer le mot de passe');
   assert.match(view.text(), /ne correspondent pas/);
   assert.equal(calls.length, 0);
-  await change(view, 'input', 'confirmation', 'new');
+  await change(view, 'input', 'confirmation', 'nouveau-2026');
   await submit(view, 'Changer le mot de passe');
   assert.match(view.text(), /Refus de confirmation/);
-  assert.equal(control(view, 'input', 'current').props.value, 'old');
+  assert.equal(control(view, 'input', 'current').props.value, 'ancien-2026');
   reject = false;
   await submit(view, 'Changer le mot de passe');
-  assert.deepEqual(calls, [['old', 'new'], ['old', 'new']]);
+  assert.deepEqual(calls, [['ancien-2026', 'nouveau-2026'], ['ancien-2026', 'nouveau-2026']]);
   assert.match(view.text(), /Mot de passe modifié/);
   assert.ok(['current', 'next', 'confirmation'].every(name => control(view, 'input', name).props.value === ''));
 });

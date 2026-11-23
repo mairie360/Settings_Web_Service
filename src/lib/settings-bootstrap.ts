@@ -3,7 +3,7 @@ import type { SettingsBootstrap as Bootstrap, SettingsProfile as Profile } from 
 // Reads historically permit omitted preference fields; null still means inherit.
 // This view type describes that boundary without claiming a complete PATCH receipt.
 type PreferenceSection = 'appearance' | 'general' | 'notifications';
-export type SettingsBootstrapRead = Pick<Bootstrap, 'profile' | 'sessions'> & {
+export type SettingsBootstrapRead = Pick<Bootstrap, 'profile' | 'sessions'> & Partial<Pick<Bootstrap, 'session_history' | 'current_session_id'>> & {
   sources: Pick<Bootstrap['sources'], 'sessions'> & Partial<Omit<Bootstrap['sources'], 'sessions'>>;
 } & { [K in PreferenceSection]?: Partial<NonNullable<Bootstrap[K]>> | null };
 
@@ -38,8 +38,8 @@ const fields = <T extends object, K extends keyof T>(record: T, keys: K[]): Pick
 ) as Pick<T, K>;
 const preferenceFields = {
   appearance: ['theme', 'density', 'font_family', 'font_size'],
-  general: ['language', 'timezone', 'date_format', 'home_page', 'auto_open_notifications'],
-  notifications: ['email', 'push', 'desktop', 'messages', 'projects', 'calendar'],
+  general: ['language', 'timezone', 'date_format', 'home_page', 'auto_open_notifications', 'autosave'],
+  notifications: ['email', 'push', 'desktop', 'messages', 'projects', 'calendar', 'system_updates', 'login_alerts'],
 };
 
 export function selectSettingsBootstrap(value: unknown): SettingsBootstrapRead | null {
@@ -47,6 +47,11 @@ export function selectSettingsBootstrap(value: unknown): SettingsBootstrapRead |
   if (![value.sources.preferences, value.sources.notifications]
     .every(source => source === undefined || source === 'available' || source === 'unavailable')) return null;
   if (value.profile.phone_country != null && typeof value.profile.phone_country !== 'string') return null;
+  // MAIR-892: the history and the current session id are optional; a malformed one is dropped, never the page.
+  const record = value as unknown as Record<string, unknown>;
+  const history = Array.isArray(record.session_history) && isConfirmedBootstrap({ ...value, sessions: record.session_history })
+    ? (record.session_history as SettingsBootstrapRead['sessions']) : undefined;
+  const currentSession = typeof record.current_session_id === 'string' ? record.current_session_id : null;
   const optional: Record<string, unknown> = {};
   for (const section of ['appearance', 'general', 'notifications'] as const) {
     const raw = value[section];
@@ -55,7 +60,7 @@ export function selectSettingsBootstrap(value: unknown): SettingsBootstrapRead |
     const selected = fields(raw as Record<string, unknown>, preferenceFields[section]);
     for (const [key, field] of Object.entries(selected)) {
       if (field == null) continue;
-      if (section === 'notifications' || key === 'auto_open_notifications') {
+      if (section === 'notifications' || key === 'auto_open_notifications' || key === 'autosave') {
         if (typeof field !== 'boolean') return null;
       } else if (key === 'font_size') {
         if (typeof field !== 'number' || !Number.isInteger(field) || field < 1 || field > 32767) return null;
@@ -66,7 +71,9 @@ export function selectSettingsBootstrap(value: unknown): SettingsBootstrapRead |
   return {
     profile: fields(value.profile, ['first_name', 'last_name', 'email', 'phone', 'phone_country']),
     sessions: value.sessions.map(session => fields(session, ['id', 'device_info', 'ip_address', 'created_at', 'expires_at', 'revoked_at'])),
-    sources: fields(value.sources, ['sessions', 'preferences', 'notifications']),
+    ...(history ? { session_history: history.map(session => fields(session, ['id', 'device_info', 'ip_address', 'created_at', 'expires_at', 'revoked_at'])) } : {}),
+    current_session_id: currentSession,
+    sources: { ...fields(value.sources, ['sessions', 'preferences', 'notifications']), ...(history ? { session_history: value.sources.session_history ?? 'available' } : { session_history: 'unavailable' as const }) },
     ...optional,
   } as SettingsBootstrapRead;
 }

@@ -335,7 +335,11 @@ test('MAIR-851: the sessions tab lists the sessions of the bootstrap, or their u
   await view.click('Sessions');
 
   assert.match(view.html, /<button id="settings-tab-sessions" role="tab" type="button" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg[^>]*aria-hidden="true"[^]*?Sessions<\/button>/);
-  assert.match(view.html, /<h2[^>]*>Sessions<\/h2>/);
+  // MAIR-892: the active sessions, « Cet appareil » for the session of the page, then the history.
+  assert.match(view.html, /<h2[^>]*>Sessions actives<\/h2>/);
+  assert.match(view.html, /<h2[^>]*>Historique des connexions<\/h2>/);
+  assert.match(view.text(), /Cet appareil/);
+  assert.match(view.text(), /Chrome sur Windows/, 'the ended session of the history');
   const createdAt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })
     .format(new Date('2026-09-15T08:00:00Z'));
   // MAIR-607: the shared SessionList renders one row per session (device, IP, creation, expiry, state).
@@ -357,7 +361,7 @@ test('MAIR-851: the sessions tab lists the sessions of the bootstrap, or their u
   // MAIR-902: one switch per notification, each saved at once (no form, no « Enregistrer »).
   assert.match(view.text(), /Les changements s’appliquent immédiatement\./);
   const preferencesDom = new (require('jsdom').JSDOM)(view.html);
-  try { assert.equal(preferencesDom.window.document.querySelectorAll('[role="switch"]').length, 5); }
+  try { assert.equal(preferencesDom.window.document.querySelectorAll('[role="switch"]').length, 6); }
   finally { preferencesDom.window.close(); }
   assert.doesNotMatch(view.text(), /Enregistrer les préférences/);
   assert.doesNotMatch(view.text(), /BFF/);

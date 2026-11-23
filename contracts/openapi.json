@@ -149,12 +149,7 @@
             "$ref": "#/components/schemas/SettingsAppearancePatchDensity"
           },
           "font_family": {
-            "maxLength": 128,
-            "pattern": "\\S",
-            "type": [
-              "string",
-              "null"
-            ]
+            "$ref": "#/components/schemas/SettingsAppearancePatchFontFamily"
           },
           "font_size": {
             "maximum": 32767,
@@ -176,6 +171,18 @@
           "compact",
           "normal",
           "comfortable",
+          null
+        ],
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "SettingsAppearancePatchFontFamily": {
+        "enum": [
+          "system",
+          "geist",
+          "atkinson",
           null
         ],
         "type": [
@@ -233,6 +240,12 @@
               }
             ]
           },
+          "current_session_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "general": {
             "anyOf": [
               {
@@ -256,9 +269,15 @@
           "profile": {
             "$ref": "#/components/schemas/SettingsProfile"
           },
+          "session_history": {
+            "items": {
+              "$ref": "#/components/schemas/SettingsSession"
+            },
+            "type": "array"
+          },
           "sessions": {
             "items": {
-              "$ref": "#/components/schemas/SettingsBootstrapSessionsItem"
+              "$ref": "#/components/schemas/SettingsSession"
             },
             "type": "array"
           },
@@ -269,43 +288,12 @@
         "required": [
           "profile",
           "sessions",
+          "current_session_id",
+          "session_history",
           "appearance",
           "general",
           "notifications",
           "sources"
-        ],
-        "type": "object"
-      },
-      "SettingsBootstrapSessionsItem": {
-        "properties": {
-          "created_at": {
-            "type": "string"
-          },
-          "device_info": {
-            "type": "string"
-          },
-          "expires_at": {
-            "type": "string"
-          },
-          "id": {
-            "type": "string"
-          },
-          "ip_address": {
-            "type": "string"
-          },
-          "revoked_at": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "device_info",
-          "ip_address",
-          "created_at",
-          "expires_at"
         ],
         "type": "object"
       },
@@ -317,12 +305,16 @@
           "preferences": {
             "$ref": "#/components/schemas/SettingsBootstrapSourcesPreferences"
           },
+          "session_history": {
+            "$ref": "#/components/schemas/SettingsBootstrapSourcesSessionHistory"
+          },
           "sessions": {
             "$ref": "#/components/schemas/SettingsBootstrapSourcesSessions"
           }
         },
         "required": [
           "sessions",
+          "session_history",
           "preferences",
           "notifications"
         ],
@@ -342,6 +334,13 @@
         ],
         "type": "string"
       },
+      "SettingsBootstrapSourcesSessionHistory": {
+        "enum": [
+          "available",
+          "unavailable"
+        ],
+        "type": "string"
+      },
       "SettingsBootstrapSourcesSessions": {
         "enum": [
           "available",
@@ -352,6 +351,12 @@
       "SettingsGeneral": {
         "properties": {
           "auto_open_notifications": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "autosave": {
             "type": [
               "boolean",
               "null"
@@ -387,13 +392,20 @@
           "timezone",
           "date_format",
           "home_page",
-          "auto_open_notifications"
+          "auto_open_notifications",
+          "autosave"
         ],
         "type": "object"
       },
       "SettingsGeneralPatch": {
         "properties": {
           "auto_open_notifications": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "autosave": {
             "type": [
               "boolean",
               "null"
@@ -461,6 +473,12 @@
               "null"
             ]
           },
+          "login_alerts": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "messages": {
             "type": [
               "boolean",
@@ -478,6 +496,12 @@
               "boolean",
               "null"
             ]
+          },
+          "system_updates": {
+            "type": [
+              "boolean",
+              "null"
+            ]
           }
         },
         "required": [
@@ -486,7 +510,9 @@
           "desktop",
           "messages",
           "projects",
-          "calendar"
+          "calendar",
+          "system_updates",
+          "login_alerts"
         ],
         "type": "object"
       },
@@ -510,6 +536,12 @@
               "null"
             ]
           },
+          "login_alerts": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "messages": {
             "type": [
               "boolean",
@@ -523,6 +555,12 @@
             ]
           },
           "push": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "system_updates": {
             "type": [
               "boolean",
               "null"
@@ -604,6 +642,25 @@
         "required": [],
         "type": "object"
       },
+      "SettingsPasswordChange": {
+        "properties": {
+          "current_password": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "new_password": {
+            "maxLength": 255,
+            "minLength": 8,
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "type": "object"
+      },
       "SettingsProfile": {
         "properties": {
           "email": {
@@ -683,6 +740,78 @@
         "required": [],
         "type": "object"
       },
+      "SettingsRevokeOthers": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SettingsSessions"
+          },
+          {
+            "properties": {
+              "revoked": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "revoked"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "SettingsSession": {
+        "properties": {
+          "created_at": {
+            "type": "string"
+          },
+          "device_info": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "ip_address": {
+            "type": "string"
+          },
+          "revoked_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "device_info",
+          "ip_address",
+          "created_at",
+          "expires_at"
+        ],
+        "type": "object"
+      },
+      "SettingsSessions": {
+        "properties": {
+          "session_history": {
+            "items": {
+              "$ref": "#/components/schemas/SettingsSession"
+            },
+            "type": "array"
+          },
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/SettingsSession"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "sessions",
+          "session_history"
+        ],
+        "type": "object"
+      },
       "SettingsTwoFactorCode": {
         "properties": {
           "code": {
@@ -750,7 +879,7 @@
   "info": {
     "title": "bff_settings",
     "version": "1.0.0",
-    "x-source-package": "@mairie360/bff-settings-openapi@0.0.0-dev.668dec668302f27caa8d0351bcd218883031866c"
+    "x-source-package": "@mairie360/bff-settings-openapi@0.0.0-dev.d4cb1387edf769c83e2e9d589af37114a6e34885"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -1090,6 +1219,27 @@
         }
       }
     },
+    "/settings/password": {
+      "post": {
+        "operationId": "postSettingsPassword",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsPasswordChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "2XX": {
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
     "/settings/profile": {
       "patch": {
         "operationId": "patchSettingsProfile",
@@ -1110,6 +1260,51 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SettingsProfile"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/settings/sessions/revoke-others": {
+      "post": {
+        "operationId": "postSettingsSessionsRevokeOthers",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsRevokeOthers"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/settings/sessions/{id}": {
+      "delete": {
+        "operationId": "deleteSettingsSessionsId",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSessions"
                 }
               }
             },

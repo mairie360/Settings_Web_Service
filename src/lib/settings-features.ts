@@ -18,8 +18,12 @@ export function changedFields<T extends object>(baseline: T, draft: T): Partial<
   return Object.fromEntries(Object.keys(draft).filter(key => baseline[key as keyof T] !== draft[key as keyof T]).map(key => [key, draft[key as keyof T]])) as Partial<T>;
 }
 
+/** Core's rule (MAIR-823): 8 to 255 characters. */
+export const MIN_PASSWORD_LENGTH = 8;
+
 export function validatePassword(current: string, next: string, confirmation: string) {
   if (!current || !next || !confirmation) return 'Tous les champs de mot de passe sont obligatoires.';
+  if (next.length < MIN_PASSWORD_LENGTH || next.length > 255) return 'Le nouveau mot de passe doit contenir entre 8 et 255 caractères.';
   if (next !== confirmation) return 'Les nouveaux mots de passe ne correspondent pas.';
   if (next === current) return 'Choisissez un mot de passe différent du mot de passe actuel.';
   return '';

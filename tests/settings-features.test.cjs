@@ -11,12 +11,15 @@ test('changedFields preserves explicit resets and never sends unchanged fields',
 });
 
 for (const [current, next, confirmation, message] of [
-  ['', 'new', 'new', 'Tous les champs de mot de passe sont obligatoires.'],
-  ['old', '', 'new', 'Tous les champs de mot de passe sont obligatoires.'],
-  ['old', 'new', '', 'Tous les champs de mot de passe sont obligatoires.'],
-  ['old', 'new', 'different', 'Les nouveaux mots de passe ne correspondent pas.'],
-  ['old', 'old', 'old', 'Choisissez un mot de passe différent du mot de passe actuel.'],
-  ['old', 'new', 'new', ''],
-]) test(`password validation distinguishes missing, mismatch, reuse and valid (${JSON.stringify([current, next, confirmation])})`, () => {
+  ['', 'nouveau-2026', 'nouveau-2026', 'Tous les champs de mot de passe sont obligatoires.'],
+  ['ancien-2026', '', 'nouveau-2026', 'Tous les champs de mot de passe sont obligatoires.'],
+  ['ancien-2026', 'nouveau-2026', '', 'Tous les champs de mot de passe sont obligatoires.'],
+  // MAIR-876: Core's rule, 8 to 255 characters.
+  ['ancien-2026', 'court', 'court', 'Le nouveau mot de passe doit contenir entre 8 et 255 caractères.'],
+  ['ancien-2026', 'x'.repeat(256), 'x'.repeat(256), 'Le nouveau mot de passe doit contenir entre 8 et 255 caractères.'],
+  ['ancien-2026', 'nouveau-2026', 'different-2026', 'Les nouveaux mots de passe ne correspondent pas.'],
+  ['ancien-2026', 'ancien-2026', 'ancien-2026', 'Choisissez un mot de passe différent du mot de passe actuel.'],
+  ['ancien-2026', 'nouveau-2026', 'nouveau-2026', ''],
+]) test(`password validation distinguishes missing, length, mismatch, reuse and valid (${JSON.stringify([current, next.length > 20 ? `${next.length} chars` : next, confirmation.length > 20 ? `${confirmation.length} chars` : confirmation])})`, () => {
   assert.equal(validatePassword(current, next, confirmation), message);
 });

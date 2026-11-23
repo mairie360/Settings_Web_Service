@@ -183,6 +183,11 @@ function installReactRuntime({ pathname = '/' } = {}) {
  * Recreates an element through the JSX runtime: array children are static, so keys are not re-validated,
  * and the props are copied because React's dev build leaves a warning `key` getter on the original object.
  */
+/** An element, or an array holding one at any depth (lib-components 2.3 nests `items.map(...)` next to other children). */
+function containsElement(value) {
+  return real.isValidElement(value) || (Array.isArray(value) && value.some(containsElement));
+}
+
 function createElement(type, props, key) {
   return (Array.isArray(props.children) ? jsxs : jsx)(type, { ...props }, key ?? undefined);
 }
@@ -430,7 +435,7 @@ class ServerView {
     let changed = false;
     const next = {};
     for (const [name, value] of Object.entries(props)) {
-      const wrapped = real.isValidElement(value) || (Array.isArray(value) && value.some(real.isValidElement)) ? this.wrap(value, name === 'children' ? `${path}>` : `${path}.${name}`) : value;
+      const wrapped = containsElement(value) ? this.wrap(value, name === 'children' ? `${path}>` : `${path}.${name}`) : value;
       if (wrapped !== value) changed = true;
       next[name] = wrapped;
     }

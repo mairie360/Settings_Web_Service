@@ -5,7 +5,7 @@ import { loadSettings } from '../../lib/settings-api';
 import type { SettingsProfile as Profile } from '../../lib/settings-api';
 import { isConfirmedBootstrap } from '../../lib/settings-bootstrap';
 import type { SettingsBootstrapRead as Bootstrap } from '../../lib/settings-bootstrap';
-import { subscribePageReturn } from '../../lib/page-return';
+import { subscribePageReturn } from '@mairie360/lib-components/shared';
 import { profilePatch } from '../../lib/profile-form';
 
 export interface SettingsData {

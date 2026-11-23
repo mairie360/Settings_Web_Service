@@ -5,7 +5,7 @@ import Home from '@/components/SettingsPage';
 import { loadSettings, saveProfile } from '@/lib/settings-api';
 import fixtures from '../support/settings-fixtures.cjs';
 
-vi.mock('@/lib/settings-api', () => ({ loadSettings: vi.fn(), saveProfile: vi.fn() }));
+vi.mock('@/lib/settings-api', () => ({ loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })), loadSettings: vi.fn(), saveProfile: vi.fn() }));
 beforeEach(() => { vi.mocked(loadSettings).mockReset().mockResolvedValue(fixtures.bootstrap()); });
 
 it('renders the confirmed server profile immediately without a duplicate StrictMode bootstrap', async () => {

@@ -9,7 +9,7 @@ import { loadSettings, saveProfile } from '@/lib/settings-api';
 import { setBrowserFrontUrls } from '@/lib/front-urls';
 import fixtures from '../support/settings-fixtures.cjs';
 
-vi.mock('@/lib/settings-api', () => ({ loadSettings: vi.fn(), saveProfile: vi.fn() }));
+vi.mock('@/lib/settings-api', () => ({ loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })), loadSettings: vi.fn(), saveProfile: vi.fn() }));
 const require = createRequire(import.meta.url);
 const stylesheet = readFileSync(require.resolve('@mairie360/lib-components/styles.css'), 'utf8') + '\n' + readFileSync(resolve(process.cwd(), 'src/app/globals.css'), 'utf8');
 let style;

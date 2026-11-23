@@ -5,7 +5,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import Home from '@/components/SettingsPage';
 import * as api from '@/lib/settings-api';
 import fixtures from '../support/settings-fixtures.cjs';
-vi.mock('@/lib/settings-api', () => ({ loadSettings: vi.fn(), saveProfile: vi.fn(), saveAppearance: vi.fn(), saveGeneral: vi.fn(), saveNotifications: vi.fn() }));
+vi.mock('@/lib/settings-api', () => ({ loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })), loadSettings: vi.fn(), saveProfile: vi.fn(), saveAppearance: vi.fn(), saveGeneral: vi.fn(), saveNotifications: vi.fn() }));
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 beforeEach(() => {
   document.documentElement.removeAttribute('data-theme');
@@ -13,6 +13,7 @@ beforeEach(() => {
   document.documentElement.style.removeProperty('--mairie-user-font');
   document.cookie = 'mairie360_appearance=; Path=/; Max-Age=0';
   for (const method of Object.values(api)) method.mockReset();
+  api.loadTwoFactor.mockResolvedValue({ enabled: false, backup_codes_remaining: 0 });
   api.loadSettings.mockResolvedValue(fixtures.bootstrap({ appearance: fixtures.appearance({ theme: 'light', density: 'normal', font_family: 'Arial' }) }));
 });
 it('applies and caches only the confirmed bootstrap and write receipt, never a pending value', async () => {

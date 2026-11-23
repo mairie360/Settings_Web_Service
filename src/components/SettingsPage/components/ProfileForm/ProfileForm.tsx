@@ -1,4 +1,5 @@
 "use client";
+import { UserRound } from "lucide-react";
 import { Fragment, useEffect } from "react";
 import { CancelButton, FormActions, Panel, PasswordField, SaveButton, TextField } from "@mairie360/lib-components/primitives";
 
@@ -27,7 +28,7 @@ export const ProfileForm = ({ form, reading }: ProfileFormProps) => {
   }, [focusTarget, fieldErrors]);
   if (!profile) return null;
   return (
-    <Panel title="Informations personnelles" description="Ces informations sont utilisées pour votre compte Mairie360." className="settings-profile-card">
+    <Panel icon={UserRound} title="Informations personnelles" description="Ces informations sont utilisées pour votre compte Mairie360." className="settings-profile-card">
       <SettingsMutationForm data-form="profile" onSubmit={save} aria-busy={saving || reading} noValidate className="space-y-4">
         <div className="settings-profile-fields">
           {PROFILE_FIELDS.map(({ field, label, type, required, maxLength, pattern, help }) => (
@@ -40,7 +41,7 @@ export const ProfileForm = ({ form, reading }: ProfileFormProps) => {
           ))}
         </div>
         {/* Both actions follow the draft: disabled while nothing changed (FormActions only disables Cancel while busy). */}
-        <FormActions status={changedStatus(changedCount)} className="settings-profile-actions">
+        <FormActions sticky status={changedStatus(changedCount)} className="settings-profile-actions">
           <CancelButton onClick={cancel} disabled={saving || !hasChanges} />
           <SaveButton type="submit" label={saving ? "Enregistrement…" : "Enregistrer"} loading={saving} disabled={saving || reading || !hasChanges} />
         </FormActions>

@@ -1,4 +1,5 @@
 "use client";
+import { KeyRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { ConfirmModal, CreatePasskeyButton, DataTable, DateTime, DeleteButton, Panel, Text } from "@mairie360/lib-components/primitives";
 
@@ -53,7 +54,7 @@ export const PasskeysSection = ({ onNotify, onFailure }: PasskeysSectionProps) =
   const rows = passkeys ?? [];
   // The dialogs stay outside the Panel: it replaces its children by its loading / empty / unavailable state.
   return (<>
-    <Panel title="Passkeys" className="settings-passkeys"
+    <Panel icon={KeyRound} title="Passkeys" className="settings-passkeys"
       description={<>
         Une passkey vous connecte sans mot de passe, avec l’empreinte, le visage ou le code de votre appareil.
         {/* In the description, not the content: the Panel replaces its content by the empty / unavailable state. */}

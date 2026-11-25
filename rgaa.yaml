@@ -121,7 +121,9 @@ states:
     steps:
       - fill: { label: Prénom, value: Camila }
       - click: { role: button, name: Enregistrer }
-      - wait_for: { text: Votre profil a été enregistré. }
+      # The confirmation is a toast that clears its status once shown: wait for the saved name in the
+      # header instead (the status change itself is recorded by the engine for 7.5).
+      - wait_for: { role: button, name: Camila Editor }
   - id: security
     description: Password, second factor and passkeys of the security tab (MAIR-807, MAIR-811)
     as: agent

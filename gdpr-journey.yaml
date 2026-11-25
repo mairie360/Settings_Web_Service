@@ -16,7 +16,7 @@ env: [ADMIN_JWT]
 steps:
   - name: read the settings
     request: {method: GET, path: /settings/bootstrap, headers: &session {Cookie: "accessToken={{env.ADMIN_JWT}}", Origin: "http://settings-front:5000"}}
-  - name: save the marker's names and phone in the profile
+  - name: save the marker's profile
     request:
       method: PATCH
       path: /settings/profile

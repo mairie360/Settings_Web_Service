@@ -40,10 +40,7 @@ export const SettingsHero = ({ data, twoFactorEnabled, onOpen }: SettingsHeroPro
         <PageHero.Stat icon={ShieldCheck} label="Double authentification"
           value={twoFactorEnabled === null ? "—" : twoFactorEnabled ? "Activée" : "Désactivée"}
           dot={twoFactorEnabled === null ? undefined : twoFactorEnabled ? "success" : "warning"} onClick={() => onOpen("security")} />
-        {/* The accessible name keeps the visible label (WCAG 2.5.3) but must not start with « sessions », the value of
-            `?tab=sessions`: ZAP's passive rule 10031 reads an attribute starting with a URL parameter as reflected input. */}
-        <PageHero.Stat icon={MonitorSmartphone} label="Sessions actives" value={sessions ?? "—"}
-          aria-label={`Nombre de sessions actives : ${sessions ?? "inconnu"}`} onClick={() => onOpen("sessions")} />
+        <PageHero.Stat icon={MonitorSmartphone} label="Sessions actives" value={sessions ?? "—"} onClick={() => onOpen("sessions")} />
         <PageHero.Stat icon={Bell} label="Notifications" value={notifications === null ? "—" : `${notifications} activée${notifications > 1 ? "s" : ""}`}
           onClick={() => onOpen("notifications")} />
       </>} />

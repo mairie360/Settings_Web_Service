@@ -96,6 +96,7 @@ Values below are local examples or explicitly described behavior, not production
 | Variable or precedence | Explicit local example | Purpose |
 | --- | --- | --- |
 | `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL` | http://localhost:4008 | Left-to-right proxy precedence; configure an HTTP(S) URL explicitly. Missing or invalid configuration returns an uncached 503 without contacting an upstream. |
+| `COMMUNE_NAME` | — | Commune named in the shared header, read at request time (a leading « Mairie de » is dropped); without it the block is hidden. |
 | `LOGIN_FRONT_URL` | — | Validated runtime Login origin used to open `/logout`. |
 
 The shared navigation reads `DASHBOARD_FRONT_URL`, `PROJECT_FRONT_URL`,

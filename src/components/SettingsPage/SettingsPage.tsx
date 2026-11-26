@@ -31,7 +31,7 @@ import { useSettingsData } from './use-settings-data';
  * The settings page (MAIR-851): lib shell, title with the date, the six tabs and their panels, the loading and
  * unavailable states, and receipts as toasts at the top right; fed by `useSettingsData` and `useProfileForm`.
  */
-export default function SettingsPage({ initialData }: { initialData?: Bootstrap | null }) {
+export default function SettingsPage({ initialData, commune }: { initialData?: Bootstrap | null; commune?: string }) {
   const settings = useSettingsData(initialData);
   const { data, setData, profile, reading, readError, readAnnouncement, accountScope, setPreferencesWriting, readSettings, reload } = settings;
   const form = useProfileForm(settings);
@@ -63,6 +63,7 @@ export default function SettingsPage({ initialData }: { initialData?: Bootstrap 
     <AccessibleShell
       className="settings-shell"
       activeItem="settings"
+      commune={commune}
       hrefs={getActiveFrontHrefs()}
       user={data ? { first_name: data.profile.first_name, last_name: data.profile.last_name, email: data.profile.email } : undefined}
       onLogout={() => void requestLogout()}

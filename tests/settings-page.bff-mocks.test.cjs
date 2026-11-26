@@ -118,12 +118,22 @@ for (const [label, phone] of [['absent', undefined], ['null', null], ['string', 
 
 test('MAIR-1125: the header names the agent and shows the second factor, read once after the profile', async () => {
   await renderLoadedPage();
-  await view.waitFor((html) => html.includes('Double authentification : Activée'));
+  await view.waitFor((html, text) => /Double authentification\s*Activée/.test(view.text()));
   assert.match(view.html, /<h1[^>]*>Anne Marie Le Gall<\/h1>/);
   assert.match(view.text(), /Paramètres du compte/);
   assert.deepEqual(allUpstream(), ['GET /settings/bootstrap', 'GET /settings/2fa'], 'one read of the second factor, after the bootstrap');
-  await view.click((props) => props['aria-label'] === 'Nombre de sessions actives : 0');
+  await view.click((props, text, tag) => tag === 'button' && /^Sessions actives\s*0$/.test(text));
   assert.match(view.html, /<h2[^>]*>Sessions actives<\/h2>/, 'the tile opens the Sessions tab');
+});
+
+test('MAIR-1227: the shared header names the commune of the deployment, and the band tiles carry no aria-label', async () => {
+  // `src/app/page.tsx` reads COMMUNE_NAME through `communeName()` and hands the page its commune.
+  const { communeName } = requireSrc('lib/commune.ts');
+  await renderLoadedPage(fixtures.bootstrap(), { commune: communeName('Mairie de Saint-André') });
+  await view.waitFor(() => /Double authentification\s*Activée/.test(view.text()));
+  assert.match(view.text(), /Saint-André/);
+  assert.doesNotMatch(view.html, /aria-label="(Double authentification|Sessions actives|Nombre de sessions|Notifications) :/);
+  assert.match(view.html, /data-variant="underline"/);
 });
 
 test('MAIR-1125: no attribute of any tab starts with a tab key (ZAP 10031 reads it as a reflected `?tab=` value)', async () => {
@@ -253,9 +263,9 @@ test('refreshing unavailable sessions keeps dirty fields and updates clean field
   ]);
 });
 
-async function renderLoadedPage(body = fixtures.bootstrap()) {
+async function renderLoadedPage(body = fixtures.bootstrap(), props = {}) {
   bffSettings.on('GET', '/settings/bootstrap', { body });
-  view = mount(React.createElement(Home));
+  view = mount(React.createElement(Home, props));
   return view.waitFor((html) => !html.includes('Chargement des paramètres'));
 }
 

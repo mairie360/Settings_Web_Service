@@ -204,6 +204,7 @@ services:
       HOSTNAME: "0.0.0.0"
       PORT: 5000
       SETTINGS_BFF_URL: http://bff-settings:4008
+      COMMUNE_NAME: "Mairie de Saint-André"
       # Reserved test destinations: the anonymous probe accepts307 without following Login.
       LOGIN_FRONT_URL: https://login.invalid/
       # Public origin of the front, the one its same-origin guards accept on writes: the browser of

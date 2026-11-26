@@ -86,10 +86,11 @@ describe('network surface of src/', () => {
     assert.deepEqual(surface.routes, ['app/[...path]/route.ts', 'app/api/auth/logout/route.ts', 'app/api/auth/refresh/route.ts', 'app/api/auth/resume/route.ts', 'app/api/auth/role/route.ts']);
   });
 
-  test('environment reads are limited to the BFF and explicit active-front navigation URLs', () => {
+  test('environment reads are limited to the BFF, explicit active-front navigation URLs and the commune name', () => {
     const expected = {
       'app/api/auth/logout/route.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL'],
       'app/layout.tsx': ['COOKIE_DOMAIN', 'INSTANCE_TIMEZONE'],
+      'lib/commune.ts': ['COMMUNE_NAME'],
       'lib/bff-proxy.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL', 'SETTINGS_BFF_URL', 'BFF_SETTINGS_BASE_URL'],
       'lib/session-role-proxy.ts': ['SETTINGS_FRONT_URL', 'LOGIN_FRONT_URL', 'NODE_ENV'],
       'lib/session-peer.ts': ['LOGIN_FRONT_URL', 'SETTINGS_FRONT_URL'],

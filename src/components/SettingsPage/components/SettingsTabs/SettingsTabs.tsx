@@ -7,8 +7,8 @@ export const SETTINGS_TABS_ID = "settings";
 export const settingsPanelId = (tab: SettingsTabId) => `${SETTINGS_TABS_ID}-panel-${tab}`;
 export const settingsTabId = (tab: SettingsTabId) => `${SETTINGS_TABS_ID}-tab-${tab}`;
 
-/** The six settings tabs on the lib `Tabs` (arrow keys, Home, End), a sticky pill bar (MAIR-1125); the page renders the panel itself. */
+/** The six settings tabs on the lib `Tabs` (arrow keys, Home, End), underlined as in the mock-up; the page renders the panel itself. */
 export const SettingsTabs = ({ value, onChange }: { value: SettingsTabId; onChange: (tab: SettingsTabId) => void }) => (
-  <Tabs id={SETTINGS_TABS_ID} hostPanel label="Paramètres" variant="pill" sticky className="settings-tabs" value={value} onChange={onChange}
+  <Tabs id={SETTINGS_TABS_ID} hostPanel label="Paramètres" variant="underline" className="settings-tabs" value={value} onChange={onChange}
     items={settingsTabs.map(({ id, label, icon }) => ({ key: id, label, icon }))} />
 );

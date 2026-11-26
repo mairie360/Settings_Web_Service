@@ -18,6 +18,15 @@ test.describe('agent editing their profile', () => {
     await expect(page.getByLabel('Prénom')).toHaveValue('Perf');
   });
 
+  test('MAIR-1227 sees the shared header with the commune, and a band tile opens its tab', async ({ page }) => {
+    await expect(page.getByRole('banner')).toHaveCount(1);
+    await expect(page.getByRole('banner')).toContainText('Saint-André');
+    await expect(page.getByRole('tablist', { name: 'Paramètres' })).toBeVisible();
+    // The tile is named by its visible text (RGAA 11.9), no « libellé : valeur » label.
+    await page.getByRole('button', { name: /^Sessions actives\s*\d+$/ }).click();
+    await expect(page.getByRole('tab', { name: 'Sessions' })).toHaveAttribute('aria-selected', 'true');
+  });
+
   test('saves a new phone number that survives a reload', async ({ page }) => {
     await expect(page.getByRole('button', { name: 'Enregistrer', exact: true })).toBeDisabled();
     await page.getByLabel('Téléphone').fill(phone);

@@ -17,20 +17,20 @@ describe('SettingsHero', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Anne Marie Le Gall' })).toBeTruthy();
     expect(screen.getByText('Paramètres du compte')).toBeTruthy();
     expect(screen.getByText('anne.le-gall@mairie.test')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Double authentification : Activée' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Nombre de sessions actives : 2' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Double authentification\s*Activée$/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Sessions actives\s*2$/ })).toBeTruthy();
     // Fixture: e-mail, messages, projects and system updates on; push and calendar off.
-    expect(screen.getByRole('button', { name: 'Notifications : 4 activées' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Notifications\s*4 activées$/ })).toBeTruthy();
   });
 
   it('opens the tab a tile summarises, and shows « — » for what is unknown', async () => {
     const user = userEvent.setup();
     const onOpen = vi.fn();
     render(<SettingsHero data={data({ sources: { sessions: 'unavailable', notifications: 'unavailable' } })} twoFactorEnabled={null} onOpen={onOpen} />);
-    expect(screen.getByRole('button', { name: 'Double authentification : —' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Nombre de sessions actives : inconnu' }));
-    await user.click(screen.getByRole('button', { name: 'Notifications : —' }));
-    await user.click(screen.getByRole('button', { name: 'Double authentification : —' }));
+    expect(screen.getByRole('button', { name: /^Double authentification\s*—$/ })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /^Sessions actives\s*—$/ }));
+    await user.click(screen.getByRole('button', { name: /^Notifications\s*—$/ }));
+    await user.click(screen.getByRole('button', { name: /^Double authentification\s*—$/ }));
     expect(onOpen.mock.calls.map(([tab]) => tab)).toEqual(['sessions', 'notifications', 'security']);
   });
 
@@ -42,6 +42,14 @@ describe('SettingsHero', () => {
         expect(keys.some((key) => value.toLowerCase().startsWith(key)), `${name}="${value}"`).toBe(false);
       }
     }
+  });
+
+  it('MAIR-1227 names each tile by its visible text, with no aria-label (RGAA 11.9)', () => {
+    const { container } = render(<SettingsHero data={data()} twoFactorEnabled onOpen={vi.fn()} />);
+    const tiles = container.querySelectorAll('[data-m360-component="PageHeroStat"]');
+    expect(tiles).toHaveLength(3);
+    for (const tile of tiles) expect(tile.hasAttribute('aria-label')).toBe(false);
+    expect([...tiles].map((tile) => tile.textContent)).toEqual(['Double authentificationActivée', 'Sessions actives2', 'Notifications4 activées']);
   });
 
   it('counts `null` notifications as on (the account default)', () => {

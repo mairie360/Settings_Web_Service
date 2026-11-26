@@ -22,4 +22,11 @@ describe('Settings tabs (lib Tabs, MAIR-608, MAIR-851)', () => {
     await user.click(tabs[2]); expect(onChange).toHaveBeenCalledWith('sessions');
     expect((await axe(container)).violations).toEqual([]);
   });
+
+  it('MAIR-1227 shows the underlined tabs of the mock-up, not a floating pill bar', () => {
+    const { container } = render(<SettingsTabs value="profile" onChange={vi.fn()} />);
+    const root = container.querySelector('[data-m360-component="Tabs"]');
+    expect(root.getAttribute('data-variant')).toBe('underline');
+    expect(root.hasAttribute('data-sticky')).toBe(false);
+  });
 });

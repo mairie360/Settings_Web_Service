@@ -97,6 +97,7 @@ Les valeurs ci-dessous sont des exemples locaux ou des comportements expliciteme
 | Variable ou priorité | Exemple local explicite | Rôle |
 | --- | --- | --- |
 | `SETTINGS_BFF_URL` → `BFF_SETTINGS_BASE_URL` | http://localhost:4008 | Priorité de gauche à droite dans le proxy ; configurer explicitement une URL HTTP(S). Une configuration absente ou invalide renvoie un 503 non mis en cache, sans appel réseau. |
+| `COMMUNE_NAME` | — | Commune affichée dans le bandeau commun, lue à chaque requête (un « Mairie de » en tête est retiré) ; sans elle, le bloc est masqué. |
 | `LOGIN_FRONT_URL` | — | Origine Login validée à l’exécution pour ouvrir `/logout`. |
 
 La navigation commune lit `DASHBOARD_FRONT_URL`, `PROJECT_FRONT_URL`,

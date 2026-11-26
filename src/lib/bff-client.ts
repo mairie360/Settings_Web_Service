@@ -47,8 +47,8 @@ export async function requestBff<T>(path: string, init: RequestInit = {}): Promi
   init.signal?.throwIfAborted();
   const headers = new Headers(init.headers);
   headers.delete('Authorization');
-  headers.set('Accept', 'application/json');
-  if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  if (!headers.get('Accept')?.startsWith('image/')) headers.set('Accept', 'application/json');
+  if (init.body && !(init.body instanceof FormData) && !(init.body instanceof Blob) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
   const response = await sessionFetch(path, { ...init, headers, credentials: 'same-origin', cache: 'no-store', redirect: 'manual' });
   init.signal?.throwIfAborted();
   if (response.type === 'opaqueredirect') {
@@ -60,7 +60,10 @@ export async function requestBff<T>(path: string, init: RequestInit = {}): Promi
     const body = await response.json().catch(() => null);
     throw new BffRequestError(errorMessage(body, response.status), response.status, body);
   }
-  return response.status === 204 ? undefined as T : response.json() as Promise<T>;
+  if (response.status === 204) return undefined as T;
+  // The profile photo is the only binary answer: it is handed over as a Blob.
+  if (response.headers.get('Content-Type')?.startsWith('image/')) return response.blob() as Promise<T>;
+  return response.json() as Promise<T>;
 }
 
 // The generated operations of the published BFF_Settings contract own every path: axios only carries the
@@ -70,7 +73,7 @@ export function createSettingsClient(request: typeof requestBff = requestBff) {
     const data = await request<unknown>(axios.getUri(config), {
       method: (config.method ?? 'get').toUpperCase(),
       headers: config.headers.toJSON() as Record<string, string>,
-      body: typeof config.data === 'string' ? config.data : undefined,
+      body: typeof config.data === 'string' || config.data instanceof Blob ? config.data : undefined,
       signal: (config.signal as AbortSignal | undefined) ?? undefined,
     });
     return {

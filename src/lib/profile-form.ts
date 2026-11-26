@@ -13,7 +13,7 @@ export type ProfileField = keyof SettingsProfile & keyof SettingsProfilePatch;
 export type ProfileFieldRule = {
   field: ProfileField;
   label: string;
-  type: 'email' | 'tel' | 'text';
+  type: 'email' | 'tel' | 'text' | 'textarea';
   required: boolean;
   maxLength: number;
   /** HTML `pattern`: anchored by the browser and compiled with the `v` flag, hence the escaped `(`, `)` and `-`. */
@@ -38,7 +38,16 @@ export const PROFILE_FIELDS: ReadonlyArray<ProfileFieldRule> = [
     pattern: '(\\+?[\\d\\s.\\(\\)\\-]+)?',
     help: 'Visible par tous les agents de la mairie (usage professionnel). Chiffres, espaces, points, tirets et parenthèses, avec un + initial facultatif (32 caractères maximum).',
   },
+  // Plain texts, both optional: a blank value removes them.
+  { field: 'job_title', label: 'Fonction', type: 'text', required: false, maxLength: 100 },
+  { field: 'biography', label: 'Bio', type: 'textarea', required: false, maxLength: 1000, help: '1000 caractères maximum.' },
 ];
+
+/** Fields the agent may leave empty: an empty value is sent as `null`, which removes it. */
+export const CLEARABLE_FIELDS: ReadonlyArray<ProfileField> = ['phone', 'job_title', 'biography'];
+
+/** The service is set by the administration: shown, never sent. */
+export const SERVICE_FIELD = { label: 'Service', help: 'Défini par l’administration.', none: 'Aucun service' } as const;
 
 /** The current password confirms an e-mail change; it is sent once and never kept with the profile. */
 export const CURRENT_PASSWORD = {
@@ -62,6 +71,8 @@ export function profilePatch(initial: SettingsProfile, current: SettingsProfile)
   if (current.last_name !== initial.last_name) patch.last_name = current.last_name;
   if (current.email !== initial.email) patch.email = current.email;
   if (current.phone !== initial.phone) patch.phone = current.phone ?? null;
+  if ((current.job_title ?? null) !== (initial.job_title ?? null)) patch.job_title = current.job_title?.trim() || null;
+  if ((current.biography ?? null) !== (initial.biography ?? null)) patch.biography = current.biography?.trim() || null;
 
   return patch;
 }
@@ -78,6 +89,7 @@ const DETAIL_TRANSLATIONS: ReadonlyArray<[RegExp, string | ((match: RegExpMatchA
   [/^Must not contain < or >$/, 'ne doit pas contenir < ni >'],
   [/^Expected a phone number\b/, 'chiffres, espaces, points, tirets, parenthèses et un + initial seulement'],
   [/^Expected an ISO 3166-1 alpha-2 code$/, 'code pays à deux lettres attendu'],
+  [/^Must fit on one line$/, 'doit tenir sur une ligne'],
   [/^Invalid email/, 'adresse e-mail invalide'],
   [/^Required$/, 'requis'],
   [/^Unrecognized key/, 'champ non pris en charge'],
@@ -107,6 +119,8 @@ export const FIELD_MESSAGES = {
   last_name: 'Le nom est obligatoire.',
   email: 'Adresse invalide (ex. prenom.nom@mairie.fr).',
   phone: 'Saisissez un numéro au format 06 12 34 56 78.',
+  job_title: 'La fonction tient sur une ligne de 100 caractères au plus.',
+  biography: 'La bio ne dépasse pas 1000 caractères.',
 } as const;
 export type FieldErrors = Partial<Record<ProfileField | 'current_password', string>>;
 
@@ -121,6 +135,9 @@ export function validateProfile(profile: SettingsProfile): FieldErrors {
   if (!EMAIL_SHAPE.test(profile.email.trim())) errors.email = FIELD_MESSAGES.email;
   const phone = profile.phone?.trim();
   if (phone && (!PHONE_SHAPE.test(phone) || phone.replace(/\D/g, '').length < 6)) errors.phone = FIELD_MESSAGES.phone;
+  const jobTitle = profile.job_title?.trim() ?? '';
+  if (jobTitle.length > 100 || /[\r\n]/.test(jobTitle)) errors.job_title = FIELD_MESSAGES.job_title;
+  if ((profile.biography?.trim() ?? '').length > 1000) errors.biography = FIELD_MESSAGES.biography;
   return errors;
 }
 

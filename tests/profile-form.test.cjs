@@ -51,3 +51,20 @@ for (const [path, message, expected] of [
 ]) test(`validation details identify the field and translate ${message}`, () => {
   assert.equal(describeDetail({ path, message }), expected);
 });
+
+test('MAIR-1231 the job title and the biography are sent trimmed, and a blank one is sent as null', () => {
+  const confirmed = profile({ job_title: 'Agent', biography: null });
+  assert.deepEqual(profilePatch(confirmed, { ...confirmed, job_title: '  Chef de service  ', biography: ' Voirie.\nAstreinte le lundi. ' }),
+    { job_title: 'Chef de service', biography: 'Voirie.\nAstreinte le lundi.' });
+  assert.deepEqual(profilePatch(confirmed, { ...confirmed, job_title: '   ' }), { job_title: null });
+  assert.deepEqual(profilePatch(confirmed, { ...confirmed, service: { id: 3, name: 'Voirie' }, has_photo: true }), {}, 'the service and the photo flag are never sent');
+});
+
+test('MAIR-1231 the local checks refuse a job title over one line or 100 characters and a biography over 1000', () => {
+  const { validateProfile, FIELD_MESSAGES } = requireSrc('lib/profile-form.ts');
+  const valid = profile();
+  assert.deepEqual(validateProfile({ ...valid, job_title: 'a'.repeat(100), biography: 'b'.repeat(1000) }), {});
+  assert.deepEqual(validateProfile({ ...valid, job_title: 'a'.repeat(101), biography: 'b'.repeat(1001) }),
+    { job_title: FIELD_MESSAGES.job_title, biography: FIELD_MESSAGES.biography });
+  assert.deepEqual(validateProfile({ ...valid, job_title: 'Chef\nde service' }), { job_title: FIELD_MESSAGES.job_title });
+});

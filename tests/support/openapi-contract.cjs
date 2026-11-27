@@ -77,6 +77,12 @@ class OpenApiContract {
   }
 
   /** Schéma JSON du corps de requête attendu par l'opération. */
+  /** Whether the operation takes raw bytes (a body declared without `application/json`, the profile photo). */
+  takesBinaryBody(match) {
+    const content = match.operation.requestBody?.content ?? {};
+    return Object.keys(content).length > 0 && !('application/json' in content);
+  }
+
   requestBodySchema(match) {
     const body = match.operation.requestBody;
     return { required: Boolean(body?.required), schema: body?.content?.['application/json']?.schema };

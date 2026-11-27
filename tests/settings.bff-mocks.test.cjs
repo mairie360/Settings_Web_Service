@@ -250,16 +250,23 @@ describe('same-origin proxy exposes exactly the published BFF_Settings contract'
       bffSettings.on(method, template, operation.reply);
 
       // A path parameter gets a concrete value (`path`); a 201 / 204 answer keeps its status and (empty) body.
-      const response = await browser(operation.path ?? template, operation.send
-        ? { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(operation.send) }
-        : { method });
+      // A raw body (the profile photo) goes as bytes, everything else as JSON.
+      const response = await browser(operation.path ?? template, operation.sendRaw
+        ? { method, headers: { 'Content-Type': 'application/octet-stream' }, body: operation.sendRaw }
+        : operation.send
+          ? { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(operation.send) }
+          : { method });
 
       assert.equal(response.status, operation.reply.status ?? 200);
       assert.equal(response.headers.get('cache-control'), 'no-store');
-      if (operation.reply.body === undefined) assert.equal(await response.text(), '');
+      if (operation.reply.raw !== undefined) {
+        assert.equal(response.headers.get('content-type'), operation.reply.contentType);
+        assert.deepEqual(Buffer.from(await response.arrayBuffer()), operation.reply.raw);
+      } else if (operation.reply.body === undefined) assert.equal(await response.text(), '');
       else assert.deepEqual(await response.json(), operation.reply.body);
       assert.deepEqual(bffSettings.requests.map((received) => `${received.method} ${received.template}`), [`${method} ${template}`]);
       assert.deepEqual(bffSettings.requests[0].body, operation.send);
+      if (operation.sendRaw) assert.deepEqual(bffSettings.requests[0].bytes, operation.sendRaw);
     });
   }
 

@@ -1,5 +1,5 @@
 import type { SettingsBootstrap, SettingsProfile, SettingsProfilePatch, SettingsAppearancePatch, SettingsGeneralPatch, SettingsNotificationsPatch, SettingsPasskey, SettingsPasskeyRegister, SettingsTwoFactorDisable, SettingsTwoFactorSetup, SettingsTwoFactorStatus, SettingsPasswordChange } from '@mairie360/bff-settings-openapi/model';
-import { bffSettings } from './bff-client';
+import { BffRequestError, bffSettings } from './bff-client';
 
 // Types of the published BFF_Settings contract (@mairie360/bff-settings-openapi, exact version pinned in package.json).
 export type { SettingsBootstrap, SettingsProfile, SettingsProfilePatch, SettingsPasskey, SettingsTwoFactorSetup, SettingsTwoFactorStatus };
@@ -19,6 +19,27 @@ export async function loadSettings(signal?: AbortSignal) {
 
 export async function saveProfile(patch: SettingsProfilePatch) {
   return (await bffSettings.patchSettingsProfile(patch)).data;
+}
+
+/** Sends the photo already converted by `toProfilePhoto` (WebP, 256 × 256, at most 100 KiB). */
+export async function saveProfilePhoto(photo: Blob) {
+  await bffSettings.putSettingsProfilePhoto(photo, { headers: { 'Content-Type': 'application/octet-stream' } });
+}
+
+export async function removeProfilePhoto() {
+  await bffSettings.deleteSettingsProfilePhoto();
+}
+
+/** The stored photo, or `null` when the agent has none (404). */
+export async function loadProfilePhoto(signal?: AbortSignal): Promise<Blob | null> {
+  try {
+    const { data } = await bffSettings.getSettingsProfilePhoto({ signal, headers: { Accept: 'image/webp' } });
+    return (data as unknown) instanceof Blob ? data as unknown as Blob : null;
+  } catch (error) {
+    signal?.throwIfAborted();
+    if (error instanceof BffRequestError && error.status === 404) return null;
+    throw error;
+  }
 }
 
 export async function saveAppearance(patch: SettingsAppearancePatch) {

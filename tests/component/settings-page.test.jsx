@@ -109,7 +109,7 @@ describe("Settings page", () => {
     expect(saveProfile).toHaveBeenCalledTimes(1);
   });
 
-  it("renders six recognizable tabs with hidden icons and a responsive four-field grid", async () => {
+  it("renders six recognizable tabs with hidden icons and a responsive grid of the profile fields", async () => {
     await openSettings();
     // MAIR-608: the tabs are the lib Tabs (Figma Base/Tabs) with the lib Icon per tab.
     const navigation = screen.getByRole("tablist", { name: "Paramètres" });
@@ -122,7 +122,7 @@ describe("Settings page", () => {
         ? tab.id.replace("-tab-", "-panel-") : null);
     }
     const grid = screen.getByRole("textbox", { name: "Prénom" }).closest(".settings-profile-fields");
-    expect(within(grid).getAllByRole("textbox")).toHaveLength(4);
+    expect(within(grid).getAllByRole("textbox").map((field) => field.name)).toEqual(["first_name", "last_name", "email", "phone", "service", "job_title", "biography"]);
     expect(screen.getByRole("tabpanel").className).toBe("settings-panel");
     expect(loadSettings).toHaveBeenCalledTimes(1);
   });

@@ -78,7 +78,11 @@ class ContractMockServer {
 
     let body;
     const { required, schema: bodySchema } = this.contract.requestBodySchema(match);
-    if (rawBody.length) {
+    // Raw bytes (the profile photo) are kept as `bytes`, never parsed; a body of any other operation is JSON.
+    const binary = this.contract.takesBinaryBody(match);
+    if (binary && rawBody.length) {
+      if (!/^application\/octet-stream/.test(req.headers['content-type'] ?? '')) this.violations.push(`[${this.service}] requête ${method} ${match.template} : corps binaire attendu, reçu ${req.headers['content-type'] ?? 'sans type'}`);
+    } else if (rawBody.length) {
       try { body = JSON.parse(rawBody.toString('utf8')); } catch { this.violations.push(`[${this.service}] requête ${method} ${match.template} : corps JSON invalide`); }
     } else if (required) {
       this.violations.push(`[${this.service}] requête ${method} ${match.template} : corps requis manquant`);
@@ -87,7 +91,7 @@ class ContractMockServer {
       this.contract.validate(bodySchema, body, '$body').forEach((error) => this.violations.push(`[${this.service}] requête ${method} ${match.template} ${error}`));
     }
 
-    const request = { method, url, template: match.template, pathParams: match.pathParams, headers: req.headers, undeclaredQuery, body };
+    const request = { method, url, template: match.template, pathParams: match.pathParams, headers: req.headers, undeclaredQuery, body, ...(binary ? { bytes: rawBody } : {}) };
     this.requests.push(request);
     const handler = this.handlers.get(`${contractMethod} ${match.template}`);
     if (!handler) {

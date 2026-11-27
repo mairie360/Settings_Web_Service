@@ -111,6 +111,132 @@
         ],
         "type": "string"
       },
+      "GetSearchParams": {
+        "properties": {
+          "limit": {
+            "maximum": 20,
+            "minimum": 1,
+            "type": "number"
+          },
+          "q": {
+            "maxLength": 100,
+            "minLength": 2,
+            "type": "string"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "type": "object"
+      },
+      "GlobalSearchResponse": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/GlobalSearchResponseGroupsItem"
+            },
+            "type": "array"
+          },
+          "unavailable": {
+            "items": {
+              "$ref": "#/components/schemas/GlobalSearchResponseUnavailableItem"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "groups",
+          "unavailable"
+        ],
+        "type": "object"
+      },
+      "GlobalSearchResponseGroupsItem": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GlobalSearchResponseGroupsItemItemsItem"
+            },
+            "type": "array"
+          },
+          "module": {
+            "$ref": "#/components/schemas/GlobalSearchResponseGroupsItemModule"
+          }
+        },
+        "required": [
+          "module",
+          "items"
+        ],
+        "type": "object"
+      },
+      "GlobalSearchResponseGroupsItemItemsItem": {
+        "properties": {
+          "excerpt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "number"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GlobalSearchResponseGroupsItemItemsItemKind"
+          },
+          "parent_id": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "title",
+          "excerpt",
+          "parent_id",
+          "updated_at"
+        ],
+        "type": "object"
+      },
+      "GlobalSearchResponseGroupsItemItemsItemKind": {
+        "enum": [
+          "agent",
+          "project",
+          "task",
+          "event",
+          "conversation",
+          "message",
+          "course"
+        ],
+        "type": "string"
+      },
+      "GlobalSearchResponseGroupsItemModule": {
+        "enum": [
+          "agents",
+          "projects",
+          "calendar",
+          "messages",
+          "elearning"
+        ],
+        "type": "string"
+      },
+      "GlobalSearchResponseUnavailableItem": {
+        "enum": [
+          "agents",
+          "projects",
+          "calendar",
+          "messages",
+          "elearning"
+        ],
+        "type": "string"
+      },
       "SettingsAppearance": {
         "properties": {
           "density": {
@@ -664,11 +790,26 @@
       },
       "SettingsProfile": {
         "properties": {
+          "biography": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "email": {
             "type": "string"
           },
           "first_name": {
             "type": "string"
+          },
+          "has_photo": {
+            "type": "boolean"
+          },
+          "job_title": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "last_name": {
             "type": "string"
@@ -690,6 +831,9 @@
               "string",
               "null"
             ]
+          },
+          "service": {
+            "$ref": "#/components/schemas/SettingsProfileService"
           }
         },
         "required": [
@@ -701,6 +845,13 @@
       },
       "SettingsProfilePatch": {
         "properties": {
+          "biography": {
+            "maxLength": 1000,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "current_password": {
             "maxLength": 255,
             "minLength": 1,
@@ -715,6 +866,14 @@
             "minLength": 1,
             "pattern": "^[^<>]*$",
             "type": "string"
+          },
+          "job_title": {
+            "maxLength": 100,
+            "pattern": "^[^\\r\\n]*$",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "last_name": {
             "maxLength": 64,
@@ -740,6 +899,28 @@
         },
         "required": [],
         "type": "object"
+      },
+      "SettingsProfileService": {
+        "anyOf": [
+          {
+            "properties": {
+              "id": {
+                "type": "number"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ],
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ]
       },
       "SettingsRevokeOthers": {
         "allOf": [
@@ -880,7 +1061,7 @@
   "info": {
     "title": "bff_settings",
     "version": "1.0.0",
-    "x-source-package": "@mairie360/bff-settings-openapi@0.0.0-dev.4c3bad1d4e78a3b876f2ba1f7a4276750ed00858"
+    "x-source-package": "@mairie360/bff-settings-openapi@0.0.0-dev.e3169494cf5bd6d467d6be9deea287f89ac4cb1c"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -912,6 +1093,45 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/GetHealth200"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/search": {
+      "get": {
+        "operationId": "getSearch",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 2,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "maximum": 20,
+              "minimum": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalSearchResponse"
                 }
               }
             },
@@ -1264,6 +1484,54 @@
                 }
               }
             },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      }
+    },
+    "/settings/profile/photo": {
+      "delete": {
+        "operationId": "deleteSettingsProfilePhoto",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      },
+      "get": {
+        "operationId": "getSettingsProfilePhoto",
+        "parameters": [],
+        "responses": {
+          "2XX": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Succès (seul statut typé par orval)"
+          }
+        }
+      },
+      "put": {
+        "operationId": "putSettingsProfilePhoto",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "2XX": {
             "description": "Succès (seul statut typé par orval)"
           }
         }

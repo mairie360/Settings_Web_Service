@@ -41,18 +41,55 @@ describe('ProfileForm (MAIR-864)', () => {
     expect(screen.getByRole('textbox', { name: /Téléphone/ }).getAttribute('aria-invalid')).toBe('true');
   });
 
-  it('says who sees the phone number (MAIR-292)', () => {
+  it('MAIR-1258 says who sees the information once, in the card, and drops the extra field hints of the artifact', () => {
     render(<ProfileForm form={form()} reading={false} />);
-    const phone = screen.getByRole('textbox', { name: /Téléphone/ });
-    const hint = document.getElementById(phone.getAttribute('aria-describedby').split(' ')[0]);
-    expect(hint.textContent).toMatch(/^Visible par tous les agents de la mairie \(usage professionnel\)\./);
+    expect(screen.getByText('Ces informations sont visibles par les autres agents de la mairie.')).toBeTruthy();
+    for (const name of [/Prénom/, /^Nom/, /Téléphone/]) {
+      expect(screen.getByRole('textbox', { name }).getAttribute('aria-describedby') ?? '').not.toMatch(/-hint/);
+    }
+    expect(screen.queryByText(/64 caractères maximum, sans/)).toBeNull();
+    expect(screen.queryByText(/Chiffres, espaces, points, tirets/)).toBeNull();
+  });
+
+  it('MAIR-1258 lays the profile out on two columns: the photo card with the directory preview, then the information card', () => {
+    const { container } = render(<ProfileForm form={form({ profile: { first_name: 'Alice', last_name: 'Martin', email: 'alice@mairie.fr', phone: null, job_title: 'Cheffe de service', service: { id: 3, name: 'Voirie' } } })} reading={false} />);
+    const grid = container.querySelector('form.settings-profile-grid');
+    expect(grid).not.toBeNull();
+    const cards = [...grid.children].map((card) => card.querySelector('h2')?.textContent);
+    expect(cards).toEqual(['Photo de profil', 'Informations personnelles']);
+    expect(screen.getByText('Formats acceptés : JPG, PNG. Taille max : 2 Mo.')).toBeTruthy();
+    expect(screen.getByText('Aperçu dans l’annuaire')).toBeTruthy();
+    expect(screen.getByText('Cheffe de service · Voirie')).toBeTruthy();
+  });
+
+  it('MAIR-1258 marks the required fields with an asterisk and counts the biography as the artifact does', () => {
+    const { rerender } = render(<ProfileForm form={form()} reading={false} />);
+    const marked = (name) => screen.getByText(name, { selector: 'label' }).parentElement.textContent.endsWith('*');
+    expect(['Prénom', 'Nom', 'E-mail'].map(marked)).toEqual([true, true, true]);
+    expect(['Téléphone', 'Fonction', 'Bio'].map(marked)).toEqual([false, false, false]);
+    expect(screen.getByText('1000 caractères maximum.')).toBeTruthy();
+    rerender(<ProfileForm form={form({ profile: { first_name: 'Alice', last_name: 'Martin', email: 'alice@mairie.fr', biography: 'Voirie.' } })} reading={false} />);
+    expect(screen.getByText('1000 caractères maximum (7 / 1000).')).toBeTruthy();
+  });
+
+  it('MAIR-1258 keeps the save bar sticky and makes it stand out only once something changed', () => {
+    const { container, rerender } = render(<ProfileForm form={form()} reading={false} />);
+    const bar = () => container.querySelector('[data-m360-component="FormActions"]');
+    expect(bar().getAttribute('data-sticky')).toBe('true');
+    expect(bar().getAttribute('data-dirty')).toBe('false');
+    expect(bar().className).toContain('settings-profile-actions');
+    // The bar closes the information card instead of floating over the photo card.
+    expect(bar().closest('section').querySelector('h2').textContent).toBe('Informations personnelles');
+    rerender(<ProfileForm form={form({ hasChanges: true, changedCount: 1 })} reading={false} />);
+    expect(bar().getAttribute('data-dirty')).toBe('true');
   });
 
   it('MAIR-1231 shows the photo, the read-only service, the function and the biography of the mockup', async () => {
     const state = form({ profile: { first_name: 'Alice', last_name: 'Martin', email: 'alice@mairie.fr', phone: null, job_title: 'Cheffe de service', biography: null, service: { id: 3, name: 'Voirie' }, has_photo: false } });
     render(<ProfileForm form={state} reading={false} />);
-    expect(screen.getByText('AM')).toBeTruthy();
-    expect(screen.getByLabelText(/Photo de profil/)).toBeTruthy();
+    // The initials show in the photo field and in the directory preview.
+    expect(screen.getAllByText('AM')).toHaveLength(2);
+    expect(screen.getByLabelText(/Photo de profil/, { selector: 'input' })).toBeTruthy();
     const service = screen.getByRole('textbox', { name: /Service/ });
     expect(service.value).toBe('Voirie');
     expect(service.disabled).toBe(true);
@@ -64,7 +101,7 @@ describe('ProfileForm (MAIR-864)', () => {
     await userEvent.type(bio, 'V');
     expect(state.updateProfile).toHaveBeenCalledWith('biography', 'V');
     const photo = new File([new Uint8Array(10)], 'portrait.png', { type: 'image/png' });
-    await userEvent.upload(screen.getByLabelText(/Photo de profil/), photo);
+    await userEvent.upload(screen.getByLabelText(/Photo de profil/, { selector: 'input' }), photo);
     expect(state.choosePhoto).toHaveBeenCalledWith(photo);
   });
 

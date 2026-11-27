@@ -21,26 +21,18 @@ export type ProfileFieldRule = {
   help?: string;
 };
 
-const NAME_RULE = { type: 'text', required: true, maxLength: 64, pattern: '[^<>]*', help: '64 caractères maximum, sans < ni >.' } as const;
+const NAME_RULE = { type: 'text', required: true, maxLength: 64, pattern: '[^<>]*' } as const;
 
 export const PROFILE_FIELDS: ReadonlyArray<ProfileFieldRule> = [
   { field: 'first_name', label: 'Prénom', ...NAME_RULE },
   { field: 'last_name', label: 'Nom', ...NAME_RULE },
   { field: 'email', label: 'E-mail', type: 'email', required: true, maxLength: 320 },
-  {
-    // Decision of the mairie (MAIR-292, GDPR): the directory shows the phone to every agent, for work,
-    // so the form says who sees it before the format rule.
-    field: 'phone',
-    label: 'Téléphone',
-    type: 'tel',
-    required: false,
-    maxLength: 32,
-    pattern: '(\\+?[\\d\\s.\\(\\)\\-]+)?',
-    help: 'Visible par tous les agents de la mairie (usage professionnel). Chiffres, espaces, points, tirets et parenthèses, avec un + initial facultatif (32 caractères maximum).',
-  },
+  // The directory shows the phone to every agent, for work (GDPR decision): the card description says so
+  // (« Ces informations sont visibles par les autres agents de la mairie. »), the field carries no hint.
+  { field: 'phone', label: 'Téléphone', type: 'tel', required: false, maxLength: 32, pattern: '(\\+?[\\d\\s.\\(\\)\\-]+)?' },
   // Plain texts, both optional: a blank value removes them.
   { field: 'job_title', label: 'Fonction', type: 'text', required: false, maxLength: 100, pattern: '[^\\r\\n]*' },
-  { field: 'biography', label: 'Bio', type: 'textarea', required: false, maxLength: 1000, help: '1000 caractères maximum.' },
+  { field: 'biography', label: 'Bio', type: 'textarea', required: false, maxLength: 1000 },
 ];
 
 /** Fields the agent may leave empty: an empty value is sent as `null`, which removes it. */

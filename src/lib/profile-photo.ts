@@ -3,14 +3,16 @@
 
 export const PHOTO_SIDE = 256;
 export const MAX_PHOTO_BYTES = 100 * 1024;
-/** What the agent may pick: the field converts it, so the limit only guards against huge files. */
-export const PHOTO_ACCEPT = ['image/jpeg', 'image/png', 'image/webp'] as const;
-export const PHOTO_PICK_MAX_BYTES = 10_000_000;
+/** What the agent may pick, as the artifact states it (JPG or PNG of at most 2 Mo); the field then converts it. */
+export const PHOTO_ACCEPT = ['image/jpeg', 'image/png'] as const;
+export const PHOTO_PICK_MAX_BYTES = 2_000_000;
+/** Hint of the photo field, from the artifact. */
+export const PHOTO_HINT = 'Formats acceptés : JPG, PNG. Taille max : 2 Mo.';
 /** WebP qualities tried in turn until the image fits. */
 const QUALITIES = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4] as const;
 
 export const PHOTO_TOO_HEAVY = 'Cette image reste trop lourde une fois compressée. Choisissez une photo plus simple.';
-export const PHOTO_UNREADABLE = 'Cette image n’a pas pu être lue. Choisissez un fichier JPG, PNG ou WebP.';
+export const PHOTO_UNREADABLE = 'Cette image n’a pas pu être lue. Choisissez un fichier JPG ou PNG.';
 
 /** Centred square of an image of `width` × `height`: the source rectangle drawn on the 256 × 256 canvas. */
 export function centredSquare(width: number, height: number) {

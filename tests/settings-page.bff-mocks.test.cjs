@@ -135,7 +135,7 @@ test('MAIR-1227: the shared header names the commune of the deployment, and the 
   await view.waitFor(() => /Double authentification\s*Activée/.test(view.text()));
   assert.match(view.text(), /Saint-André/);
   assert.doesNotMatch(view.html, /aria-label="(Double authentification|Sessions actives|Nombre de sessions|Notifications) :/);
-  assert.match(view.html, /data-variant="underline"/);
+  assert.match(view.html, /data-variant="pill"/);
 });
 
 test('MAIR-1125: no attribute of any tab starts with a tab key (ZAP 10031 reads it as a reflected `?tab=` value)', async () => {
@@ -331,6 +331,9 @@ test('the first pass renders the loading state, the next one the profile form fi
     first_name: 'Anne Marie',
     last_name: 'Le Gall',
     email: 'anne.le-gall@mairie.test',
+    // lib 2.8.0 shows the role under the name; without a function the artifact reads « Agent ».
+    role: 'Agent',
+    service: undefined,
   });
   assert.equal(view.props('AppShell').isAdmin, false);
   assert.equal(typeof view.props('AppShell').onLogout, 'function');
@@ -591,16 +594,19 @@ test('the input constraints mirror the SettingsProfilePatch schema of the publis
   assert.equal(CURRENT_PASSWORD.maxLength, PROFILE_PATCH_SCHEMA.properties.current_password.maxLength);
 });
 
-test('the rendered inputs carry the contract constraints and their help text', async () => {
+test('MAIR-1258 the rendered inputs carry the contract constraints without the extra hints the artifact does not show', async () => {
   const html = await renderLoadedPage();
   // react-dom/server writes `maxLength` as such and escapes `<` / `>` in attribute values.
-  assert.match(html, /<input(?=[^>]*maxLength="64")(?=[^>]*pattern="\[\^&lt;&gt;\]\*")(?=[^>]*aria-describedby="settings-first_name-hint")[^>]*name="first_name"/);
+  assert.match(html, /<input(?=[^>]*maxLength="64")(?=[^>]*pattern="\[\^&lt;&gt;\]\*")(?=[^>]*required="")[^>]*name="first_name"/);
   assert.match(html, /<input(?=[^>]*maxLength="64")(?=[^>]*pattern="\[\^&lt;&gt;\]\*")[^>]*name="last_name"/);
   assert.match(html, /<input(?=[^>]*type="email")(?=[^>]*maxLength="320")[^>]*name="email"/);
   assert.doesNotMatch(html, /<input[^>]*type="email"[^>]*pattern=/);
-  assert.match(html, /<input(?=[^>]*type="tel")(?=[^>]*maxLength="32")(?=[^>]*pattern="\(\\\+\?\[\\d\\s\.\\\(\\\)\\-\]\+\)\?")[^>]*aria-describedby="settings-phone-hint"[^>]*name="phone"/);
-  assert.match(html, /<p id="settings-phone-hint"[^>]*>Visible par tous les agents de la mairie \(usage professionnel\)\. Chiffres, espaces, points, tirets et parenthèses, avec un \+ initial facultatif \(32 caractères maximum\)\.<\/p>/);
-  assert.match(html, /<p id="settings-first_name-hint"[^>]*>64 caractères maximum, sans &lt; ni &gt;\.<\/p>/);
+  assert.match(html, /<input(?=[^>]*type="tel")(?=[^>]*maxLength="32")(?=[^>]*pattern="\(\\\+\?\[\\d\\s\.\\\(\\\)\\-\]\+\)\?")[^>]*name="phone"/);
+  assert.doesNotMatch(html, /settings-(first_name|last_name|phone)-hint/);
+  assert.doesNotMatch(html, /64 caractères maximum, sans|Chiffres, espaces, points, tirets/);
+  // Who sees the phone (GDPR decision) is said once, by the card.
+  assert.match(html, /Ces informations sont visibles par les autres agents de la mairie\./);
+  assert.match(html, /<p id="settings-biography-hint"[^>]*>1000 caractères maximum\.<\/p>/);
   assert.equal(passwordInputs().length, 0);
 });
 
@@ -803,6 +809,42 @@ test('MAIR-1231: the profile shows the stored photo and the read-only service, t
   assert.deepEqual(journeyRequests()[2].body, { job_title: 'Chef de service', biography: 'Voirie.\nAstreinte le lundi.' });
   assert.match(view.html, /Aucune modification à enregistrer\./);
   assert.match(view.html, /Glisser un fichier ou/, 'the photo field is empty again');
+});
+
+test('MAIR-1258 business journey: edit the profile, save, then read back the values, the directory preview and the account band', async () => {
+  const body = fixtures.bootstrap();
+  body.profile = fixtures.profile({ job_title: null, biography: null, has_photo: false, service: { id: 3, name: 'Voirie' } });
+  await renderLoadedPage(body);
+  const card = () => `<${view.html.match(/data-testid="settings-directory-card"[^]*?<\/span><\/div>/)?.[0] ?? ''}`;
+  // Before: two columns (photo card, then the information card), the preview and the band say « Agent · Voirie ».
+  assert.ok(view.html.indexOf('>Photo de profil</h2>') < view.html.indexOf('>Informations personnelles</h2>'));
+  assert.match(view.html, /Formats acceptés : JPG, PNG\. Taille max : 2 Mo\./);
+  assert.match(view.html, /Aperçu dans l’annuaire/);
+  assert.match(stripTags(card()), /Anne Marie Le GallAgent · Voirie/);
+  assert.match(view.text(), /Agent · Voirie · anne\.le-gall@mairie\.test/);
+
+  // Edit: the preview follows the draft before anything is saved.
+  await view.fire((props) => props.name === 'first_name', 'onChange', { target: { value: 'Anne' } });
+  await view.fire((props) => props.name === 'job_title', 'onChange', { target: { value: 'Cheffe de service' } });
+  await view.fire((props) => props.name === 'biography', 'onChange', { target: { value: 'Voirie.' } });
+  await view.waitFor((html) => /3 champs modifiés\./.test(html));
+  assert.match(stripTags(card()), /Anne Le GallCheffe de service · Voirie/);
+  assert.match(view.html, /<p id="settings-biography-hint"[^>]*>1000 caractères maximum \(7 \/ 1000\)\.<\/p>/);
+  assert.match(view.html, /data-m360-component="FormActions"[^>]*data-dirty="true"[^>]*data-sticky="true"/);
+
+  // Save, then read back what the BFF confirmed.
+  const saved = fixtures.profile({ first_name: 'Anne', job_title: 'Cheffe de service', biography: 'Voirie.', has_photo: false, service: { id: 3, name: 'Voirie' } });
+  bffSettings.on('PATCH', '/settings/profile', { body: saved });
+  await view.fire(profileForm, 'onSubmit');
+  await view.waitFor((html) => html.includes('Votre profil a été enregistré.'));
+  assert.deepEqual(journeyRequests().at(-1).body, { first_name: 'Anne', job_title: 'Cheffe de service', biography: 'Voirie.' });
+  assert.match(view.html, /<input[^>]*name="first_name"[^>]*value="Anne"/);
+  assert.match(view.html, /<input[^>]*name="job_title"[^>]*value="Cheffe de service"/);
+  assert.match(stripTags(card()), /Anne Le GallCheffe de service · Voirie/);
+  assert.match(view.text(), /Cheffe de service · Voirie · anne\.le-gall@mairie\.test/);
+  assert.equal(view.props('AppShell').user.role, 'Cheffe de service');
+  assert.match(view.html, /Aucune modification à enregistrer\./);
+  assert.match(view.html, /data-m360-component="FormActions"[^>]*data-dirty="false"/);
 });
 
 test('MAIR-1231: a refused photo keeps the saved fields and is explained under the photo field', async () => {

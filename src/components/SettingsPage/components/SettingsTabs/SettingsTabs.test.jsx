@@ -23,10 +23,12 @@ describe('Settings tabs (lib Tabs, MAIR-608, MAIR-851)', () => {
     expect((await axe(container)).violations).toEqual([]);
   });
 
-  it('MAIR-1227 shows the underlined tabs of the mock-up, not a floating pill bar', () => {
-    const { container } = render(<SettingsTabs value="profile" onChange={vi.fn()} />);
+  it('MAIR-1258 shows the floating pill bar of the artifact, sticky at the top of the scrolling area', () => {
+    const { container } = render(<SettingsTabs value="security" onChange={vi.fn()} />);
     const root = container.querySelector('[data-m360-component="Tabs"]');
-    expect(root.getAttribute('data-variant')).toBe('underline');
-    expect(root.hasAttribute('data-sticky')).toBe(false);
+    expect(root.getAttribute('data-variant')).toBe('pill');
+    expect(root.hasAttribute('data-sticky')).toBe(true);
+    expect(root.className).toContain('settings-tabs');
+    expect(screen.getByRole('tab', { name: 'Sécurité' }).getAttribute('aria-selected')).toBe('true');
   });
 });

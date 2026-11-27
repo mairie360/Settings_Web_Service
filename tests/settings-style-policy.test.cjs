@@ -58,3 +58,13 @@ test('parsed focus and backdrop policies retain their scoped widths and colors',
   assert.equal(declaration('.settings-page :is(button, input, textarea, summary):focus-visible', 'outline-offset'), '2px');
   // Native focus visibility, backdrop rendering and modal isolation remain separate.
 });
+
+test('MAIR-1258 parsed layout policy keeps the artifact profile on two columns, its fields on three and the save bar off the form edge', () => {
+  const { declaration } = policy();
+  assert.equal(compact(declaration('.settings-profile-grid', 'grid-template-columns', '(min-width: 1180px)')), 'minmax(0,4fr)minmax(0,8fr)');
+  assert.equal(compact(declaration('.settings-profile-fields', 'grid-template-columns', '(min-width: 1180px)')), 'repeat(3,minmax(0,1fr))');
+  assert.equal(declaration('.settings-profile-actions', 'bottom'), 'var(--mairie-space-m)');
+  assert.equal(declaration('.settings-shell main:has(.settings-profile-actions)', 'scroll-padding-bottom'), '96px');
+  assert.equal(declaration('.settings-tabs [role="tablist"]', 'width'), 'fit-content');
+  assert.equal(declaration('.settings-page', 'max-width'), '1440px');
+});

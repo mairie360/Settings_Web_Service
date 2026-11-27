@@ -781,7 +781,8 @@ test('MAIR-1231: the profile shows the stored photo and the read-only service, t
   body.profile = fixtures.profile({ job_title: null, biography: null, has_photo: true, service: { id: 3, name: 'Voirie' } });
   bffSettings.on('GET', '/settings/profile/photo', fixtures.SETTINGS_OPERATIONS['GET /settings/profile/photo'].reply);
   await renderLoadedPage(body);
-  await view.waitFor(() => upstream().includes('GET /settings/profile/photo'));
+  // The stored photo is shown (and « Retirer » offered) once its bytes are read, not when the request leaves.
+  await view.waitFor(() => /Retirer/.test(view.text()));
   assert.match(view.html, /<input(?=[^>]*disabled="")(?=[^>]*readOnly="")[^>]*name="service"[^>]*value="Voirie"/);
   assert.match(view.html, /Défini par l’administration\./);
 
@@ -807,7 +808,8 @@ test('MAIR-1231: a refused photo keeps the saved fields and is explained under t
   body.profile = fixtures.profile({ has_photo: true });
   bffSettings.on('GET', '/settings/profile/photo', fixtures.SETTINGS_OPERATIONS['GET /settings/profile/photo'].reply);
   await renderLoadedPage(body);
-  await view.waitFor(() => upstream().includes('GET /settings/profile/photo'));
+  // The stored photo is shown (and « Retirer » offered) once its bytes are read, not when the request leaves.
+  await view.waitFor(() => /Retirer/.test(view.text()));
   await view.click('Retirer');
   bffSettings.on('DELETE', '/settings/profile/photo', { status: 502, body: { error: { code: 'BAD_GATEWAY', message: 'Core API indisponible.', details: [] } }, outOfContract: true });
   await view.fire((props, text, tag) => tag === 'form', 'onSubmit');

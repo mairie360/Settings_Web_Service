@@ -66,22 +66,31 @@ export function useProfileForm({ data, setData, profile, setProfile, readRef, sa
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [storedPhoto, setStoredPhoto] = useState<string | null>(null);
   const draftUrl = useRef<string | null>(null);
+  // Bumped by every pick, « Annuler », save and account change: a conversion that ends after one of them is dropped.
+  const photoPick = useRef(0);
   const hasPhoto = Boolean(data?.profile.has_photo);
-  // The stored photo is read once the confirmed profile says there is one, and again after each photo save.
+  // The stored photo is read once the confirmed profile says there is one, again after each photo save and for
+  // another account (its photo is never shown on the next one's form).
   const [photoVersion, setPhotoVersion] = useState(0);
   useEffect(() => {
-    if (!hasPhoto) { setStoredPhoto(null); return; }
+    if (!hasPhoto) return;
     const controller = new AbortController();
     let url: string | null = null;
     loadProfilePhoto(controller.signal).then((blob) => {
+      if (controller.signal.aborted) return;
       url = blob ? objectUrl(blob) : null;
       setStoredPhoto(url);
-    }).catch(() => setStoredPhoto(null));
-    return () => { controller.abort(); revoke(url); };
+    }).catch(() => { if (!controller.signal.aborted) setStoredPhoto(null); });
+    // The previous photo goes away with the load that showed it.
+    return () => { controller.abort(); revoke(url); setStoredPhoto(null); };
   }, [hasPhoto, photoVersion]);
   useEffect(() => () => revoke(draftUrl.current), []);
   useEffect(() => {
-    registerAccountChanged(() => { setCurrentPassword(""); setFieldErrors({}); setFailure(null); setStatus(""); });
+    registerAccountChanged(() => {
+      setCurrentPassword(""); setFieldErrors({}); setFailure(null); setStatus("");
+      photoPick.current += 1;
+      replaceDraft(null); setPhotoError(null); setPhotoVersion((version) => version + 1);
+    });
   }, [registerAccountChanged]);
 
   const patch = data && profile ? profilePatch(data.profile, profile) : {};
@@ -118,12 +127,13 @@ export function useProfileForm({ data, setData, profile, setProfile, readRef, sa
     if (savingRef.current) return;
     setPhotoError(null);
     setStatus("");
+    const pick = ++photoPick.current;
     if (!file) { replaceDraft({ kind: 'remove' }); return; }
     try {
       const blob = await toProfilePhoto(file);
-      replaceDraft({ kind: 'set', blob, url: objectUrl(blob) });
+      if (pick === photoPick.current) replaceDraft({ kind: 'set', blob, url: objectUrl(blob) });
     } catch (reason) {
-      setPhotoError(reason instanceof Error ? reason.message : String(reason));
+      if (pick === photoPick.current) setPhotoError(reason instanceof Error ? reason.message : String(reason));
     }
   }
 
@@ -136,6 +146,7 @@ export function useProfileForm({ data, setData, profile, setProfile, readRef, sa
 
   function cancel() {
     if (savingRef.current || !data) return;
+    photoPick.current += 1;
     replaceDraft(null);
     setPhotoError(null);
     setProfile(data.profile);
@@ -157,6 +168,9 @@ export function useProfileForm({ data, setData, profile, setProfile, readRef, sa
     setFieldErrors({});
     setFailure(null);
     setStatus("");
+    // A conversion still running is not part of this save.
+    photoPick.current += 1;
+    if (photoChanged) setPhotoError(null);
     let saved = data.profile;
     try {
       if (Object.keys(patch).length) {

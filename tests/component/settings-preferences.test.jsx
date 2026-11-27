@@ -6,7 +6,7 @@ import fixtures from '../support/settings-fixtures.cjs';
 import { findToastAlert, toastAlertText } from './page-alerts';
 
 // MAIR-902 / MAIR-912 / MAIR-921: switches, lists and the slider save at once; « Langue et région » is a form.
-vi.mock('@/lib/settings-api', () => ({ loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })), loadSettings: vi.fn(), saveProfile: vi.fn(), saveAppearance: vi.fn(), saveGeneral: vi.fn(), saveNotifications: vi.fn() }));
+vi.mock('@/lib/settings-api', () => ({ searchEverywhere: vi.fn(), loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })), loadSettings: vi.fn(), saveProfile: vi.fn(), saveAppearance: vi.fn(), saveGeneral: vi.fn(), saveNotifications: vi.fn() }));
 const deferred = () => { let resolve; let reject; const promise = new Promise((ok, fail) => { resolve = ok; reject = fail; }); return { promise, resolve, reject }; };
 const tab = name => fireEvent.click(screen.getByRole('tab', { name, exact: true }));
 const toggle = name => fireEvent.click(screen.getByRole('switch', { name }));

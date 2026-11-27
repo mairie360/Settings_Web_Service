@@ -5,7 +5,7 @@ import Home from '@/components/SettingsPage';
 import { loadSettings, saveProfile } from '@/lib/settings-api';
 import fixtures from '../support/settings-fixtures.cjs';
 
-vi.mock('@/lib/settings-api', () => ({ loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })), loadSettings: vi.fn(), saveProfile: vi.fn() }));
+vi.mock('@/lib/settings-api', () => ({ searchEverywhere: vi.fn(), loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })), loadSettings: vi.fn(), saveProfile: vi.fn() }));
 beforeEach(() => { vi.mocked(loadSettings).mockReset().mockResolvedValue(fixtures.bootstrap()); });
 
 it('renders the confirmed server profile immediately without a duplicate StrictMode bootstrap', async () => {
@@ -34,7 +34,8 @@ it('keeps personal data and preferences out of native GET submissions in every s
   expect(document.querySelector('input[name="email"]').form.method).toBe('post');
   for (const name of ['Apparence', 'Général', 'Notifications']) {
     fireEvent.click(screen.getByRole('tab', { name, exact: true }));
-    const forms = [...document.querySelectorAll('form')];
+    // The header search form (role="search") submits nothing natively: its handler prevents the default.
+    const forms = [...document.querySelectorAll('form:not([role="search"])')];
     // MAIR-902 / MAIR-912: switches, lists and the slider save at once, so only « Langue et région » is a form.
     if (name === 'Général') expect(forms.length).toBeGreaterThan(0);
     expect(forms.every(form => form.method === 'post')).toBe(true);

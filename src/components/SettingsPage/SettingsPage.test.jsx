@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 
 import SettingsPage from './SettingsPage';
 
-vi.mock('@/lib/settings-api', () => ({ loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })), loadSettings: vi.fn(() => new Promise(() => {})), saveProfile: vi.fn() }));
+vi.mock('@/lib/settings-api', () => ({ searchEverywhere: vi.fn(), loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })), loadSettings: vi.fn(() => new Promise(() => {})), saveProfile: vi.fn() }));
 
 describe('SettingsPage', () => {
   it('renders the shell and the loading state while the settings are read', () => {

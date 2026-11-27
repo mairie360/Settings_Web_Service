@@ -77,7 +77,9 @@ describe('network surface of src/', () => {
       // MAIR-807 / MAIR-811: second factor and passkeys of the Security tab.
       'GET /settings/2fa', 'POST /settings/2fa/setup', 'POST /settings/2fa/confirm', 'POST /settings/2fa/backup-codes', 'POST /settings/2fa/disable',
       'GET /settings/passkeys', 'POST /settings/passkeys/options', 'POST /settings/passkeys', 'DELETE /settings/passkeys/${id}',
-      'POST /settings/password', 'DELETE /settings/sessions/${id}', 'POST /settings/sessions/revoke-others']);
+      'POST /settings/password', 'DELETE /settings/sessions/${id}', 'POST /settings/sessions/revoke-others',
+      // MAIR-1230: the global search of the shared header.
+      'GET /search']);
   });
 
   test('business requests use the Settings contract proxy and configured BFF URL', () => {

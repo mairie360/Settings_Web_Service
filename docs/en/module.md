@@ -100,6 +100,7 @@ Approved light option 1: shared tokens and font, accessible navigation, and pres
 ### V2.1 layout (MAIR-1125)
 
 - A header band names the agent (name, « Paramètres du compte », e-mail) on every tab and shows three tiles that open their tab: double authentication (Activée / Désactivée), active sessions, notifications switched on. They follow every change.
+- The search field of the shared header searches every module (agents, projects and tasks, events, conversations and messages, courses) through `GET /search` of BFF_Settings from 2 characters on. Results are grouped by module and each one opens its module (project, task, event, conversation, course) through the link the library builds from the other fronts' URLs; a module that does not answer is named, and a refused search says « La recherche est indisponible pour le moment. ». Settings itself is not searched: there is nothing to open on this page.
 - The tabs are underlined, as in the mock-up; every panel has its icon; the « Annuler / Enregistrer » bar of Profil and « Langue et région » stays visible.
 
 - Sessions V2.1 (MAIR-1126): four cards above the lists (« Connexions actives », other connected devices, « Historique des sessions », location of this device: « Non disponible », the BFF has none yet), and a click on a session opens its detail in a centred window, with « Déconnecter cette session » for another active session (confirmed above the window).

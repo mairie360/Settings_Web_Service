@@ -1,5 +1,6 @@
 import type { SettingsBootstrap, SettingsProfile, SettingsProfilePatch, SettingsAppearancePatch, SettingsGeneralPatch, SettingsNotificationsPatch, SettingsPasskey, SettingsPasskeyRegister, SettingsTwoFactorDisable, SettingsTwoFactorSetup, SettingsTwoFactorStatus, SettingsPasswordChange } from '@mairie360/bff-settings-openapi/model';
 import { BffRequestError, bffSettings } from './bff-client';
+import type { GlobalSearchSource } from '@mairie360/lib-components/shell';
 
 // Types of the published BFF_Settings contract (@mairie360/bff-settings-openapi, exact version pinned in package.json).
 export type { SettingsBootstrap, SettingsProfile, SettingsProfilePatch, SettingsPasskey, SettingsTwoFactorSetup, SettingsTwoFactorStatus };
@@ -106,3 +107,16 @@ export async function revokeSession(id: string) {
 export async function revokeOtherSessions() {
   return (await bffSettings.postSettingsSessionsRevokeOthers()).data;
 }
+
+/**
+ * Source of the global search of the shared header: `GET /search` of BFF_Settings, which searches every module
+ * for the agent. A cancelled call rejects with the signal's own AbortError, like `loadSettings`.
+ */
+export const searchEverywhere: GlobalSearchSource = async (query, signal) => {
+  try {
+    return (await bffSettings.getSearch({ q: query.trim() }, { signal })).data;
+  } catch (error) {
+    signal.throwIfAborted();
+    throw error;
+  }
+};

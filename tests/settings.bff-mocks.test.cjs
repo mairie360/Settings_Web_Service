@@ -22,7 +22,7 @@ const front = createFront({
   upstreams: () => [bffSettings.url, unreachable],
 });
 
-const { loadSettings, saveProfile, saveAppearance, saveGeneral, saveNotifications, loadTwoFactor, startTwoFactor, confirmTwoFactor, regenerateBackupCodes, disableTwoFactor, loadPasskeys, passkeyOptions, registerPasskey, deletePasskey } = requireSrc('lib/settings-api.ts');
+const { loadSettings, saveProfile, saveAppearance, saveGeneral, saveNotifications, loadTwoFactor, startTwoFactor, confirmTwoFactor, regenerateBackupCodes, disableTwoFactor, loadPasskeys, passkeyOptions, registerPasskey, deletePasskey, searchEverywhere } = requireSrc('lib/settings-api.ts');
 
 const BFF_URL_VARIABLES = ['SETTINGS_BFF_URL', 'BFF_SETTINGS_BASE_URL'];
 const savedEnv = Object.fromEntries(BFF_URL_VARIABLES.map((name) => [name, process.env[name]]));
@@ -104,6 +104,33 @@ describe('page calls (src/lib/settings-api.ts) against the published BFF_Setting
     assert.deepEqual(await registerPasskey({ label: 'Téléphone', credential: { id: 'cred' } }), ops['POST /settings/passkeys'].reply.body);
     assert.equal(await deletePasskey(12), undefined);
     assert.deepEqual(front.browserCalls.map(call => `${call.method} ${call.path}`), ['GET /settings/passkeys', 'POST /settings/passkeys/options', 'POST /settings/passkeys', 'DELETE /settings/passkeys/12']);
+  });
+
+  test('MAIR-1230: the header search reads GET /search through the contract proxy with the agent session', async () => {
+    bffSettings.on('GET', '/search', fixtures.SETTINGS_OPERATIONS['GET /search'].reply);
+
+    assert.deepEqual(await searchEverywhere('  agenda ', new AbortController().signal), fixtures.searchResult());
+
+    assert.deepEqual(front.browserCalls, [{ method: 'GET', path: '/search?q=agenda' }]);
+    assert.deepEqual(upstreamOrigins(), [new URL(bffSettings.url).origin]);
+    const [received] = bffSettings.requests;
+    assert.equal(bffSettings.requests.length, 1);
+    assert.equal(received.template, '/search');
+    assert.equal(received.url.searchParams.get('q'), 'agenda', 'the term is sent trimmed');
+    assert.equal(received.headers.authorization, `Bearer ${fixtures.ACCESS_TOKEN}`);
+    assert.equal(received.headers.cookie, undefined);
+    assert.deepEqual(received.undeclaredQuery, []);
+  });
+
+  test('MAIR-1230: a refused search rejects (the header says the search is unavailable) and an aborted one never reaches the BFF', async () => {
+    bffSettings.on('GET', '/search', bffError(503, 'Recherche indisponible'));
+    await assert.rejects(searchEverywhere('agenda', new AbortController().signal), (error) => error.status === 503);
+
+    const controller = new AbortController();
+    controller.abort();
+    bffSettings.reset();
+    await assert.rejects(searchEverywhere('agenda', controller.signal), { name: 'AbortError' });
+    assert.deepEqual(bffSettings.requests, []);
   });
 
   test('loadSettings keeps sessions marked unavailable by the BFF', async () => {

@@ -103,6 +103,7 @@ DA claire option 1 : tokens et police communs, navigation accessible et contenu 
 ### Mise en page V2.1 (MAIR-1125)
 
 - Un bandeau d’en-tête présente l’agent (nom, « Paramètres du compte », e-mail) sur tous les onglets et montre trois tuiles qui ouvrent leur onglet : double authentification (Activée / Désactivée), sessions actives, notifications activées. Elles suivent chaque changement.
+- Le champ de recherche de l’en-tête commun cherche dans tous les modules (agents, projets et tâches, événements, conversations et messages, formations) via `GET /search` de BFF_Settings dès 2 caractères. Les résultats sont groupés par module et chacun ouvre son module (projet, tâche, événement, conversation, formation) par le lien que la bibliothèque construit à partir des URL des autres fronts ; un module qui ne répond pas est nommé, et une recherche refusée affiche « La recherche est indisponible pour le moment. ». Settings n’est pas lui-même cherché : rien n’est à ouvrir sur cette page.
 - Les onglets sont soulignés, comme sur la maquette ; chaque panneau a son icône ; la barre « Annuler / Enregistrer » de Profil et de « Langue et région » reste visible.
 
 - Sessions V2.1 (MAIR-1126) : quatre cartes au-dessus des listes (« Connexions actives », autres appareils connectés, « Historique des sessions », localisation de cet appareil : « Non disponible », le BFF ne la fournit pas encore), et un clic sur une session ouvre son détail dans une fenêtre centrée, avec « Déconnecter cette session » pour une autre session active (confirmation au-dessus de la fenêtre).

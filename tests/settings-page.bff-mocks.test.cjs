@@ -65,6 +65,8 @@ const allUpstream = () => bffSettings.requests.map((request) => `${request.metho
 const HEADER_READ = 'GET /settings/2fa';
 const journeyRequests = () => bffSettings.requests.filter((request) => `${request.method} ${request.template}` !== HEADER_READ);
 const upstream = () => journeyRequests().map((request) => `${request.method} ${request.template}`);
+// MAIR-1230: the shared header holds the global search form (`role="search"`); the page's own forms are the others.
+const profileForm = (props, text, tag) => tag === 'form' && props.role !== 'search';
 const profileInputs = () => [...view.html.matchAll(/<input\b[^>]*>/g)].map(([html]) => html).filter(html => /name="(?:first_name|last_name|email|phone)"/.test(html));
 
 for (const [label, reply] of [
@@ -83,7 +85,7 @@ for (const [label, reply] of [
     await view.fire(props => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Submitted draft' } });
     // Intentional fault injection, not evidence that this response satisfies the published DTO.
     bffSettings.on('PATCH', '/settings/profile', { ...reply, outOfContract: true });
-    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    await view.fire(profileForm, 'onSubmit');
     assert.doesNotMatch(view.text(), /Votre profil a été enregistré/);
     assert.match(pageHtml(view.html), /role="alert"/);
     assert.match(view.html, /value="Submitted draft"/);
@@ -93,7 +95,7 @@ for (const [label, reply] of [
     assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
     assert.deepEqual(journeyRequests()[1].body, { first_name: 'Submitted draft' });
     bffSettings.on('PATCH', '/settings/profile', { body: fixtures.profile({ first_name: 'OFFICIAL', last_name: 'RECEIVED' }) });
-    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    await view.fire(profileForm, 'onSubmit');
     assert.deepEqual(journeyRequests()[2].body, journeyRequests()[1].body);
     assert.match(view.html, /value="OFFICIAL"/);
     assert.match(view.html, /value="RECEIVED"/);
@@ -109,7 +111,7 @@ for (const [label, phone] of [['absent', undefined], ['null', null], ['string', 
     const saved = fixtures.profile({ first_name: 'OFFICIAL', phone });
     if (phone === undefined) delete saved.phone;
     bffSettings.on('PATCH', '/settings/profile', { body: saved });
-    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    await view.fire(profileForm, 'onSubmit');
     assert.match(view.text(), /Votre profil a été enregistré/);
     assert.match(view.html, /value="OFFICIAL"/);
     assert.doesNotMatch(pageHtml(view.html), /role="alert"/);
@@ -221,7 +223,7 @@ for (const [name, body] of malformedBootstraps) {
       if (mode === 'refresh') {
         assert.match(view.html, /value="\+33999999999"/);
         bffSettings.on('PATCH', '/settings/profile', { body: fixtures.profile({ last_name: 'Confirmed surname', phone: '+33999999999' }) });
-        await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+        await view.fire(profileForm, 'onSubmit');
         assert.deepEqual(bffSettings.requests.at(-1).body, { phone: '+33999999999' });
         assert.equal(bffSettings.requests.filter(request => request.method !== 'GET').length, 1);
       }
@@ -274,7 +276,7 @@ test('an unusable profile reply does not poison a recovered read or repeat its P
   await view.fire(props => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Retained draft' } });
   // Deliberately malformed confirmation, not a conforming deployed BFF response.
   bffSettings.on('PATCH', '/settings/profile', { body: {}, outOfContract: true });
-  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.fire(profileForm, 'onSubmit');
   assert.match(view.text(), /L’enregistrement du profil n’a pas été confirmé/);
   const received = fixtures.bootstrap({ sessions: [], sources: { sessions: 'unavailable' } });
   received.profile.first_name = 'Read name';
@@ -290,7 +292,7 @@ test('an unusable profile reply does not poison a recovered read or repeat its P
 
   const official = fixtures.profile({ first_name: 'Confirmed name', last_name: 'Confirmed surname' });
   bffSettings.on('PATCH', '/settings/profile', { body: official });
-  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.fire(profileForm, 'onSubmit');
   assert.deepEqual(journeyRequests()[3].body, { first_name: 'Retained draft' });
   assert.match(view.text(), /Votre profil a été enregistré/);
   assert.match(view.html, /value="Confirmed name"/);
@@ -314,7 +316,7 @@ test('the first pass renders the loading state, the next one the profile form fi
   assert.match(view.html, /<h1[^>]*>Paramètres<\/h1>/);
   // MAIR-851 (O1): the lib Panel in its loading state, titled « Chargement des paramètres… ».
   assert.match(view.html, /data-m360-component="Panel"[^>]*data-state="loading"[^]*Chargement des paramètres…<\/h2>/);
-  assert.doesNotMatch(view.html, /<form/);
+  assert.doesNotMatch(view.html, /<form(?![^>]*role="search")/);
 
   const html = await view.waitFor((current) => !current.includes('Chargement des paramètres'));
 
@@ -452,7 +454,7 @@ for (const refused of [false, true]) {
       if (request.method === 'PATCH') { patchCount += 1; await gate; }
       return handle.call(this, request, response);
     });
-    const submit = view.hostElements((props, text, tag) => tag === 'form')[0].props.onSubmit;
+    const submit = view.hostElements(profileForm)[0].props.onSubmit;
     const staleChange = view.hostElements((props) => props.type === 'text' && props.value === 'Anne')[0].props.onChange;
     const pending = submit({ preventDefault() {} });
     // No render or await between these calls: state alone cannot guard this race.
@@ -481,7 +483,7 @@ for (const refused of [false, true]) {
       assert.match(view.text(), /Service indisponible/);
       assert.doesNotMatch(view.text(), /Votre profil a été enregistré/);
       bffSettings.on('PATCH', '/settings/profile', { body: saved });
-      await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+      await view.fire(profileForm, 'onSubmit');
       assert.equal(patchCount, 2);
       assert.deepEqual(patches()[1].body, { first_name: 'Anne' });
     }
@@ -504,7 +506,7 @@ test('editing a field and submitting the form saves the profile with PATCH /sett
   assert.doesNotMatch(view.html, /value="Anne Marie"/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap'], 'typing does not call the BFF');
 
-  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.fire(profileForm, 'onSubmit');
   const html = await view.waitFor((current) => current.includes('Votre profil a été enregistré.'));
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
@@ -527,7 +529,7 @@ test('a refused save keeps the form and shows the BFF message', async () => {
   // "12" passes the contract pattern of SettingsProfilePatch.phone (digits, spaces, dots, dashes, optional +):
   // the refusal comes from the BFF's own validation, not from the mock's contract check.
   await view.fire((props) => props.type === 'tel', 'onChange', { target: { value: '061234567' } });
-  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.fire(profileForm, 'onSubmit');
   const html = await view.waitFor((current) => toastAlert(current) !== '');
 
   // MAIR-864 (P1): a refusal without field details is the « Enregistrement impossible » toast, the draft is kept.
@@ -540,7 +542,7 @@ test('a refused save keeps the form and shows the BFF message', async () => {
 test('submitting an unchanged profile never calls the BFF', async () => {
   await renderLoadedPage();
 
-  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.fire(profileForm, 'onSubmit');
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
   assert.doesNotMatch(view.html, /Votre profil a été enregistré/);
@@ -557,7 +559,7 @@ test('a bootstrap failure renders an alert instead of the form', async () => {
   assert.match(html, /Profil temporairement indisponible/);
   assert.doesNotMatch(html, /Core API indisponible/);
   assert.match(view.text(), /Réessayer/);
-  assert.doesNotMatch(html, /<form/);
+  assert.doesNotMatch(html, /<form(?![^>]*role="search")/);
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
 });
 
@@ -625,7 +627,7 @@ test('a changed e-mail shows the current-password field, which disappears once t
 test('an e-mail change without the current password is refused locally, then sent with it and the password is dropped', async () => {
   await renderLoadedPage();
   await view.fire(isEmailInput, 'onChange', { target: { value: 'anne.nouvelle@mairie.test' } });
-  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.fire(profileForm, 'onSubmit');
   assert.equal(fieldError(view.html, 'current_password'), 'Saisissez votre mot de passe actuel pour changer votre adresse e-mail.');
   assert.equal(toastAlert(view.html), 'Profil non enregistré Corrigez les champs signalés.');
   assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
@@ -635,7 +637,7 @@ test('an e-mail change without the current password is refused locally, then sen
   assert.equal(fieldError(view.html, 'current_password'), '', 'the error disappears as the agent types');
   const saved = fixtures.profile({ email: 'anne.nouvelle@mairie.test' });
   bffSettings.on('PATCH', '/settings/profile', { body: saved });
-  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.fire(profileForm, 'onSubmit');
   await view.waitFor((html) => html.includes('Votre profil a été enregistré.'));
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'PATCH /settings/profile']);
@@ -653,7 +655,7 @@ test('a save without an e-mail change never sends current_password', async () =>
   await renderLoadedPage();
   await view.fire((props) => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Anne' } });
   bffSettings.on('PATCH', '/settings/profile', { body: fixtures.profile({ first_name: 'Anne' }) });
-  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.fire(profileForm, 'onSubmit');
   await view.waitFor((html) => html.includes('Votre profil a été enregistré.'));
   assert.deepEqual(journeyRequests()[1].body, { first_name: 'Anne' });
   assert.equal(passwordInputs().length, 0);
@@ -693,7 +695,7 @@ for (const [label, reply, expected] of [
     await view.fire(isEmailInput, 'onChange', { target: { value: 'anne.nouvelle@mairie.test' } });
     await view.fire((props) => props.type === 'password', 'onChange', { target: { value: 'current-secret' } });
     bffSettings.on('PATCH', '/settings/profile', { ...reply, outOfContract: true });
-    await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+    await view.fire(profileForm, 'onSubmit');
     const html = await view.waitFor((current) => toastAlert(current) !== '');
 
     assert.equal(toastAlert(html), expected.toast);
@@ -712,7 +714,7 @@ test('a 403 on a save without password keeps the BFF message', async () => {
   await renderLoadedPage();
   await view.fire((props) => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: 'Anne' } });
   bffSettings.on('PATCH', '/settings/profile', { status: 403, body: fixtures.error('Accès refusé', 403), outOfContract: true });
-  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.fire(profileForm, 'onSubmit');
   const html = await view.waitFor((current) => toastAlert(current) !== '');
   assert.equal(toastAlert(html), 'Enregistrement impossible Accès refusé');
 });
@@ -721,7 +723,7 @@ test('MAIR-864 (P2): invalid fields are refused locally, under each field, with 
   await renderLoadedPage();
   await view.fire((props) => props.type === 'text' && props.value === 'Anne Marie', 'onChange', { target: { value: '  ' } });
   await view.fire((props) => props.type === 'tel', 'onChange', { target: { value: '12' } });
-  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.fire(profileForm, 'onSubmit');
   assert.equal(fieldError(view.html, 'first_name'), 'Le prénom est obligatoire.');
   assert.equal(fieldError(view.html, 'phone'), 'Saisissez un numéro au format 06 12 34 56 78.');
   assert.match(view.html, /<input[^>]*aria-invalid="true"[^>]*aria-describedby="settings-first_name-error[^"]*"/);
@@ -794,7 +796,7 @@ test('MAIR-1231: the profile shows the stored photo and the read-only service, t
   const saved = fixtures.profile({ job_title: 'Chef de service', biography: 'Voirie.\nAstreinte le lundi.', has_photo: true, service: { id: 3, name: 'Voirie' } });
   bffSettings.on('PATCH', '/settings/profile', { body: saved });
   bffSettings.on('DELETE', '/settings/profile/photo', { status: 204 });
-  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.fire(profileForm, 'onSubmit');
   await view.waitFor((html) => html.includes('Votre profil a été enregistré.'));
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/profile/photo', 'PATCH /settings/profile', 'DELETE /settings/profile/photo']);
@@ -812,10 +814,50 @@ test('MAIR-1231: a refused photo keeps the saved fields and is explained under t
   await view.waitFor(() => /Retirer/.test(view.text()));
   await view.click('Retirer');
   bffSettings.on('DELETE', '/settings/profile/photo', { status: 502, body: { error: { code: 'BAD_GATEWAY', message: 'Core API indisponible.', details: [] } }, outOfContract: true });
-  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.fire(profileForm, 'onSubmit');
   await view.waitFor(() => /Photo non enregistrée/.test(toastAlert(view.html)));
 
   assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/profile/photo', 'DELETE /settings/profile/photo'], 'no PATCH without a changed field');
   assert.match(fieldError(view.html, 'photo'), /Core API indisponible\./);
   assert.match(view.html, /1 champ modifié\./, 'the removal is still to save');
+});
+
+test('MAIR-1230: typing in the header search lists the results of the other modules, each linked to its module, and opens one', async () => {
+  setBrowserFrontUrls({
+    PROJECT_FRONT_URL: 'https://projets.mairie.test/',
+    CALENDAR_FRONT_URL: 'https://calendrier.mairie.test/',
+    ELEARNING_FRONT_URL: 'https://formation.mairie.test/',
+  });
+  bffSettings.on('GET', '/search', fixtures.SETTINGS_OPERATIONS['GET /search'].reply);
+  await renderLoadedPage();
+  const opened = [];
+  global.window.location = { assign: (href) => opened.push(href) };
+
+  await view.fire((props, text, tag) => tag === 'input' && props.role === 'combobox', 'onChange', { target: { value: 'agenda' } });
+  await view.waitFor((html) => /data-href=/.test(html));
+
+  const searches = bffSettings.requests.filter((request) => request.template === '/search');
+  assert.deepEqual(searches.map((request) => request.url.searchParams.get('q')), ['agenda'], 'one debounced search for the typed term');
+  assert.equal(searches[0].headers.authorization, `Bearer ${fixtures.ACCESS_TOKEN}`);
+  const links = [...view.html.matchAll(/data-href="([^"]*)"/g)].map(([, href]) => href.replace(/&amp;/g, '&'));
+  assert.equal(links.length, 3);
+  assert.equal(links[0], 'https://projets.mairie.test/?project=7&task=9');
+  assert.match(links[1], /^https:\/\/calendrier\.mairie\.test\/\?date=2026-12-0\d&event=4$/);
+  assert.equal(links[2], 'https://formation.mairie.test/?course=3');
+  for (const label of ['Projets', 'Calendrier', 'E-learning', 'Agenda du conseil', 'Agenda partagé', 'Agents et RGPD']) assert.match(view.text(), new RegExp(label));
+  assert.match(view.text(), /Messagerie ne répond pas/);
+
+  await view.click((props, text, tag) => tag === 'li' && props.role === 'option' && props['data-href']?.endsWith('?course=3'));
+  assert.deepEqual(opened, ['https://formation.mairie.test/?course=3']);
+});
+
+test('MAIR-1230: a refused search says it is unavailable and leaves the settings page working', async () => {
+  bffSettings.on('GET', '/search', { status: 503, body: fixtures.error('Recherche indisponible', 503), outOfContract: true });
+  await renderLoadedPage();
+
+  await view.fire((props, text, tag) => tag === 'input' && props.role === 'combobox', 'onChange', { target: { value: 'agenda' } });
+  await view.waitFor(() => /La recherche est indisponible pour le moment/.test(view.text()));
+
+  assert.match(view.html, /<h1[^>]*>Anne Marie Le Gall<\/h1>/);
+  assert.match(view.html, /value="Anne Marie"/);
 });

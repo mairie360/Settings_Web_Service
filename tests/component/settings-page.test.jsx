@@ -4,7 +4,7 @@ import { axe } from "jest-axe";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Home from '@/components/SettingsPage';
 import { InstanceProvider } from "@mairie360/lib-components/react";
-import { loadSettings, saveProfile } from "@/lib/settings-api";
+import { loadSettings, saveProfile, searchEverywhere } from "@/lib/settings-api";
 import { loadSessionRole } from "@/lib/session-role";
 import { findToastAlert, toastAlertText } from "./page-alerts";
 import { setBrowserFrontUrls } from "@/lib/front-urls";
@@ -14,6 +14,7 @@ vi.mock("@/lib/settings-api", () => ({
   saveProfile: vi.fn(),
   // MAIR-1125: the page header reads the second factor.
   loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })),
+  searchEverywhere: vi.fn(),
 }));
 
 // The lib ToastProvider keeps an empty assertive region mounted: page alerts are read without it.
@@ -52,6 +53,25 @@ beforeEach(() => {
 });
 
 describe("Settings page", () => {
+  it("MAIR-1230: the header search is the global search, fed by searchEverywhere and linked to the other modules", async () => {
+    setBrowserFrontUrls({ PROJECT_FRONT_URL: "https://projets.test.example/" });
+    vi.mocked(searchEverywhere).mockResolvedValue({
+      groups: [{ module: "projects", items: [{ kind: "project", id: 7, title: "Rénovation de l’école", excerpt: null, parent_id: null, updated_at: "2026-11-20T09:00:00Z" }] }],
+      unavailable: [],
+    });
+    const user = await openSettings();
+
+    const field = screen.getByRole("combobox", { name: /rechercher/i });
+    await user.type(field, "école");
+    const option = await screen.findByRole("option", { name: /Rénovation de l’école/ });
+
+    expect(searchEverywhere).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(searchEverywhere).mock.calls[0][0]).toBe("école");
+    expect(vi.mocked(searchEverywhere).mock.calls[0][1]).toBeInstanceOf(AbortSignal);
+    expect(option.getAttribute("data-href")).toBe("https://projets.test.example/?project=7");
+    expect(field.getAttribute("aria-expanded")).toBe("true");
+  });
+
   it.each([
     ["notifications", "Notifications"],
     ["notification-preferences", "Notifications"],

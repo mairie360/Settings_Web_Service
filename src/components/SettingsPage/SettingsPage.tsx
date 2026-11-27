@@ -16,7 +16,7 @@ import { settingsUrlSchema, tabFromUrl, tabToUrl } from './components/SettingsTa
 import { SettingsHeader } from './components/SettingsHeader';
 import { SettingsHero, activeSessions } from './components/SettingsHero';
 import { ProtectionSection } from './components/ProtectionSection';
-import { loadTwoFactor } from '../../lib/settings-api';
+import { loadTwoFactor, searchEverywhere } from '../../lib/settings-api';
 import { SettingsLoading } from './components/SettingsLoading';
 import { SettingsNotices } from './components/SettingsNotices';
 import { StatusToast } from './components/StatusToast';
@@ -65,6 +65,7 @@ export default function SettingsPage({ initialData, commune }: { initialData?: B
       activeItem="settings"
       commune={commune}
       hrefs={getActiveFrontHrefs()}
+      searchSource={searchEverywhere}
       user={data ? { first_name: data.profile.first_name, last_name: data.profile.last_name, email: data.profile.email } : undefined}
       onLogout={() => void requestLogout()}
       sidebarProps={{ brandLogoSrc: "/mairie360-logo.png" }}

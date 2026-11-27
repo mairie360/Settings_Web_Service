@@ -21,7 +21,7 @@ test('a confirmed profile notification closes by Escape without repeating its sa
   t.after(() => { view.unmount(); delete global.window; delete global.document; });
   await view.settle();
   await view.fire(props => props.name === 'first_name', 'onChange', { target: { value: 'Submitted draft' } });
-  const saving = view.fire((_props, _text, tag) => tag === 'form', 'onSubmit');
+  const saving = view.fire((props, _text, tag) => tag === 'form' && props.role !== 'search', 'onSubmit');
   await view.settle();
   assert.doesNotMatch(view.text(), /Votre profil a été enregistré/);
   assert.equal(writes.length, 1);

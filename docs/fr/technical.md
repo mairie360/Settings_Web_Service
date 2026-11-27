@@ -128,6 +128,7 @@ Ces chemins de données sont exposés à la même origine par le proxy; les page
 | PATCH | `/settings/notifications` | application/json | 200, 404 |
 | PATCH | `/settings/appearance` | application/json | 200, 404 |
 | PATCH | `/settings/general` | application/json | 200, 404 |
+| GET | `/search?q=…&limit=…` | — | 200 (recherche globale de l’en-tête commun : résultats groupés par module et modules qui n’ont pas répondu) |
 
 ### Pages
 

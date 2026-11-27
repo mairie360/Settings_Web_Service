@@ -8,7 +8,7 @@ import { findToastAlert, toastAlertText } from './page-alerts';
 import { loadSettings, saveProfile } from "@/lib/settings-api";
 import { logoutAndRedirect, navigateToLogin } from "@/lib/logout";
 
-vi.mock("@/lib/settings-api", () => ({ loadSettings: vi.fn(), saveProfile: vi.fn(), loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })) }));
+vi.mock("@/lib/settings-api", () => ({ searchEverywhere: vi.fn(), loadSettings: vi.fn(), saveProfile: vi.fn(), loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })) }));
 vi.mock("@/lib/logout", () => ({ logoutAndRedirect: vi.fn(), navigateToLogin: vi.fn() }));
 
 const initial = { first_name: "Test", last_name: "User", email: "test@example.invalid", phone: null };
@@ -134,7 +134,8 @@ it("keeps an unusable save out of the read baseline and recovers only through ex
   expect(screen.getByRole("textbox", { name: "E-mail" }).value).toBe("draft@example.invalid");
   expect(loadSettings).toHaveBeenCalledTimes(3);
   expect(saveProfile).toHaveBeenCalledTimes(2);
-});
+// Many role queries over the whole shell (with the header search since MAIR-1230): ~4–6 s under jsdom, above the 5 s default.
+}, 15_000);
 
 it("updates clean fields from the response but retains dirty fields against the new confirmed baseline", async () => {
   await open();

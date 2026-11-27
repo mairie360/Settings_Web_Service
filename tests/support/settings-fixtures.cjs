@@ -62,6 +62,18 @@ function error(message, status = 500) {
   return { error: { code: ERROR_CODES[status] ?? 'INTERNAL_ERROR', message, details: [] } };
 }
 
+/** Answer of `GET /search`: one group per module that answered, and the modules that could not. */
+function searchResult() {
+  return {
+    groups: [
+      { module: 'projects', items: [{ kind: 'task', id: 9, title: 'Agenda du conseil', excerpt: 'Préparer l’ordre du jour', parent_id: 7, updated_at: '2026-11-20T09:00:00Z' }] },
+      { module: 'calendar', items: [{ kind: 'event', id: 4, title: 'Agenda partagé', excerpt: null, parent_id: null, updated_at: '2026-12-03T10:00:00Z' }] },
+      { module: 'elearning', items: [{ kind: 'course', id: 3, title: 'Agents et RGPD', excerpt: 'Module d’initiation', parent_id: null, updated_at: '2026-10-01T08:00:00Z' }] },
+    ],
+    unavailable: ['messages'],
+  };
+}
+
 /**
  * Réponse de succès conforme pour chaque opération du contrat BFF_Settings, et corps envoyé par le navigateur.
  * Une opération ajoutée au contrat sans entrée ici fait échouer les tests : il faut la mocker explicitement.
@@ -79,8 +91,8 @@ const SETTINGS_OPERATIONS = {
   'PUT /settings/profile/photo': { sendRaw: Buffer.from('RIFF\0\0\0\0WEBPVP8 photo'), reply: { status: 204 } },
   'GET /settings/profile/photo': { reply: { raw: Buffer.from('RIFF\0\0\0\0WEBPVP8 photo'), contentType: 'image/webp' } },
   'DELETE /settings/profile/photo': { reply: { status: 204 } },
-  // The header's global search of BFF_Settings: published, not called by this front yet.
-  'GET /search': { path: '/search?q=ag', reply: { body: { groups: [], unavailable: ['projects', 'calendar', 'messages', 'elearning'] } } },
+  // The global search of the shared header: results of the other modules, one module that could not answer.
+  'GET /search': { path: '/search?q=ag', reply: { body: searchResult() } },
   'GET /settings/2fa': { reply: { body: { enabled: true, backup_codes_remaining: 8 } } },
   'POST /settings/2fa/setup': { reply: { body: { secret: 'JBSWY3DPEHPK3PXP', otpauth_uri: 'otpauth://totp/Mairie360:agent?secret=JBSWY3DPEHPK3PXP&issuer=Mairie360' } } },
   'POST /settings/2fa/confirm': { send: { code: '123456' }, reply: { body: { backup_codes: Array.from({ length: 10 }, (_, index) => `ab${index}c-d${index}ef`) } } },
@@ -97,4 +109,4 @@ const SETTINGS_OPERATIONS = {
   'POST /settings/password': { send: { current_password: 'ancien-ancien', new_password: 'nouveau-nouveau' }, reply: { status: 204 } },
 };
 
-module.exports = { ACCESS_TOKEN, profile, session, appearance, general, notifications, bootstrap, error, SETTINGS_OPERATIONS };
+module.exports = { ACCESS_TOKEN, searchResult, profile, session, appearance, general, notifications, bootstrap, error, SETTINGS_OPERATIONS };

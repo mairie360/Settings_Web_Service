@@ -100,7 +100,7 @@ test('confirmed personal fields cannot submit before the SDK handlers are hydrat
     assert.ok(input, 'The confirmed personal fields remain server-rendered');
     assert.equal(input.form, null, 'There is no native fallback endpoint for SDK mutations');
     assert.equal(input.matches(':disabled'), true, 'The server-rendered controls stay read-only until their handlers attach');
-    assert.equal(html.window.document.querySelectorAll('form').length, 0);
+    assert.equal(html.window.document.querySelectorAll('form:not([role="search"])').length, 0, 'only the header search is a form');
     assert.match(html.window.document.querySelector('noscript').textContent, /JavaScript/);
   } finally { html.window.close(); }
 });

@@ -126,6 +126,7 @@ These data paths are exposed at the same origin through the proxy; Next.js pages
 | PATCH | `/settings/notifications` | application/json | 200, 404 |
 | PATCH | `/settings/appearance` | application/json | 200, 404 |
 | PATCH | `/settings/general` | application/json | 200, 404 |
+| GET | `/search?q=…&limit=…` | — | 200 (global search of the shared header: results grouped by module and the modules that could not answer) |
 
 ### Pages
 

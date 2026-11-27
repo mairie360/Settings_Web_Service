@@ -5,7 +5,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import Home from '@/components/SettingsPage';
 import * as api from '@/lib/settings-api';
 import fixtures from '../support/settings-fixtures.cjs';
-vi.mock('@/lib/settings-api', () => ({ loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })), loadSettings: vi.fn(), saveProfile: vi.fn(), saveAppearance: vi.fn(), saveGeneral: vi.fn(), saveNotifications: vi.fn() }));
+vi.mock('@/lib/settings-api', () => ({ searchEverywhere: vi.fn(), loadTwoFactor: vi.fn(async () => ({ enabled: false, backup_codes_remaining: 0 })), loadSettings: vi.fn(), saveProfile: vi.fn(), saveAppearance: vi.fn(), saveGeneral: vi.fn(), saveNotifications: vi.fn() }));
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 beforeEach(() => {
   document.documentElement.removeAttribute('data-theme');

@@ -570,7 +570,7 @@ const isEmailInput = (props) => props.type === 'email';
 const htmlPattern = (pattern) => new RegExp(`^(?:${pattern})$`, 'v');
 
 test('the input constraints mirror the SettingsProfilePatch schema of the published contract', () => {
-  assert.deepEqual(PROFILE_FIELDS.map(({ field }) => field), ['first_name', 'last_name', 'email', 'phone']);
+  assert.deepEqual(PROFILE_FIELDS.map(({ field }) => field), ['first_name', 'last_name', 'email', 'phone', 'job_title', 'biography']);
   for (const { field, maxLength, pattern, required } of PROFILE_FIELDS) {
     const schema = PROFILE_PATCH_SCHEMA.properties[field];
     assert.equal(maxLength, schema.maxLength, field);
@@ -774,4 +774,46 @@ test('MAIR-807: an unavailable second factor offers « Réessayer » without bre
   await view.waitFor(html => html.includes('Double authentification indisponible'));
   assert.doesNotMatch(view.text(), /Core API indisponible/);
   assert.match(view.text(), /Mot de passe actuel/);
+});
+
+test('MAIR-1231: the profile shows the stored photo and the read-only service, then saves the function, the biography and the photo removal', async () => {
+  const body = fixtures.bootstrap();
+  body.profile = fixtures.profile({ job_title: null, biography: null, has_photo: true, service: { id: 3, name: 'Voirie' } });
+  bffSettings.on('GET', '/settings/profile/photo', fixtures.SETTINGS_OPERATIONS['GET /settings/profile/photo'].reply);
+  await renderLoadedPage(body);
+  await view.waitFor(() => upstream().includes('GET /settings/profile/photo'));
+  assert.match(view.html, /<input(?=[^>]*disabled="")(?=[^>]*readOnly="")[^>]*name="service"[^>]*value="Voirie"/);
+  assert.match(view.html, /Défini par l’administration\./);
+
+  await view.fire((props) => props.name === 'job_title', 'onChange', { target: { value: '  Chef de service  ' } });
+  await view.fire((props) => props.name === 'biography', 'onChange', { target: { value: 'Voirie.\nAstreinte le lundi.' } });
+  await view.click('Retirer');
+  await view.waitFor((html) => /3 champs modifiés\./.test(html));
+
+  const saved = fixtures.profile({ job_title: 'Chef de service', biography: 'Voirie.\nAstreinte le lundi.', has_photo: true, service: { id: 3, name: 'Voirie' } });
+  bffSettings.on('PATCH', '/settings/profile', { body: saved });
+  bffSettings.on('DELETE', '/settings/profile/photo', { status: 204 });
+  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.waitFor((html) => html.includes('Votre profil a été enregistré.'));
+
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/profile/photo', 'PATCH /settings/profile', 'DELETE /settings/profile/photo']);
+  assert.deepEqual(journeyRequests()[2].body, { job_title: 'Chef de service', biography: 'Voirie.\nAstreinte le lundi.' });
+  assert.match(view.html, /Aucune modification à enregistrer\./);
+  assert.match(view.html, /Glisser un fichier ou/, 'the photo field is empty again');
+});
+
+test('MAIR-1231: a refused photo keeps the saved fields and is explained under the photo field', async () => {
+  const body = fixtures.bootstrap();
+  body.profile = fixtures.profile({ has_photo: true });
+  bffSettings.on('GET', '/settings/profile/photo', fixtures.SETTINGS_OPERATIONS['GET /settings/profile/photo'].reply);
+  await renderLoadedPage(body);
+  await view.waitFor(() => upstream().includes('GET /settings/profile/photo'));
+  await view.click('Retirer');
+  bffSettings.on('DELETE', '/settings/profile/photo', { status: 502, body: { error: { code: 'BAD_GATEWAY', message: 'Core API indisponible.', details: [] } }, outOfContract: true });
+  await view.fire((props, text, tag) => tag === 'form', 'onSubmit');
+  await view.waitFor(() => /Photo non enregistrée/.test(toastAlert(view.html)));
+
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap', 'GET /settings/profile/photo', 'DELETE /settings/profile/photo'], 'no PATCH without a changed field');
+  assert.match(fieldError(view.html, 'photo'), /Core API indisponible\./);
+  assert.match(view.html, /1 champ modifié\./, 'the removal is still to save');
 });

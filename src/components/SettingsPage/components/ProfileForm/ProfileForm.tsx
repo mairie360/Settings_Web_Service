@@ -35,7 +35,9 @@ export const ProfileForm = ({ form, reading }: ProfileFormProps) => {
   return (
     <Panel icon={UserRound} title="Informations personnelles" description="Ces informations sont visibles par les autres agents de la mairie." className="settings-profile-card">
       <SettingsMutationForm data-form="settings-profile" onSubmit={save} aria-busy={saving || reading} noValidate className="space-y-4">
-        <ProfilePhotoField id="settings-photo" label="Photo de profil" className="settings-profile-photo" value={photoUrl} initials={initialsOf(profile.first_name, profile.last_name)}
+        {/* The lib marker would start with « ProfilePhotoField », which ZAP 10031 reads as the reflected `?tab=profile`:
+            a caller name first keeps « ProfilePhotoField » for the RGAA engine (`~=` match) without that prefix. */}
+        <ProfilePhotoField data-m360-component="SettingsPhoto" id="settings-photo" label="Photo de profil" className="settings-profile-photo" value={photoUrl} initials={initialsOf(profile.first_name, profile.last_name)}
           accept={PHOTO_ACCEPT} maxSize={PHOTO_PICK_MAX_BYTES} error={photoError ?? undefined} disabled={saving} onChange={(file) => { void choosePhoto(file); }} />
         <div className="settings-profile-fields">
           {PROFILE_FIELDS.map(({ field, label, type, required, maxLength, pattern, help }) => type === "textarea" ? (

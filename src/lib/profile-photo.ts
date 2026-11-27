@@ -24,14 +24,14 @@ export interface PhotoEncoder {
 }
 
 /** Encodes at decreasing qualities and keeps the first WebP of at most 100 KiB. */
-export async function compressPhoto(encoder: PhotoEncoder): Promise<Blob> {
-  for (const quality of QUALITIES) {
-    const blob = await encoder.encode(quality);
-    // A browser without WebP encoding falls back to PNG: refuse it rather than send a format Core refuses.
-    if (!blob || blob.type !== 'image/webp') throw new Error(PHOTO_UNREADABLE);
-    if (blob.size <= MAX_PHOTO_BYTES) return blob;
-  }
-  throw new Error(PHOTO_TOO_HEAVY);
+export async function compressPhoto(encoder: PhotoEncoder, qualities: readonly number[] = QUALITIES): Promise<Blob> {
+  const [quality, ...lower] = qualities;
+  if (quality === undefined) throw new Error(PHOTO_TOO_HEAVY);
+  const blob = await encoder.encode(quality);
+  // A browser without WebP encoding falls back to PNG: refuse it rather than send a format Core refuses.
+  if (!blob || blob.type !== 'image/webp') throw new Error(PHOTO_UNREADABLE);
+  // Each quality is only tried once the higher one is known to be too heavy.
+  return blob.size <= MAX_PHOTO_BYTES ? blob : compressPhoto(encoder, lower);
 }
 
 /** Browser encoder of `file`: decodes it, crops its centred square and scales it to 256 × 256. */

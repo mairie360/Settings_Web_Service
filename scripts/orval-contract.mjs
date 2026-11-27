@@ -163,12 +163,14 @@ function readOperation(operationId, fn, models) {
 
   const responseType = withoutVoid(successType(fn.type, operationId));
   const isText = /responseType:\s*'text'/.test(call.getText());
-  const responseSchema = responseType ? typeSchema(responseType) : undefined;
+  // A `Blob` is raw bytes (the profile photo): orval drops the media type, so it is declared as octet-stream.
+  const responseBinary = responseType !== undefined && isBlob(responseType);
+  const responseSchema = responseType ? (responseBinary ? BINARY : typeSchema(responseType)) : undefined;
 
   const responses = {
     '2XX': {
       description: 'Succès (seul statut typé par orval)',
-      ...(responseSchema ? { content: { [isText ? 'text/plain' : 'application/json']: { schema: responseSchema } } } : {}),
+      ...(responseSchema ? { content: { [isText ? 'text/plain' : responseBinary ? 'application/octet-stream' : 'application/json']: { schema: responseSchema } } } : {}),
     },
   };
   // Modèles orval `<OperationId><statut>` : réponses non 2xx dont le schéma était déclaré en ligne.
@@ -182,7 +184,11 @@ function readOperation(operationId, fn, models) {
 
   const operation = { operationId, parameters, responses };
   if (bodyParameter?.type) {
-    operation.requestBody = { required: !bodyParameter.questionToken, content: { 'application/json': { schema: typeSchema(bodyParameter.type) } } };
+    const binary = isBlob(bodyParameter.type);
+    operation.requestBody = {
+      required: !bodyParameter.questionToken,
+      content: binary ? { 'application/octet-stream': { schema: BINARY } } : { 'application/json': { schema: typeSchema(bodyParameter.type) } },
+    };
   }
   return { method, template, operation };
 }
@@ -240,6 +246,9 @@ function applyConstraints(schema, member) {
     else if (STRING_CONSTRAINTS.has(keyword) && types.includes('string')) target[keyword] = keyword === 'pattern' ? rawValue : Number(rawValue);
   }
 }
+
+const BINARY = { type: 'string', format: 'binary' };
+const isBlob = (node) => ts.isTypeReferenceNode(node) && node.typeName.getText() === 'Blob';
 
 function typeSchema(node) {
   switch (node.kind) {

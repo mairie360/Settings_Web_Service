@@ -75,6 +75,12 @@ const SETTINGS_OPERATIONS = {
   'PATCH /settings/appearance': { send: { theme: 'dark' }, reply: { body: appearance({ theme: 'dark' }) } },
   'PATCH /settings/general': { send: { language: 'fr' }, reply: { body: general() } },
   // MAIR-807: second factor.
+  // MAIR-1231: the photo travels as raw bytes (a WebP), answered as image/webp.
+  'PUT /settings/profile/photo': { sendRaw: Buffer.from('RIFF\0\0\0\0WEBPVP8 photo'), reply: { status: 204 } },
+  'GET /settings/profile/photo': { reply: { raw: Buffer.from('RIFF\0\0\0\0WEBPVP8 photo'), contentType: 'image/webp' } },
+  'DELETE /settings/profile/photo': { reply: { status: 204 } },
+  // The header's global search of BFF_Settings: published, not called by this front yet.
+  'GET /search': { path: '/search?q=ag', reply: { body: { groups: [], unavailable: ['projects', 'calendar', 'messages', 'elearning'] } } },
   'GET /settings/2fa': { reply: { body: { enabled: true, backup_codes_remaining: 8 } } },
   'POST /settings/2fa/setup': { reply: { body: { secret: 'JBSWY3DPEHPK3PXP', otpauth_uri: 'otpauth://totp/Mairie360:agent?secret=JBSWY3DPEHPK3PXP&issuer=Mairie360' } } },
   'POST /settings/2fa/confirm': { send: { code: '123456' }, reply: { body: { backup_codes: Array.from({ length: 10 }, (_, index) => `ab${index}c-d${index}ef`) } } },

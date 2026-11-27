@@ -39,7 +39,7 @@ export const PROFILE_FIELDS: ReadonlyArray<ProfileFieldRule> = [
     help: 'Visible par tous les agents de la mairie (usage professionnel). Chiffres, espaces, points, tirets et parenthèses, avec un + initial facultatif (32 caractères maximum).',
   },
   // Plain texts, both optional: a blank value removes them.
-  { field: 'job_title', label: 'Fonction', type: 'text', required: false, maxLength: 100 },
+  { field: 'job_title', label: 'Fonction', type: 'text', required: false, maxLength: 100, pattern: '[^\\r\\n]*' },
   { field: 'biography', label: 'Bio', type: 'textarea', required: false, maxLength: 1000, help: '1000 caractères maximum.' },
 ];
 

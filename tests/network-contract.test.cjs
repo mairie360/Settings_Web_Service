@@ -70,7 +70,10 @@ describe('network surface of src/', () => {
       assert.ok(contract.match(method.toUpperCase(), template), `${name}: ${method} ${template} absent de ${PACKAGE}`);
       return `${method.toUpperCase()} ${template}`;
     });
-    assert.deepEqual([...new Set(routes)], ['GET /settings/bootstrap', 'PATCH /settings/profile', 'PATCH /settings/appearance', 'PATCH /settings/general', 'PATCH /settings/notifications',
+    assert.deepEqual([...new Set(routes)], ['GET /settings/bootstrap', 'PATCH /settings/profile',
+      // MAIR-1231: the profile photo.
+      'PUT /settings/profile/photo', 'DELETE /settings/profile/photo', 'GET /settings/profile/photo',
+      'PATCH /settings/appearance', 'PATCH /settings/general', 'PATCH /settings/notifications',
       // MAIR-807 / MAIR-811: second factor and passkeys of the Security tab.
       'GET /settings/2fa', 'POST /settings/2fa/setup', 'POST /settings/2fa/confirm', 'POST /settings/2fa/backup-codes', 'POST /settings/2fa/disable',
       'GET /settings/passkeys', 'POST /settings/passkeys/options', 'POST /settings/passkeys', 'DELETE /settings/passkeys/${id}',

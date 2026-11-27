@@ -82,7 +82,7 @@ describe('actual Settings page with the published shell and consumer styles', ()
     expect(screen.queryByRole('dialog', { name: 'Navigation mobile' })).toBeNull();
   });
 
-  it('changes real selected-tab styles while keeping the four profile fields in their bounded grid', async () => {
+  it('changes real selected-tab styles while keeping the profile fields in their bounded grid', async () => {
     const user = await page(), tabs = within(screen.getByRole('tablist', { name: 'Paramètres' })).getAllByRole('tab');
     // MAIR-608: the lib Tabs own their layout (Tailwind utilities of the published package); the page keeps the rhythm around them.
     expect(tabs).toHaveLength(6);
@@ -90,7 +90,7 @@ describe('actual Settings page with the published shell and consumer styles', ()
     expect(tabs[0].getAttribute('aria-selected')).toBe('true');
     const fields = screen.getByRole('textbox', { name: 'Prénom' }).closest('.settings-profile-fields');
     expect(getComputedStyle(fields).display).toBe('grid'); expect(getComputedStyle(fields).gap).toBe('20px 36px');
-    const inputs = within(fields).getAllByRole('textbox'); expect(inputs).toHaveLength(4);
+    const inputs = within(fields).getAllByRole('textbox'); expect(inputs.map((input) => input.name)).toEqual(['first_name', 'last_name', 'email', 'phone', 'service', 'job_title', 'biography']);
     for (const input of inputs) {
       expect(input.closest('.mairie-field').querySelector('label')).not.toBeNull();
     }

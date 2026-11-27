@@ -23,7 +23,7 @@ export async function saveProfile(patch: SettingsProfilePatch) {
 
 /** Sends the photo already converted by `toProfilePhoto` (WebP, 256 × 256, at most 100 KiB). */
 export async function saveProfilePhoto(photo: Blob) {
-  await bffSettings.putSettingsProfilePhoto(photo, { headers: { 'Content-Type': 'image/webp' } });
+  await bffSettings.putSettingsProfilePhoto(photo, { headers: { 'Content-Type': 'application/octet-stream' } });
 }
 
 export async function removeProfilePhoto() {

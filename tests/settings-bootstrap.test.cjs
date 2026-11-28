@@ -32,3 +32,21 @@ for (const [name,patch] of [
 ]) test(`the server projection refuses ${name} instead of serializing an unconfirmed value`,()=>assert.equal(selectSettingsBootstrap(fixture.bootstrap(patch)),null));
 
 test('malformed core data cannot become a serialized initial receipt',()=>assert.equal(selectSettingsBootstrap({profile:{}}),null));
+
+test('MAIR-1258 the server projection keeps the function, the service, the biography and the photo flag of the profile', () => {
+  const original=fixture.bootstrap({profile:fixture.profile({job_title:'Chargée de mission',service:{id:4,name:'Urbanisme'},biography:'Bio',has_photo:true,pending_email:null})});
+  original.profile.service.secret='never-serialize';
+  const selected=selectSettingsBootstrap(original);
+  assert.ok(selected);
+  assert.equal(selected.profile.job_title,'Chargée de mission');
+  assert.deepEqual(selected.profile.service,{id:4,name:'Urbanisme'});
+  assert.equal(selected.profile.biography,'Bio');
+  assert.equal(selected.profile.has_photo,true);
+  assert.equal(selected.profile.pending_email,null);
+  assert.doesNotMatch(JSON.stringify(selected),/never-serialize/);
+  assert.equal(selectSettingsBootstrap(fixture.bootstrap({profile:fixture.profile({service:null})})).profile.service,null);
+});
+
+for (const [name,patch] of [['a numeric job title',{job_title:3}],['a service without name',{service:{id:1}}],['a string photo flag',{has_photo:'yes'}]])
+  test(`MAIR-1258 the server projection refuses ${name}`,()=>assert.equal(selectSettingsBootstrap(fixture.bootstrap({profile:fixture.profile(patch)})),null));
+

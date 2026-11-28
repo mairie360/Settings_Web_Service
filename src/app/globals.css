@@ -199,6 +199,8 @@ body {
    renders the form as a disabled fieldset, which then carries the grid. */
 .settings-profile-grid, .settings-profile-grid > fieldset { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--mairie-space-l); align-items: stretch; }
 .settings-profile-grid:has(> fieldset) { display: block; }
+/* MAIR-1258: Security on two columns as in the artifact, the password form beside « Protection du compte ». */
+.settings-security-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--mairie-space-l); align-items: start; }
 .settings-photo-card > :last-child, .settings-profile-card > :last-child { display: flex; flex: 1; flex-direction: column; gap: var(--mairie-space-m); }
 .settings-photo-card .settings-profile-photo { width: 100%; }
 .settings-directory-preview { display: flex; flex-direction: column; gap: var(--mairie-space-xs); margin-top: auto; }
@@ -209,5 +211,6 @@ body {
 .settings-shell main:has(.settings-profile-actions) { scroll-padding-bottom: 96px; }
 @media (min-width: 1180px) {
   .settings-profile-grid, .settings-profile-grid > fieldset { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); }
+  .settings-security-grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
   .settings-profile-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

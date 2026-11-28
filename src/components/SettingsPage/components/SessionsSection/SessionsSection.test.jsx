@@ -19,13 +19,31 @@ const props = (overrides = {}) => ({ data: data(), onSessions: vi.fn(), onNotify
 describe('SessionsSection', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('marks this device, never revocable, and lists the ended sessions in the history', () => {
+  it('marks this device, never revocable, and lists the ended sessions in the history', async () => {
+    const user = userEvent.setup();
     render(<SessionsSection {...props()} />);
-    expect(screen.getByRole('heading', { name: 'Sessions actives' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Sessions' })).toBeTruthy();
     const active = screen.getByRole('table', { name: 'Sessions actives' });
     expect(within(active).getByText('Cet appareil')).toBeTruthy();
     expect(within(active).getAllByRole('button', { name: /Déconnecter/ })).toHaveLength(1);
-    expect(within(screen.getByRole('table', { name: 'Historique des connexions' })).getByText('Chrome sur Windows')).toBeTruthy();
+    await user.click(screen.getByRole('radio', { name: /Historique \(1\)/ }));
+    expect(within(screen.getByRole('table', { name: 'Historique des sessions' })).getByText('Chrome sur Windows')).toBeTruthy();
+  });
+
+  it('MAIR-1258 one « Sessions » panel: the artifact text and the « Actives (n) » / « Historique (n) » switch', async () => {
+    const user = userEvent.setup();
+    render(<SessionsSection {...props()} />);
+    expect(screen.getByText('Appareils connectés à votre compte. Si vous ne reconnaissez pas une session, déconnectez-la puis changez votre mot de passe.')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Historique des connexions' })).toBeNull();
+    const switcher = screen.getByRole('radiogroup', { name: 'Filtrer les sessions' });
+    expect(within(switcher).getAllByRole('radio').map((tab) => tab.textContent)).toEqual(['Actives (2)', 'Historique (1)']);
+    expect(within(switcher).getByRole('radio', { name: /Actives/ }).getAttribute('aria-checked')).toBe('true');
+    expect(screen.queryByRole('table', { name: 'Historique des sessions' })).toBeNull();
+    await user.click(within(switcher).getByRole('radio', { name: /Historique/ }));
+    expect(screen.queryByRole('table', { name: 'Sessions actives' })).toBeNull();
+    expect(screen.getByRole('table', { name: 'Historique des sessions' })).toBeTruthy();
+    await user.click(within(switcher).getByRole('radio', { name: /Actives/ }));
+    expect(screen.getByRole('table', { name: 'Sessions actives' })).toBeTruthy();
   });
 
   it('ends another session after the confirmation and replaces the lists with the answer', async () => {
@@ -64,9 +82,13 @@ describe('SessionsSection', () => {
     expect(onSessions).toHaveBeenCalledWith([fixtures.session('s-1')], []);
   });
 
-  it('shows both unavailable states and offers no « autres appareils » without another active session', () => {
+  it('shows both unavailable states and offers no « autres appareils » without another active session', async () => {
+    const user = userEvent.setup();
     render(<SessionsSection {...props({ data: data({ sessions: [], session_history: undefined, sources: { sessions: 'unavailable', session_history: 'unavailable' } }) })} />);
     expect(screen.getByText('Les sessions sont temporairement indisponibles.')).toBeTruthy();
+    // MAIR-1258: an unreadable list has no count in the switch.
+    expect(screen.getAllByRole('radio').map((tab) => tab.textContent)).toEqual(['Actives', 'Historique']);
+    await user.click(screen.getByRole('radio', { name: 'Historique' }));
     expect(screen.getByText('L’historique est temporairement indisponible.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Déconnecter les autres appareils' }).disabled).toBe(true);
   });

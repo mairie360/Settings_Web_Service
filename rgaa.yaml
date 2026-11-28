@@ -139,8 +139,16 @@ states:
     route: /
     steps:
       - click: { role: tab, name: Sessions }
-      - wait_for: { role: heading, name: Sessions actives }
+      - wait_for: { role: heading, name: Sessions, exact: true }
       - wait_for: { role: table, name: Sessions actives, exact: true }
+  # MAIR-1258: the history sits behind « Historique (n) » of the same panel.
+  - id: session-history
+    description: The ended sessions, behind the Actives / Historique switch
+    as: agent
+    route: /?tab=sessions
+    steps:
+      - click: { role: radio, name: Historique }
+      - wait_for: { role: table, name: Historique des sessions, exact: true }
   # MAIR-767: Core_API serves ISO 8601 session dates, so the lib SessionList shows the seeded
   # sessions as active with their "Déconnecter" action.
   - id: session-revoke-dialog

@@ -125,7 +125,7 @@ test('MAIR-1125: the header names the agent and shows the second factor, read on
   assert.match(view.text(), /Paramètres du compte/);
   assert.deepEqual(allUpstream(), ['GET /settings/bootstrap', 'GET /settings/2fa'], 'one read of the second factor, after the bootstrap');
   await view.click((props, text, tag) => tag === 'button' && /^Sessions actives\s*0$/.test(text));
-  assert.match(view.html, /<h2[^>]*>Sessions actives<\/h2>/, 'the tile opens the Sessions tab');
+  assert.match(view.html, /<h2[^>]*>Sessions<\/h2>/, 'the tile opens the Sessions tab');
 });
 
 test('MAIR-1227: the shared header names the commune of the deployment, and the band tiles carry no aria-label', async () => {
@@ -377,11 +377,12 @@ test('MAIR-851: the sessions tab lists the sessions of the bootstrap, or their u
   await view.click('Sessions');
 
   assert.match(view.html, /<button id="settings-tab-sessions" role="tab" type="button" aria-selected="true"[^>]*tabindex="0"[^>]*>[^]*?<svg[^>]*aria-hidden="true"[^]*?Sessions<\/button>/);
-  // MAIR-892: the active sessions, « Cet appareil » for the session of the page, then the history.
-  assert.match(view.html, /<h2[^>]*>Sessions actives<\/h2>/);
-  assert.match(view.html, /<h2[^>]*>Historique des connexions<\/h2>/);
+  // MAIR-892 / MAIR-1258: one « Sessions » panel, the active sessions (« Cet appareil » for the session of the page)
+  // first, the history behind « Historique (n) ».
+  assert.match(view.html, /<h2[^>]*>Sessions<\/h2>/);
+  assert.doesNotMatch(view.html, /Historique des connexions/);
   assert.match(view.text(), /Cet appareil/);
-  assert.match(view.text(), /Chrome sur Windows/, 'the ended session of the history');
+  assert.match(view.text(), /Actives \(2\) Historique \(1\)/);
   const createdAt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' })
     .format(new Date('2026-09-15T08:00:00Z'));
   // MAIR-607: the shared SessionList renders one row per session (device, IP, creation, expiry, state).
@@ -392,6 +393,11 @@ test('MAIR-851: the sessions tab lists the sessions of the bootstrap, or their u
   assert.match(view.text(), /Chrome sur Android/); assert.match(view.text(), /198\.51\.100\.7/);
   assert.doesNotMatch(view.text(), /Mot de passe actuel/, 'the sessions left the security tab');
   assert.deepEqual(upstream(), ['GET /settings/bootstrap'], 'changing tab does not call the BFF');
+  // MAIR-1258: the history of the same panel, without another BFF call.
+  assert.doesNotMatch(view.text(), /Chrome sur Windows/);
+  await view.click('Historique (1)');
+  assert.match(view.text(), /Chrome sur Windows/, 'the ended session of the history');
+  assert.deepEqual(upstream(), ['GET /settings/bootstrap']);
 
   view.unmount();
   await renderLoadedPage(fixtures.bootstrap({ sessions: [], sources: { sessions: 'unavailable' } }));

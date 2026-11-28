@@ -143,4 +143,13 @@ describe('SessionsSection', () => {
     expect(sessionDeviceLabel({ device_info: 'curl/8.5' })).toBe('curl/8.5');
     expect(sessionDeviceLabel({ device_info: '  ' })).toBe('Appareil inconnu');
   });
+
+  it('MAIR-1258 (lib 2.10.0): « Déconnecter » carries its icon and this device shows a chevron, as the artifact', () => {
+    render(<SessionsSection {...props()} />);
+    const active = screen.getByRole('table', { name: 'Sessions actives' });
+    expect(within(active).getByRole('button', { name: 'Déconnecter la session Safari sur iPhone' }).querySelector('svg')).toBeTruthy();
+    const current = active.querySelector('tr[data-current="true"]');
+    expect(current.querySelector('[data-session-open]')).toBeTruthy();
+    expect(current.textContent).not.toContain('—');
+  });
 });

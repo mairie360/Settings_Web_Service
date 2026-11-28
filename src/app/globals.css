@@ -63,7 +63,6 @@ body {
 .settings-panel > :is(form, [data-settings-mutation], section) { padding: 20px; border-color: #d8d2ca; border-radius: 12px; box-shadow: 0 5px 15px rgb(23 32 51 / 14%), 0 1px 3px rgb(23 32 51 / 12%); }
 .settings-panel h2 { font-size: 17px; line-height: 25.5px; font-weight: 400; }
 .settings-profile-fields { display: grid; gap: 17px; margin-top: 25.5px; }
-.settings-profile-photo { max-width: 360px; }
 .settings-profile-fields label { min-width: 0; font-size: 15.9375px; line-height: 1.4286; font-weight: 500; }
 .settings-profile-fields input {
   height: 38.25px;
@@ -189,3 +188,29 @@ body {
 .settings-page > .page-title-row > div > p { margin-top: 5px; }
 .settings-tabs { margin-block: 24px 20px; }
 @media (min-width: 768px) { .settings-shell main { padding: 24px 40px; } }
+
+/* Artifact layout: one content column for the band, the tabs and the panels. */
+.settings-page { width: 100%; max-width: 1440px; margin-inline: auto; }
+.settings-hero { width: 100%; }
+/* Tabs: the lib floating pill bar, as wide as its tabs and sticky at the top of the scrolling area. */
+.settings-tabs { z-index: 15; }
+.settings-tabs [role="tablist"] { width: fit-content; }
+/* Profile on two columns: « Photo de profil » (4/12) beside « Informations personnelles » (8/12). The server pass
+   renders the form as a disabled fieldset, which then carries the grid. */
+.settings-profile-grid, .settings-profile-grid > fieldset { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--mairie-space-l); align-items: stretch; }
+.settings-profile-grid:has(> fieldset) { display: block; }
+/* MAIR-1258: Security on two columns as in the artifact, the password form beside « Protection du compte ». */
+.settings-security-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--mairie-space-l); align-items: start; }
+.settings-photo-card > :last-child, .settings-profile-card > :last-child { display: flex; flex: 1; flex-direction: column; gap: var(--mairie-space-m); }
+.settings-photo-card .settings-profile-photo { width: 100%; }
+.settings-directory-preview { display: flex; flex-direction: column; gap: var(--mairie-space-xs); margin-top: auto; }
+.settings-directory-card { display: flex; padding: 12px; border: 1px solid var(--mairie-border); border-radius: var(--mairie-radius-l); background: var(--mairie-surface); box-shadow: var(--mairie-shadow); }
+/* Save bar: sticky a little above the bottom edge, at the end of its card; the scrolling area keeps room under
+   it so a focused field is never hidden behind the bar. */
+.settings-profile-actions { bottom: var(--mairie-space-m); margin-top: auto; }
+.settings-shell main:has(.settings-profile-actions) { scroll-padding-bottom: 96px; }
+@media (min-width: 1180px) {
+  .settings-profile-grid, .settings-profile-grid > fieldset { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); }
+  .settings-security-grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+  .settings-profile-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

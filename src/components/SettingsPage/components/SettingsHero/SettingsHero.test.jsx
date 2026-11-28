@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { SettingsHero, activeSessions, enabledNotifications } from './SettingsHero';
+import { SettingsHero, activeSessions, enabledNotifications, heroSubtitle } from './SettingsHero';
 import fixtures from '@tests/support/settings-fixtures.cjs';
 
 const future = new Date(Date.now() + 86_400_000).toISOString();
@@ -16,7 +16,8 @@ describe('SettingsHero', () => {
     render(<SettingsHero data={data()} twoFactorEnabled onOpen={vi.fn()} />);
     expect(screen.getByRole('heading', { level: 1, name: 'Anne Marie Le Gall' })).toBeTruthy();
     expect(screen.getByText('Paramètres du compte')).toBeTruthy();
-    expect(screen.getByText('anne.le-gall@mairie.test')).toBeTruthy();
+    // « fonction · service · e-mail » under the name; no function reads « Agent », no service is left out.
+    expect(screen.getByText('Agent · anne.le-gall@mairie.test')).toBeTruthy();
     expect(screen.getByRole('button', { name: /^Double authentification\s*Activée$/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /^Sessions actives\s*2$/ })).toBeTruthy();
     // Fixture: e-mail, messages, projects and system updates on; push and calendar off.
@@ -55,5 +56,15 @@ describe('SettingsHero', () => {
   it('counts `null` notifications as on (the account default)', () => {
     expect(enabledNotifications(data({ notifications: null }))).toBe(6);
     expect(activeSessions(data({ sessions: [] }))).toBe(0);
+  });
+
+  it('MAIR-1258 shows the role, the service and the e-mail of the artifact under the name, and the stored photo', () => {
+    const profile = fixtures.profile({ job_title: 'Cheffe de service', service: { id: 3, name: 'Voirie' } });
+    expect(heroSubtitle(profile)).toBe('Cheffe de service · Voirie · anne.le-gall@mairie.test');
+    expect(heroSubtitle(fixtures.profile({ job_title: '  ', service: { id: 3, name: 'Voirie' } }))).toBe('Agent · Voirie · anne.le-gall@mairie.test');
+    const { container } = render(<SettingsHero data={data({ profile })} twoFactorEnabled onOpen={vi.fn()} photoUrl="blob:photo" />);
+    expect(screen.getByText('Cheffe de service · Voirie · anne.le-gall@mairie.test')).toBeTruthy();
+    expect(screen.getByText('Paramètres du compte')).toBeTruthy();
+    expect(container.querySelector('img[src="blob:photo"]')).not.toBeNull();
   });
 });

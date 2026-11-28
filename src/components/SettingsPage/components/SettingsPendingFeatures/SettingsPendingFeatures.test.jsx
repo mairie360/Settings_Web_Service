@@ -13,4 +13,15 @@ describe('SettingsPendingFeatures', () => {
     expect(screen.getByText('Liste des sessions')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Changer le mot de passe' })).toBeNull();
   });
+
+  it('MAIR-1258 puts « Protection du compte » beside the password form, the other security cards below', () => {
+    const { container } = render(<SettingsPendingFeatures tab="security" securityAside={<section>Protection du compte</section>} securityContent={<section>Double authentification</section>} />);
+    const grid = container.querySelector('.settings-security-grid');
+    expect(grid).not.toBeNull();
+    expect(grid.children).toHaveLength(2);
+    expect(grid.lastElementChild.textContent).toBe('Protection du compte');
+    expect(grid.firstElementChild.textContent).toMatch(/Mot de passe/);
+    expect(grid.textContent).not.toMatch(/Double authentification/);
+    expect(grid.nextElementSibling.textContent).toBe('Double authentification');
+  });
 });

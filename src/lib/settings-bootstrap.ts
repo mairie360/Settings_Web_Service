@@ -68,8 +68,21 @@ export function selectSettingsBootstrap(value: unknown): SettingsBootstrapRead |
     }
     optional[section] = selected;
   }
+  // MAIR-1258: the account band and the profile form read these on the first render, so they cross the boundary too
+  // (scalars of the published shape only; the service keeps its id and name).
+  const profile = value.profile as unknown as Record<string, unknown>;
+  for (const key of ['pending_email', 'biography', 'job_title'] as const) {
+    if (profile[key] != null && typeof profile[key] !== 'string') return null;
+  }
+  if (profile.has_photo !== undefined && typeof profile.has_photo !== 'boolean') return null;
+  const service = profile.service;
+  if (service != null && (typeof service !== 'object' || typeof (service as { name?: unknown }).name !== 'string'
+    || typeof (service as { id?: unknown }).id !== 'number')) return null;
   return {
-    profile: fields(value.profile, ['first_name', 'last_name', 'email', 'phone', 'phone_country']),
+    profile: {
+      ...fields(value.profile, ['first_name', 'last_name', 'email', 'phone', 'phone_country', 'pending_email', 'biography', 'job_title', 'has_photo']),
+      ...('service' in value.profile ? { service: value.profile.service ? fields(value.profile.service, ['id', 'name']) : value.profile.service } : {}),
+    },
     sessions: value.sessions.map(session => fields(session, ['id', 'device_info', 'ip_address', 'created_at', 'expires_at', 'revoked_at'])),
     ...(history ? { session_history: history.map(session => fields(session, ['id', 'device_info', 'ip_address', 'created_at', 'expires_at', 'revoked_at'])) } : {}),
     current_session_id: currentSession,

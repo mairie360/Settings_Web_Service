@@ -66,13 +66,13 @@ export default function SettingsPage({ initialData, commune }: { initialData?: B
       commune={commune}
       hrefs={getActiveFrontHrefs()}
       searchSource={searchEverywhere}
-      user={data ? { first_name: data.profile.first_name, last_name: data.profile.last_name, email: data.profile.email } : undefined}
+      user={data ? { first_name: data.profile.first_name, last_name: data.profile.last_name, email: data.profile.email, role: data.profile.job_title?.trim() || "Agent", service: data.profile.service?.name ?? undefined } : undefined}
       onLogout={() => void requestLogout()}
       sidebarProps={{ brandLogoSrc: "/mairie360-logo.png" }}
     >
       <ToastProvider regionLabel="Notifications de la page" placement="top-end" defaultDuration={5000}>
         <section className="settings-page">
-          {data && profile ? <SettingsHero data={data} twoFactorEnabled={twoFactorEnabled} onOpen={setActiveTab} /> : <SettingsHeader />}
+          {data && profile ? <SettingsHero data={data} twoFactorEnabled={twoFactorEnabled} onOpen={setActiveTab} photoUrl={form.storedPhotoUrl} /> : <SettingsHeader />}
           <SettingsNotices readError={data ? readError : ""} logoutError={logoutError} recoverable={Boolean(data) && recoverable} hasData={Boolean(data)} reading={reading} saving={form.saving} onReload={reload} />
           <StatusToast message={form.status} title="Profil enregistré" onShown={form.clearStatus} />
           <StatusToast message={form.failure?.message ?? ""} title={form.failure?.title} tone="error" onShown={form.clearFailure} dismiss={form.saving} />
@@ -88,9 +88,9 @@ export default function SettingsPage({ initialData, commune }: { initialData?: B
                   preferencesContent={<PreferencesPanel key={accountScope} tab={activeTab} bootstrap={data} reading={reading || form.saving} onWriting={setPreferencesWriting} onRefresh={() => void readSettings()}
                     onNotify={(message) => setNotice({ message, tone: "success" })} onFailure={(message) => setNotice({ message, tone: "error" })} />}
                   profileContent={<ProfileForm form={form} reading={reading} />}
+                  securityAside={<ProtectionSection twoFactorEnabled={twoFactorEnabled} loginAlerts={data.notifications?.login_alerts}
+                    activeSessions={activeSessions(data)} onManageSessions={() => setActiveTab("sessions")} />}
                   securityContent={<>
-                    <ProtectionSection twoFactorEnabled={twoFactorEnabled} loginAlerts={data.notifications?.login_alerts}
-                      activeSessions={activeSessions(data)} onManageSessions={() => setActiveTab("sessions")} />
                     <TwoFactorSection onNotify={(message) => setNotice({ message, tone: "success" })} onStatus={setTwoFactorEnabled} />
                     <LoginAlertsSection enabled={data.notifications?.login_alerts} disabled={reading || data.sources.notifications === "unavailable"}
                       onSaved={(notifications) => setData((current) => current ? { ...current, notifications } : current)}

@@ -69,7 +69,7 @@ describe('actual Settings page with the published shell and consumer styles', ()
     const sidebar = document.querySelector('aside.app-desktop-navigation');
     expect(sidebar.getAttribute('aria-label')).toBe('Navigation principale');
     const buttons = [...sidebar.querySelectorAll('nav[aria-label="Menu principal"] button')];
-    expect(buttons.map(button => button.getAttribute('aria-label'))).toEqual(['Tableau de bord', 'Projets', 'Messagerie', 'Formation', 'Calendrier', 'Paramètres']);
+    expect(buttons.map(button => button.getAttribute('aria-label'))).toEqual(['Tableau de bord', 'Projets', 'Calendrier', 'Messagerie', 'E-learning', 'Paramètres']);
     expect(buttons.at(-1).getAttribute('aria-current')).toBe('page');
   });
 

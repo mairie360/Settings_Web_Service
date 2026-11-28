@@ -34,6 +34,8 @@ export interface ProfileForm {
   updateProfile: (field: ProfileField, value: string) => void;
   /** URL of the photo shown (the draft one, else the stored one), `null` for the initials. */
   photoUrl: string | null;
+  /** URL of the stored photo only (the account band shows the saved identity), `null` for the initials. */
+  storedPhotoUrl: string | null;
   /** Refusal of the picked image (unreadable, too heavy once compressed), shown under the photo field. */
   photoError: string | null;
   /** A picked file (converted to WebP 256 × 256 before it is kept) or `null` for « Retirer ». */
@@ -43,7 +45,7 @@ export interface ProfileForm {
 }
 
 const PHOTO_TOO_LARGE = 'Cette photo dépasse 100 Ko une fois compressée.';
-const PHOTO_REFUSED = 'Cette photo n’a pas été acceptée. Choisissez un fichier JPG, PNG ou WebP.';
+const PHOTO_REFUSED = 'Cette photo n’a pas été acceptée. Choisissez un fichier JPG ou PNG.';
 const FIX_FIELDS: SaveFailure = { title: 'Profil non enregistré', message: 'Corrigez les champs signalés.' };
 const fieldOrder = ['photo', ...PROFILE_FIELDS.map(({ field }) => field as string), 'current_password'];
 
@@ -222,6 +224,7 @@ export function useProfileForm({ data, setData, profile, setProfile, readRef, sa
     fieldErrors, failure, clearFailure: () => setFailure(null), status, clearStatus: () => setStatus(""),
     saving, hasChanges, changedCount, emailChanged, focusTarget, updateProfile, cancel, save,
     photoUrl: photoDraft?.kind === 'set' ? photoDraft.url : photoDraft?.kind === 'remove' ? null : storedPhoto,
+    storedPhotoUrl: storedPhoto,
     photoError, choosePhoto,
   };
 }

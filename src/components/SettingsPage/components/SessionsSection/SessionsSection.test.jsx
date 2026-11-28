@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { SessionsSection, revokeFailure } from './SessionsSection';
+import { sessionDeviceLabel } from './session-device';
 import * as api from '@/lib/settings-api';
 import { BffRequestError } from '@/lib/bff-client';
 import fixtures from '@tests/support/settings-fixtures.cjs';
@@ -115,5 +116,31 @@ describe('SessionsSection', () => {
   it('explains every refusal in French', () => {
     expect(revokeFailure(new BffRequestError('x', 409, null))).toBe('Pour fermer cette session, déconnectez-vous.');
     expect(revokeFailure(new Error('x'))).toBe('La déconnexion n’a pas été confirmée.');
+  });
+
+  it('MAIR-1258 names each session « navigateur · système » with its id under it, as the artifact', async () => {
+    const user = userEvent.setup();
+    const firefox = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0';
+    const onNotify = vi.fn();
+    api.revokeSession.mockResolvedValue({ sessions: [fixtures.session('s-1')], session_history: [] });
+    render(<SessionsSection {...props({ onNotify, data: data({ sessions: [
+      fixtures.session('s-1', { expires_at: future }),
+      fixtures.session('c47e5d10-2b8a-4f63', { device_info: firefox, expires_at: future }),
+    ] }) })} />);
+    const active = screen.getByRole('table', { name: 'Sessions actives' });
+    expect(within(active).getByText('Firefox 132 · Windows')).toBeTruthy();
+    expect(within(active).queryByText(firefox)).toBeNull();
+    expect(within(active).getByText('c47e5d10-2b8a-4f63')).toBeTruthy();
+    await user.click(within(active).getByRole('button', { name: 'Déconnecter la session Firefox 132 · Windows' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmer la déconnexion' }));
+    expect(onNotify).toHaveBeenCalledWith('Session « Firefox 132 · Windows » déconnectée.');
+  });
+
+  it('MAIR-1258 sessionDeviceLabel reads a user-agent and keeps a text it cannot read', () => {
+    expect(sessionDeviceLabel({ device_info: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1' })).toBe('Safari 18 · iOS 18.1');
+    expect(sessionDeviceLabel({ device_info: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36' })).toBe('Chrome 131 · Linux');
+    expect(sessionDeviceLabel({ device_info: 'Firefox sur Linux' })).toBe('Firefox sur Linux');
+    expect(sessionDeviceLabel({ device_info: 'curl/8.5' })).toBe('curl/8.5');
+    expect(sessionDeviceLabel({ device_info: '  ' })).toBe('Appareil inconnu');
   });
 });

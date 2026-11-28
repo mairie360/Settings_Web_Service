@@ -9,6 +9,7 @@ import { BffRequestError } from '@/lib/bff-client';
 import SessionRevokeDialog from './components/SessionRevokeDialog';
 import { SessionMetrics } from './components/SessionMetrics';
 import { SessionDetailDialog } from './components/SessionDetailDialog';
+import { sessionDeviceLabel } from './session-device';
 
 type Session = Bootstrap['sessions'][number];
 
@@ -82,15 +83,20 @@ export const SessionsSection = ({ data, onSessions, onNotify, onFailure }: Sessi
               sessions={sessions}
               currentSessionId={current}
               caption="Sessions actives"
+              // MAIR-1258 (artifact): « Firefox 132 · Windows » and the session id under it.
+              deviceLabel={sessionDeviceLabel}
+              showIds
               unavailableTitle="Les sessions sont temporairement indisponibles."
               emptyTitle="Aucune session à afficher."
-              onRevoke={(session) => setSessionToRevoke({ id: session.id, device_info: session.device_info })}
+              onRevoke={(session) => setSessionToRevoke({ id: session.id, device_info: sessionDeviceLabel(session) })}
               onSelect={(session) => setSelected(session as Session)}
             />
           ) : (
             <SessionList
               sessions={historyAvailable ? data.session_history! : null}
               caption="Historique des sessions"
+              deviceLabel={sessionDeviceLabel}
+              showIds
               dateColumnLabel="Fin"
               unavailableTitle="L’historique est temporairement indisponible."
               emptyTitle="Aucune session passée."
@@ -99,7 +105,7 @@ export const SessionsSection = ({ data, onSessions, onNotify, onFailure }: Sessi
         </div>
       </Panel>
       <SessionDetailDialog session={selected} current={selected?.id === current} revocable={selected ? isActive(selected) : false}
-        onClose={() => setSelected(null)} onRevoke={(session) => setSessionToRevoke({ id: session.id, device_info: session.device_info })} />
+        onClose={() => setSelected(null)} onRevoke={(session) => setSessionToRevoke({ id: session.id, device_info: sessionDeviceLabel(session) })} />
       {sessionToRevoke ? (
         <SessionRevokeDialog session={sessionToRevoke}
           port={{ revokeSession: async (id) => { try { const result = await api.revokeSession(id); onSessions(result.sessions, result.session_history); } catch (error) { throw new Error(revokeFailure(error)); } } }}
